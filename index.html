@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>花醫班表系統</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- Firebase v9 compat -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f0ede8;--surface:#fff;--s2:#f7f5f1;--s3:#edeae4;
+  --bd:#ddd9d0;--bd2:#c5c0b4;
+  --tx:#1a1916;--tx2:#5a5750;--tx3:#9a9690;
+  --teal:#0d7377;--teal-bg:#e0f4f4;--teal-bd:#7ecece;--teal-tx:#084f52;
+  --amber:#b45309;--amber-bg:#fef3c7;--amber-bd:#fbbf24;--amber-tx:#78350f;
+  --red:#b91c1c;--red-bg:#fee2e2;--red-bd:#fca5a5;--red-tx:#7f1d1d;
+  --blue:#1d4ed8;--blue-bg:#dbeafe;--blue-bd:#93c5fd;--blue-tx:#1e3a8a;
+  --purple:#6d28d9;--purple-bg:#ede9fe;--purple-bd:#c4b5fd;--purple-tx:#4c1d95;
+  --green:#065f46;--green-bg:#d1fae5;--green-bd:#6ee7b7;--green-tx:#064e3b;
+  --r:8px;--rl:14px;
+}
+body{font-family:'Noto Sans TC','PingFang TC',sans-serif;background:var(--bg);color:var(--tx);font-size:14px;min-height:100vh}
+input,select,button{font-family:inherit;font-size:13px}
+
+/* ── Layout ── */
+.wrap{max-width:1140px;margin:0 auto;padding:24px 18px 60px}
+.card{background:var(--surface);border:0.5px solid var(--bd);border-radius:var(--rl);overflow:hidden;margin-bottom:16px}
+
+/* ── Header ── */
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:0.5px solid var(--bd);flex-wrap:wrap;gap:10px;background:var(--s2)}
+.hdr-l{display:flex;align-items:center;gap:11px}
+.logo{width:40px;height:40px;background:var(--teal-bg);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;border:0.5px solid var(--teal-bd)}
+.app-title{font-size:17px;font-weight:600;color:var(--tx);letter-spacing:0.3px}
+.app-sub{font-size:11px;color:var(--tx3);margin-top:2px}
+.hdr-r{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+
+/* ── Buttons ── */
+.btn{border:0.5px solid var(--bd2);background:transparent;color:var(--tx);padding:7px 13px;border-radius:var(--r);cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;transition:background 0.15s,transform 0.1s;line-height:1}
+.btn:hover{background:var(--s3)}
+.btn:active{transform:scale(0.97)}
+.btn-teal{background:var(--teal-bg);color:var(--teal-tx);border-color:var(--teal-bd)}
+.btn-teal:hover{background:#c5eaea}
+.btn-amber{background:var(--amber-bg);color:var(--amber-tx);border-color:var(--amber-bd)}
+.btn-amber:hover{background:#fde68a}
+.btn-blue{background:var(--blue-bg);color:var(--blue-tx);border-color:var(--blue-bd)}
+.btn-blue:hover{background:#bfdbfe}
+.btn-green{background:var(--green-bg);color:var(--green-tx);border-color:var(--green-bd)}
+.btn-green:hover{background:#a7f3d0}
+.btn-red{background:var(--red-bg);color:var(--red-tx);border-color:var(--red-bd);padding:5px 10px;font-size:12px}
+
+/* ── Tabs ── */
+.tabs{display:flex;border-bottom:0.5px solid var(--bd);background:var(--s2);padding:0 22px;gap:0}
+.tab{padding:10px 17px;font-size:13px;font-weight:500;color:var(--tx3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-0.5px;transition:color 0.15s}
+.tab:hover{color:var(--tx)}
+.tab.on{color:var(--teal-tx);border-bottom-color:var(--teal)}
+
+/* ── Login screen ── */
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:60vh;padding:40px 20px}
+.login-card{background:var(--surface);border:0.5px solid var(--bd);border-radius:var(--rl);padding:40px 36px;width:360px;max-width:100%;text-align:center}
+.login-icon{font-size:48px;margin-bottom:16px}
+.login-title{font-size:20px;font-weight:600;margin-bottom:6px}
+.login-sub{font-size:13px;color:var(--tx2);margin-bottom:28px;line-height:1.6}
+.google-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px;border-radius:var(--r);border:1px solid var(--bd2);background:var(--surface);cursor:pointer;font-size:14px;font-weight:500;color:var(--tx);transition:background 0.15s}
+.google-btn:hover{background:var(--s2)}
+.google-btn svg{width:20px;height:20px;flex-shrink:0}
+
+/* ── Nav ── */
+.nav{display:flex;align-items:center;justify-content:space-between;padding:13px 22px 9px;flex-wrap:wrap;gap:8px}
+.nav-c{display:flex;align-items:center;gap:11px}
+.nav-btn{border:0.5px solid var(--bd);background:var(--s2);color:var(--tx);width:32px;height:32px;border-radius:var(--r);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:background 0.15s}
+.nav-btn:hover{background:var(--s3)}
+.nav-lbl{text-align:center;min-width:130px}
+.nav-lbl .wr{font-size:14px;font-weight:600}
+.nav-lbl .wn{font-size:11px;color:var(--tx3);margin-top:2px}
+.nav-r{display:flex;gap:7px}
+
+/* ── Month view ── */
+.month-lbl{padding:13px 22px 0;font-size:15px;font-weight:600;color:var(--tx2)}
+.month-grid-wrap{overflow-x:auto;padding:0 22px 22px}
+.mgrid{display:grid;min-width:700px;border:0.5px solid var(--bd);border-radius:var(--r);overflow:hidden}
+.mgrid-header{display:grid;grid-template-columns:110px 70px repeat(31,1fr);background:var(--s2);border-bottom:0.5px solid var(--bd)}
+.mg-hcell{padding:6px 3px;text-align:center;font-size:11px;font-weight:500;color:var(--tx3);border-right:0.5px solid var(--bd)}
+.mg-hcell:last-child{border-right:none}
+.mg-hcell.today{background:var(--teal-bg);color:var(--teal-tx)}
+.mgrid-row{display:grid;grid-template-columns:110px 70px repeat(31,1fr);border-bottom:0.5px solid var(--bd)}
+.mgrid-row:last-child{border-bottom:none}
+.mgrid-row:hover{background:var(--s2)}
+.mg-cell{padding:5px 2px;text-align:center;border-right:0.5px solid var(--bd);display:flex;align-items:center;justify-content:center}
+.mg-cell:last-child{border-right:none}
+.mg-emp{justify-content:flex-start;padding:5px 8px;gap:6px}
+.mg-type{font-size:11px;color:var(--tx3);justify-content:center}
+.emp-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.emp-nm{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:75px}
+.shift-pill{display:inline-flex;align-items:center;justify-content:center;width:26px;height:22px;border-radius:5px;font-size:11px;font-weight:700;border:0.5px solid transparent;cursor:pointer;transition:transform 0.1s}
+.shift-pill:hover{transform:scale(1.12)}
+.shift-pill.ro{cursor:default}
+.shift-pill.ro:hover{transform:none}
+.sp-日{background:#fff8e8;color:#92610a;border-color:#fcd34d}
+.sp-小{background:#edfafa;color:#0a6e6b;border-color:#90ddd9}
+.sp-大{background:#f0eeff;color:#4438a0;border-color:#c4bbff}
+.sp-休{background:#edfbf4;color:#1a6040;border-color:#90e0b0}
+.sp-empty{background:transparent;color:#ccc;border:0.5px dashed #ddd}
+
+/* ── Week view ── */
+.week-wrap{overflow-x:auto;padding:0 22px 22px}
+table{width:100%;border-collapse:separate;border-spacing:0;min-width:640px}
+th{padding:7px 5px;text-align:center;font-size:11px;font-weight:500;color:var(--tx3);border-bottom:0.5px solid var(--bd)}
+th.ec{text-align:left;padding-left:8px;min-width:105px}
+.dth{min-width:72px}.tth{min-width:60px}
+.today-h .dn{color:var(--teal-tx);font-weight:700}
+td{padding:3px 3px;vertical-align:middle}
+td.ec2{padding:4px 8px;white-space:nowrap}
+.erow:hover td{background:var(--s2)}
+.en{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600}
+.sft-btn{width:64px;padding:5px 2px;border-radius:16px;border:0.5px solid var(--bd);background:transparent;color:var(--tx3);cursor:pointer;font-size:12px;font-weight:600;transition:transform 0.1s}
+.sft-btn:hover{transform:scale(1.06)}
+.sft-ro{width:64px;padding:5px 2px;border-radius:16px;border:0.5px solid transparent;font-size:12px;font-weight:600;display:inline-block;text-align:center}
+.del-e{border:none;background:none;color:var(--tx3);cursor:pointer;font-size:12px;padding:0 3px;margin-left:2px;opacity:0.4}
+.del-e:hover{opacity:1;color:var(--red)}
+
+/* ── Legend ── */
+.legend{display:flex;flex-wrap:wrap;gap:8px;padding:0 22px 18px}
+.li{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--tx3)}
+.ldot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* ── Stats ── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;padding:18px 22px;border-bottom:0.5px solid var(--bd)}
+.sc{background:var(--s2);border-radius:var(--r);padding:12px 14px}
+.sl{font-size:11px;color:var(--tx3);margin-bottom:3px}
+.sv{font-size:22px;font-weight:600}
+.detail-wrap{padding:0 22px 22px}
+
+/* ── Excel panel ── */
+.xp{padding:22px}
+.xp h2{font-size:15px;font-weight:600;margin-bottom:5px}
+.xp-desc{font-size:13px;color:var(--tx2);line-height:1.6;margin-bottom:18px}
+.xp-info{background:var(--teal-bg);border:0.5px solid var(--teal-bd);border-radius:var(--r);padding:12px 14px;font-size:13px;color:var(--teal-tx);margin-bottom:16px;line-height:1.7}
+.xp-info b{font-weight:600}
+.drop-z{border:1.5px dashed var(--bd2);border-radius:var(--rl);padding:38px 20px;text-align:center;cursor:pointer;transition:border-color 0.2s,background 0.2s;margin-bottom:16px}
+.drop-z:hover,.drop-z.drag{border-color:var(--teal);background:var(--teal-bg)}
+.drop-z input{display:none}
+.di{font-size:34px;margin-bottom:9px}
+.dt{font-size:14px;font-weight:600;margin-bottom:4px}
+.ds{font-size:12px;color:var(--tx3)}
+.preview-wrap{overflow-x:auto;margin-top:14px}
+.pt{width:100%;border-collapse:collapse;font-size:12px}
+.pt th{background:var(--s2);padding:5px 9px;text-align:left;border:0.5px solid var(--bd);font-weight:500;color:var(--tx2)}
+.pt td{padding:5px 9px;border:0.5px solid var(--bd)}
+.imp-ok{background:var(--green-bg);color:var(--green-tx);border:0.5px solid var(--green-bd);border-radius:var(--r);padding:10px 14px;font-size:13px;margin-top:12px}
+.imp-err{background:var(--red-bg);color:var(--red-tx);border:0.5px solid var(--red-bd);border-radius:var(--r);padding:10px 14px;font-size:13px;margin-top:12px}
+
+/* ── Firebase setup panel ── */
+.fb-setup{padding:22px}
+.fb-setup h2{font-size:15px;font-weight:600;margin-bottom:5px}
+.fb-steps{counter-reset:step;margin-bottom:18px}
+.fb-step{display:flex;gap:12px;margin-bottom:14px;align-items:flex-start}
+.fb-step-num{width:26px;height:26px;border-radius:50%;background:var(--teal-bg);color:var(--teal-tx);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;border:0.5px solid var(--teal-bd)}
+.fb-step-body{font-size:13px;color:var(--tx2);line-height:1.6;padding-top:3px}
+.fb-step-body b{color:var(--tx);font-weight:600}
+.fb-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.fb-field label{font-size:12px;color:var(--tx2);display:block;margin-bottom:4px}
+.fb-field input{width:100%;padding:8px 10px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;outline:none}
+.fb-field input:focus{border-color:var(--teal)}
+.fb-code{background:#1a1916;color:#e8e4de;border-radius:var(--r);padding:12px 14px;font-family:monospace;font-size:12px;margin:8px 0;line-height:1.6;overflow-x:auto;white-space:pre}
+
+/* ── Modal ── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:300;padding:16px}
+.modal{background:var(--surface);border:0.5px solid var(--bd2);border-radius:var(--rl);padding:22px;width:300px;max-width:100%;box-shadow:0 16px 48px rgba(0,0,0,0.18)}
+.mt{font-size:15px;font-weight:600;margin-bottom:4px}
+.ms{font-size:12px;color:var(--tx3);margin-bottom:16px}
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.sc2{padding:12px 8px;border-radius:var(--r);border:0.5px solid;font-size:13px;font-weight:700;cursor:pointer;transition:transform 0.1s;text-align:center}
+.sc2:hover{transform:scale(1.04)}
+.mi{width:100%;padding:8px 10px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;margin-bottom:11px;outline:none}
+.mi:focus{border-color:var(--teal)}
+.mi-sel{width:100%;padding:8px 10px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;margin-bottom:11px;outline:none}
+.crow{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
+.cp{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2.5px solid transparent;transition:transform 0.1s}
+.cp:hover{transform:scale(1.15)}
+.cp.on{border-color:var(--tx)}
+.ma{display:flex;gap:8px}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(12px);background:#1a1916;color:#f5f3ef;padding:10px 22px;border-radius:var(--r);font-size:13px;font-weight:500;white-space:nowrap;z-index:400;opacity:0;transition:opacity 0.3s,transform 0.3s;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── Sync status ── */
+.sync-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px}
+.sync-ok{background:#10b981}
+.sync-off{background:#f59e0b}
+.sync-err{background:#ef4444}
+
+/* ── Responsive ── */
+@media(max-width:600px){
+  .wrap{padding:10px 10px 40px}
+  .hdr{padding:12px 14px}
+  .tabs{padding:0 14px}
+  .nav,.month-grid-wrap,.week-wrap,.legend,.xp,.fb-setup,.stats-grid,.detail-wrap{padding-left:14px;padding-right:14px}
+  .fb-fields{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ══ FIREBASE CONFIG NOTICE ══ -->
+<div id="setup-banner" class="card" style="display:none">
+  <div style="padding:14px 22px;background:var(--amber-bg);border-bottom:0.5px solid var(--amber-bd);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <span style="font-size:14px;color:var(--amber-tx)">⚠️ <b>尚未設定 Firebase</b> — 目前使用本機模式（無法跨裝置同步）。請點擊「設定」完成雲端連線。</span>
+    <button class="btn btn-amber" style="margin-left:auto" onclick="switchTab('setup')">設定 Firebase</button>
+  </div>
+</div>
+
+<div class="card" id="main-card">
+  <!-- Header -->
+  <div class="hdr">
+    <div class="hdr-l">
+      <div class="logo">🏥</div>
+      <div>
+        <div class="app-title">花醫班表系統</div>
+        <div class="app-sub" id="app-sub">
+          <span class="sync-dot sync-off" id="sync-dot"></span>
+          <span id="sync-label">本機模式</span>
+          <span id="user-label" style="margin-left:10px"></span>
+        </div>
+      </div>
+    </div>
+    <div class="hdr-r" id="hdr-r">
+      <button class="btn btn-teal" id="add-emp-btn" onclick="openAddEmp()">＋ 員工</button>
+      <button class="btn btn-amber" onclick="switchTab('excel')">📊 匯入班表</button>
+      <button class="btn" onclick="doExport()">⬇ 匯出</button>
+      <button class="btn btn-blue" id="share-btn" onclick="doShare()">🔗 分享</button>
+      <button class="btn" id="login-btn" onclick="doLogin()" style="display:none">登入 Google</button>
+      <button class="btn" id="logout-btn" onclick="doLogout()" style="display:none">登出</button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab on" id="tab-month" onclick="switchTab('month')">月視圖</div>
+    <div class="tab" id="tab-week" onclick="switchTab('week')">週視圖</div>
+    <div class="tab" id="tab-stats" onclick="switchTab('stats')">統計</div>
+    <div class="tab" id="tab-excel" onclick="switchTab('excel')">匯入 Excel</div>
+    <div class="tab" id="tab-setup" onclick="switchTab('setup')">⚙ 設定</div>
+  </div>
+
+  <!-- ══ MONTH PANE ══ -->
+  <div id="pane-month">
+    <div class="nav">
+      <div class="nav-c">
+        <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
+        <div class="nav-lbl">
+          <div class="wr" id="month-label">—</div>
+          <div class="wn" id="month-sub"></div>
+        </div>
+        <button class="nav-btn" onclick="changeMonth(1)">›</button>
+        <button class="btn" id="cur-month-btn" style="display:none;font-size:12px;padding:5px 10px" onclick="goCurrentMonth()">本月</button>
+      </div>
+      <div class="nav-r">
+        <button class="btn" style="font-size:12px" onclick="switchTab('week')">切換週視圖</button>
+      </div>
+    </div>
+    <div class="month-grid-wrap" id="month-grid-wrap"></div>
+    <div class="legend" id="legend-month"></div>
+  </div>
+
+  <!-- ══ WEEK PANE ══ -->
+  <div id="pane-week" style="display:none">
+    <div class="nav">
+      <div class="nav-c">
+        <button class="nav-btn" onclick="changeWeek(-1)">‹</button>
+        <div class="nav-lbl">
+          <div class="wr" id="week-range">—</div>
+          <div class="wn" id="week-name">本週</div>
+        </div>
+        <button class="nav-btn" onclick="changeWeek(1)">›</button>
+        <button class="btn" id="today-btn" style="display:none;font-size:12px;padding:5px 10px" onclick="goToday()">今天</button>
+      </div>
+      <div class="nav-r">
+        <button class="btn" style="font-size:12px" onclick="copyLastWeek()">📋 複製上週</button>
+        <button class="btn" style="font-size:12px" onclick="switchTab('month')">切換月視圖</button>
+      </div>
+    </div>
+    <div class="week-wrap" id="week-wrap"></div>
+    <div class="legend" id="legend-week"></div>
+  </div>
+
+  <!-- ══ STATS PANE ══ -->
+  <div id="pane-stats" style="display:none">
+    <div class="nav" style="padding-bottom:0">
+      <div class="nav-c">
+        <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
+        <div class="nav-lbl"><div class="wr" id="stats-month-label">—</div></div>
+        <button class="nav-btn" onclick="changeMonth(1)">›</button>
+      </div>
+    </div>
+    <div class="stats-grid" id="stats-grid"></div>
+    <div class="detail-wrap" id="stats-detail"></div>
+  </div>
+
+  <!-- ══ EXCEL PANE ══ -->
+  <div id="pane-excel" style="display:none">
+    <div class="xp">
+      <h2>匯入花醫班表 Excel</h2>
+      <p class="xp-desc">支援你現有的 Excel 格式，系統會自動解析。</p>
+      <div class="xp-info">
+        <b>已偵測到你的班表格式：</b><br>
+        • 工作表名稱 = 月份（如「六月2」、「班表」）<br>
+        • 第7列起為資料：院區 / 工作 / 姓名 / 班型 / 第1日...第31日<br>
+        • 班別符號：<b>日</b>（白班 07-15）、<b>小</b>（小夜 15-23）、<b>大</b>（大夜 23-07）、<b>休</b>（休假）<br>
+        • 空白 = 未排班（正常班週末）
+      </div>
+      <div class="drop-z" id="drop-z" onclick="document.getElementById('fi').click()" ondragover="doDrag(event,true)" ondragleave="doDrag(event,false)" ondrop="doDrop(event)">
+        <input type="file" id="fi" accept=".xlsx,.xls" onchange="handleFile(this.files[0])"/>
+        <div class="di">📂</div>
+        <div class="dt">點擊選擇 Excel，或拖曳到這裡</div>
+        <div class="ds">.xlsx · .xls</div>
+      </div>
+      <div id="xp-result"></div>
+      <div id="xp-preview" style="display:none">
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--tx2)">預覽（前 5 位員工）</div>
+        <div class="preview-wrap" id="preview-tbl"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SETUP PANE ══ -->
+  <div id="pane-setup" style="display:none">
+    <div class="fb-setup">
+      <h2>Firebase 雲端同步設定</h2>
+      <p style="font-size:13px;color:var(--tx2);margin-bottom:18px;line-height:1.6">設定後，班表資料會自動同步到 Firebase，網頁版與手機 App 都可以即時看到最新班表。</p>
+
+      <div class="fb-steps">
+        <div class="fb-step"><div class="fb-step-num">1</div><div class="fb-step-body">前往 <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a>，建立新專案（免費）</div></div>
+        <div class="fb-step"><div class="fb-step-num">2</div><div class="fb-step-body">進入專案 → <b>Build → Realtime Database</b> → 建立資料庫（選 Asia-Southeast1）</div></div>
+        <div class="fb-step"><div class="fb-step-num">3</div><div class="fb-step-body">Rules 設定為允許已登入使用者讀寫：<div class="fb-code">{"rules": {"schedule": {".read": "auth != null", ".write": "auth != null"}}}</div></div></div>
+        <div class="fb-step"><div class="fb-step-num">4</div><div class="fb-step-body">Authentication → Sign-in method → 啟用 <b>Google</b></div></div>
+        <div class="fb-step"><div class="fb-step-num">5</div><div class="fb-step-body">專案設定（齒輪）→ 你的應用程式 → 選 Web → 複製 firebaseConfig 各欄位填入下方</div></div>
+      </div>
+
+      <div class="fb-fields">
+        <div class="fb-field"><label>API Key</label><input id="fb-apiKey" placeholder="AIzaSy..." /></div>
+        <div class="fb-field"><label>Auth Domain</label><input id="fb-authDomain" placeholder="xxx.firebaseapp.com" /></div>
+        <div class="fb-field"><label>Database URL</label><input id="fb-dbUrl" placeholder="https://xxx.firebaseio.com" /></div>
+        <div class="fb-field"><label>Project ID</label><input id="fb-projectId" placeholder="my-project-id" /></div>
+        <div class="fb-field"><label>Storage Bucket</label><input id="fb-storageBucket" placeholder="xxx.appspot.com" /></div>
+        <div class="fb-field"><label>Messaging Sender ID</label><input id="fb-msgSenderId" placeholder="123456789" /></div>
+        <div class="fb-field"><label>App ID</label><input id="fb-appId" placeholder="1:123:web:abc" /></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-teal" onclick="saveFirebaseConfig()">💾 儲存並連線</button>
+        <button class="btn" onclick="clearFirebaseConfig()">清除設定（回本機模式）</button>
+      </div>
+      <div id="fb-result" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+</div><!-- end main-card -->
+</div><!-- end wrap -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+// SHIFT DEFINITIONS
+// ══════════════════════════════════════════════
+const SHIFTS = {
+  '日': { label:'日班', short:'日', bg:'#fff8e8', bd:'#fcd34d', tx:'#92610a', cls:'sp-日' },
+  '小': { label:'小夜', short:'小', bg:'#edfafa', bd:'#90ddd9', tx:'#0a6e6b', cls:'sp-小' },
+  '大': { label:'大夜', short:'大', bg:'#f0eeff', bd:'#c4bbff', tx:'#4438a0', cls:'sp-大' },
+  '休': { label:'休假', short:'休', bg:'#edfbf4', bd:'#90e0b0', tx:'#1a6040', cls:'sp-休' },
+};
+const SHIFT_KEYS = ['日','小','大','休'];
+const EMP_COLORS = ['#E24B4A','#EF9F27','#1D9E75','#378ADD','#7F77DD','#D4537E','#639922','#BA7517','#0F6E56','#534AB7'];
+const MONTHS_TW = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
+
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+let S = {
+  employees: [],   // [{id, name, dept, type, colorIdx}]
+  schedule: {},    // { "empId_YYYY-MM-DD": "日|小|大|休" }
+  monthOffset: 0,
+  weekOffset: 0,
+  isReadOnly: false,
+};
+let firebaseApp = null, firebaseDb = null, firebaseAuth = null, currentUser = null;
+let dbRef = null, syncUnsub = null;
+
+// ══════════════════════════════════════════════
+// DATE UTILS
+// ══════════════════════════════════════════════
+function fmtKey(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function todayKey() { return fmtKey(new Date()); }
+function getMonthDates(off) {
+  const now = new Date(); now.setDate(1);
+  now.setMonth(now.getMonth() + off);
+  const y = now.getFullYear(), m = now.getMonth();
+  const days = new Date(y, m+1, 0).getDate();
+  return Array.from({length:days}, (_,i) => new Date(y, m, i+1));
+}
+function getWeekDates(off) {
+  const now = new Date(), dow = now.getDay();
+  const mon = new Date(now);
+  mon.setDate(now.getDate() - (dow===0?6:dow-1) + off*7);
+  return Array.from({length:7}, (_,i) => { const d=new Date(mon); d.setDate(mon.getDate()+i); return d; });
+}
+function fmtD(d) { return `${d.getMonth()+1}/${d.getDate()}`; }
+const DAY_CH = ['日','一','二','三','四','五','六'];
+
+// ══════════════════════════════════════════════
+// STORAGE
+// ══════════════════════════════════════════════
+const LS_DATA = 'huayi_sched_v1', LS_FB = 'huayi_fb_config';
+
+function saveLocal() {
+  if (!S.isReadOnly) {
+    try { localStorage.setItem(LS_DATA, JSON.stringify({employees:S.employees,schedule:S.schedule})); } catch(e) {}
+  }
+}
+function loadLocal() {
+  try {
+    const params = new URLSearchParams(location.search);
+    if (params.get('view')==='share') {
+      const d = params.get('d');
+      if (d) { const x=JSON.parse(atob(d)); S.employees=x.employees||[]; S.schedule=x.schedule||{}; S.isReadOnly=true; }
+      return;
+    }
+    const raw = localStorage.getItem(LS_DATA);
+    if (raw) { const x=JSON.parse(raw); S.employees=x.employees||[]; S.schedule=x.schedule||{}; }
+  } catch(e) {}
+}
+
+// ══════════════════════════════════════════════
+// FIREBASE
+// ══════════════════════════════════════════════
+function loadFbConfig() {
+  try { return JSON.parse(localStorage.getItem(LS_FB)||'null'); } catch(e) { return null; }
+}
+function saveFbConfig(cfg) {
+  localStorage.setItem(LS_FB, JSON.stringify(cfg));
+}
+
+function initFirebase(cfg) {
+  try {
+    if (firebase.apps.length) firebase.apps.forEach(a => a.delete());
+    firebaseApp = firebase.initializeApp(cfg);
+    firebaseDb = firebase.database();
+    firebaseAuth = firebase.auth();
+    dbRef = firebaseDb.ref('schedule');
+
+    firebaseAuth.onAuthStateChanged(user => {
+      currentUser = user;
+      updateAuthUI();
+      if (user) startSync();
+      else stopSync();
+    });
+
+    updateSyncStatus('ok', '已連線 Firebase');
+    document.getElementById('login-btn').style.display = '';
+    return true;
+  } catch(e) {
+    updateSyncStatus('err', '連線失敗: ' + e.message);
+    return false;
+  }
+}
+
+function startSync() {
+  if (syncUnsub) { dbRef.off('value', syncUnsub); }
+  syncUnsub = dbRef.on('value', snap => {
+    const data = snap.val();
+    if (data) {
+      S.employees = data.employees || [];
+      S.schedule = data.schedule || {};
+      saveLocal();
+      renderAll();
+    }
+  });
+}
+function stopSync() {
+  if (syncUnsub) { dbRef.off('value', syncUnsub); syncUnsub=null; }
+}
+
+function pushToFirebase() {
+  if (!currentUser || !dbRef) return;
+  dbRef.set({ employees: S.employees, schedule: S.schedule });
+}
+
+function doLogin() {
+  if (!firebaseAuth) return;
+  const provider = new firebase.auth.GoogleAuthProvider();
+  firebaseAuth.signInWithPopup(provider).catch(e => showToast('登入失敗: '+e.message));
+}
+function doLogout() {
+  if (firebaseAuth) firebaseAuth.signOut();
+}
+
+function updateAuthUI() {
+  const lb = document.getElementById('login-btn');
+  const lo = document.getElementById('logout-btn');
+  const ul = document.getElementById('user-label');
+  if (currentUser) {
+    lb.style.display = 'none';
+    lo.style.display = '';
+    ul.textContent = currentUser.displayName || currentUser.email;
+    updateSyncStatus('ok', '即時同步中');
+  } else {
+    lb.style.display = firebaseAuth ? '' : 'none';
+    lo.style.display = 'none';
+    ul.textContent = '';
+    if (firebaseAuth) updateSyncStatus('off', '請登入以啟用同步');
+  }
+}
+
+function updateSyncStatus(state, label) {
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-label');
+  dot.className = 'sync-dot sync-' + state;
+  lbl.textContent = label;
+}
+
+function saveFirebaseConfig() {
+  const cfg = {
+    apiKey: document.getElementById('fb-apiKey').value.trim(),
+    authDomain: document.getElementById('fb-authDomain').value.trim(),
+    databaseURL: document.getElementById('fb-dbUrl').value.trim(),
+    projectId: document.getElementById('fb-projectId').value.trim(),
+    storageBucket: document.getElementById('fb-storageBucket').value.trim(),
+    messagingSenderId: document.getElementById('fb-msgSenderId').value.trim(),
+    appId: document.getElementById('fb-appId').value.trim(),
+  };
+  if (!cfg.apiKey || !cfg.databaseURL) {
+    document.getElementById('fb-result').innerHTML = '<div class="imp-err">請至少填入 API Key 和 Database URL</div>';
+    return;
+  }
+  saveFbConfig(cfg);
+  const ok = initFirebase(cfg);
+  document.getElementById('fb-result').innerHTML = ok
+    ? '<div class="imp-ok">✅ Firebase 設定已儲存！請點「登入 Google」完成同步。</div>'
+    : '<div class="imp-err">❌ 設定有誤，請檢查各欄位</div>';
+  document.getElementById('setup-banner').style.display = 'none';
+}
+
+function clearFirebaseConfig() {
+  localStorage.removeItem(LS_FB);
+  stopSync();
+  firebaseApp = firebaseDb = firebaseAuth = null;
+  currentUser = null;
+  updateSyncStatus('off', '本機模式');
+  document.getElementById('setup-banner').style.display = '';
+  document.getElementById('login-btn').style.display = 'none';
+  document.getElementById('logout-btn').style.display = 'none';
+  showToast('已清除 Firebase 設定');
+}
+
+// ══════════════════════════════════════════════
+// SAVE WRAPPER
+// ══════════════════════════════════════════════
+function saveAll() {
+  saveLocal();
+  if (currentUser && dbRef) pushToFirebase();
+}
+
+// ══════════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════════
+let curTab = 'month';
+function switchTab(t) {
+  curTab = t;
+  ['month','week','stats','excel','setup'].forEach(id => {
+    document.getElementById('pane-'+id).style.display = id===t ? '' : 'none';
+    document.getElementById('tab-'+id).classList.toggle('on', id===t);
+  });
+  if (t==='stats') renderStats();
+}
+
+// ══════════════════════════════════════════════
+// RENDER — MONTH
+// ══════════════════════════════════════════════
+function renderMonth() {
+  const days = getMonthDates(S.monthOffset);
+  const now = new Date(); now.setMonth(now.getMonth() + S.monthOffset);
+  const tk = todayKey();
+  document.getElementById('month-label').textContent = `${now.getFullYear()} 年 ${MONTHS_TW[now.getMonth()]}`;
+  document.getElementById('month-sub').textContent = `${days.length} 天`;
+  document.getElementById('cur-month-btn').style.display = S.monthOffset !== 0 ? '' : 'none';
+
+  const wrap = document.getElementById('month-grid-wrap');
+  if (!S.employees.length) {
+    wrap.innerHTML = `<div style="text-align:center;padding:50px 20px;color:var(--tx3)"><div style="font-size:36px;margin-bottom:10px">👤</div><div style="font-size:14px;font-weight:600;margin-bottom:4px">還沒有員工</div><div style="font-size:12px">點擊「＋ 員工」新增，或從 Excel 匯入</div></div>`;
+    document.getElementById('legend-month').innerHTML = '';
+    return;
+  }
+
+  // header row
+  let h = `<div class="mgrid">
+  <div class="mgrid-header">
+    <div class="mg-hcell" style="text-align:left;padding-left:8px">姓名</div>
+    <div class="mg-hcell">班型</div>`;
+  days.forEach(d => {
+    const isT = fmtKey(d) === tk;
+    const dw = DAY_CH[d.getDay()];
+    const isSun = d.getDay() === 0, isSat = d.getDay() === 6;
+    h += `<div class="mg-hcell${isT?' today':''}">
+      <div style="font-size:10px;color:${isSun?'#b91c1c':isSat?'#1d4ed8':'var(--tx3)'}">${dw}</div>
+      <div style="font-size:12px;font-weight:600;color:${isT?'var(--teal-tx)':'var(--tx)'}">${d.getDate()}</div>
+    </div>`;
+  });
+  h += `</div>`; // end header
+
+  S.employees.forEach(emp => {
+    const c = EMP_COLORS[emp.colorIdx % EMP_COLORS.length];
+    h += `<div class="mgrid-row">
+      <div class="mg-cell mg-emp"><div class="emp-dot" style="background:${c}"></div><span class="emp-nm">${emp.name}</span>`;
+    if (!S.isReadOnly) h += `<button class="del-e" onclick="removeEmp(${emp.id})">✕</button>`;
+    h += `</div><div class="mg-cell mg-type"><span style="font-size:11px;color:var(--tx3)">${emp.type||''}</span></div>`;
+
+    days.forEach(d => {
+      const dk = fmtKey(d);
+      const key = `${emp.id}_${dk}`;
+      const sv = S.schedule[key] || null;
+      const sh = sv ? SHIFTS[sv] : null;
+      const isT = dk === tk;
+      if (S.isReadOnly) {
+        h += `<div class="mg-cell" style="${isT?'background:var(--teal-bg)':''}">
+          <div class="shift-pill ro ${sh?sh.cls:'sp-empty'}">${sh?sh.short:'·'}</div>
+        </div>`;
+      } else {
+        h += `<div class="mg-cell" style="${isT?'background:var(--teal-bg)':''}">
+          <div class="shift-pill ${sh?sh.cls:'sp-empty'}" onclick="openShiftModal(${emp.id},'${dk}','${emp.name}','${d.getMonth()+1}/${d.getDate()}')">${sh?sh.short:'·'}</div>
+        </div>`;
+      }
+    });
+    h += `</div>`;
+  });
+  h += `</div>`; // end mgrid
+  wrap.innerHTML = h;
+
+  // Legend
+  document.getElementById('legend-month').innerHTML = SHIFT_KEYS.map(k =>
+    `<div class="li"><div class="ldot" style="background:${SHIFTS[k].bd}"></div>${SHIFTS[k].label}</div>`
+  ).join('');
+}
+
+// ══════════════════════════════════════════════
+// RENDER — WEEK
+// ══════════════════════════════════════════════
+function renderWeek() {
+  const days = getWeekDates(S.weekOffset);
+  const tk = todayKey();
+  const DAY_FULL = ['週日','週一','週二','週三','週四','週五','週六'];
+  document.getElementById('week-range').textContent = fmtD(days[0]) + ' — ' + fmtD(days[6]);
+  document.getElementById('week-name').textContent = S.weekOffset===0?'本週':S.weekOffset<0?`${Math.abs(S.weekOffset)} 週前`:`${S.weekOffset} 週後`;
+  document.getElementById('today-btn').style.display = S.weekOffset!==0 ? '' : 'none';
+
+  const wrap = document.getElementById('week-wrap');
+  if (!S.employees.length) {
+    wrap.innerHTML = `<div style="text-align:center;padding:50px;color:var(--tx3)">尚無員工資料</div>`;
+    return;
+  }
+
+  let h = `<table><thead><tr><th class="ec">員工</th>`;
+  days.forEach((d,i) => {
+    const isT = fmtKey(d)===tk;
+    const dw = DAY_CH[d.getDay()];
+    h += `<th class="dth${isT?' today-h':''}"><div class="dn">${DAY_FULL[d.getDay()]}</div><div style="font-size:13px;font-weight:600;margin-top:1px">${fmtD(d)}</div></th>`;
+  });
+  h += `</tr></thead><tbody>`;
+  S.employees.forEach(emp => {
+    const c = EMP_COLORS[emp.colorIdx % EMP_COLORS.length];
+    h += `<tr class="erow"><td class="ec2"><div class="en"><div class="emp-dot" style="background:${c}"></div><span>${emp.name}</span>`;
+    if (!S.isReadOnly) h += `<button class="del-e" onclick="removeEmp(${emp.id})">✕</button>`;
+    h += `</div></td>`;
+    days.forEach(d => {
+      const dk = fmtKey(d), key = `${emp.id}_${dk}`, sv = S.schedule[key]||null, sh = sv?SHIFTS[sv]:null;
+      const isT = dk===tk;
+      if (S.isReadOnly) {
+        h += `<td style="text-align:center${isT?';background:var(--teal-bg)':''}"><div class="sft-ro" style="background:${sh?sh.bg:'transparent'};color:${sh?sh.tx:'#ccc'};border-color:${sh?sh.bd:'transparent'}">${sh?sh.label:'—'}</div></td>`;
+      } else {
+        h += `<td style="text-align:center${isT?';background:var(--teal-bg)':''}"><button class="sft-btn" style="background:${sh?sh.bg:'transparent'};color:${sh?sh.tx:'#bbb'};border-color:${sh?sh.bd:'#ddd'}" onclick="openShiftModal(${emp.id},'${dk}','${emp.name}','${fmtD(d)}')">${sh?sh.label:'＋'}</button></td>`;
+      }
+    });
+    h += `</tr>`;
+  });
+  h += `</tbody></table>`;
+  wrap.innerHTML = h;
+  document.getElementById('legend-week').innerHTML = SHIFT_KEYS.map(k =>
+    `<div class="li"><div class="ldot" style="background:${SHIFTS[k].bd}"></div>${SHIFTS[k].label}</div>`
+  ).join('');
+}
+
+// ══════════════════════════════════════════════
+// RENDER — STATS
+// ══════════════════════════════════════════════
+function renderStats() {
+  const days = getMonthDates(S.monthOffset);
+  const now = new Date(); now.setMonth(now.getMonth() + S.monthOffset);
+  document.getElementById('stats-month-label').textContent = `${now.getFullYear()} 年 ${MONTHS_TW[now.getMonth()]}`;
+
+  const monthKeys = new Set(days.map(d => fmtKey(d)));
+  const total = Object.keys(S.schedule).filter(k => {
+    const [,dk] = k.split('_'); return monthKeys.has(dk);
+  }).length;
+
+  let sg = `<div class="sc"><div class="sl">員工人數</div><div class="sv">${S.employees.length}</div></div>
+    <div class="sc"><div class="sl">本月排班</div><div class="sv">${total}</div></div>`;
+  SHIFT_KEYS.forEach(sv => {
+    const cnt = Object.entries(S.schedule).filter(([k,v]) => { const [,dk]=k.split('_'); return v===sv && monthKeys.has(dk); }).length;
+    const s = SHIFTS[sv];
+    sg += `<div class="sc" style="background:${s.bg}"><div class="sl" style="color:${s.tx}">${s.label}</div><div class="sv" style="color:${s.tx}">${cnt}</div></div>`;
+  });
+  document.getElementById('stats-grid').innerHTML = sg;
+
+  if (!S.employees.length) { document.getElementById('stats-detail').innerHTML='<div style="color:var(--tx3);font-size:13px;padding:20px 0">尚無資料</div>'; return; }
+
+  let dh = `<div style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--tx2);padding-top:18px">各員工本月班次</div>
+  <table style="width:100%;border-collapse:collapse;font-size:13px">
+  <thead><tr><th style="text-align:left;padding:6px 8px;border-bottom:0.5px solid var(--bd);font-weight:500;color:var(--tx2)">員工</th>
+  <th style="padding:6px 6px;border-bottom:0.5px solid var(--bd);font-weight:500;color:var(--tx2);text-align:center">院區</th>
+  ${SHIFT_KEYS.map(sv=>`<th style="text-align:center;padding:6px 4px;border-bottom:0.5px solid var(--bd);font-weight:600;color:${SHIFTS[sv].tx}">${SHIFTS[sv].label}</th>`).join('')}
+  <th style="text-align:center;padding:6px 4px;border-bottom:0.5px solid var(--bd);font-weight:500;color:var(--tx2)">合計</th></tr></thead><tbody>`;
+
+  S.employees.forEach(emp => {
+    const c = EMP_COLORS[emp.colorIdx % EMP_COLORS.length];
+    const counts = SHIFT_KEYS.map(sv =>
+      Object.entries(S.schedule).filter(([k,v]) => { const [eid,dk]=k.split('_'); return eid==emp.id && v===sv && monthKeys.has(dk); }).length
+    );
+    const t = counts.reduce((a,b)=>a+b,0);
+    dh += `<tr style="border-bottom:0.5px solid var(--bd)">
+      <td style="padding:7px 8px"><div style="display:flex;align-items:center;gap:6px">
+        <div class="emp-dot" style="background:${c}"></div>${emp.name}
+      </div></td>
+      <td style="text-align:center;padding:7px 6px;font-size:12px;color:var(--tx3)">${emp.dept||''}</td>
+      ${counts.map((n,i)=>`<td style="text-align:center;padding:7px 4px;color:${n>0?SHIFTS[SHIFT_KEYS[i]].tx:'var(--tx3)'};font-weight:${n>0?'600':'400'}">${n>0?n:'—'}</td>`).join('')}
+      <td style="text-align:center;padding:7px 4px;font-weight:600">${t}</td></tr>`;
+  });
+  dh += `</tbody></table>`;
+  document.getElementById('stats-detail').innerHTML = dh;
+}
+
+function renderAll() {
+  renderMonth();
+  renderWeek();
+  if (curTab === 'stats') renderStats();
+}
+
+// ══════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════
+function changeMonth(d) { S.monthOffset += d; renderMonth(); if(curTab==='stats') renderStats(); }
+function changeWeek(d) { S.weekOffset += d; renderWeek(); }
+function goCurrentMonth() { S.monthOffset = 0; renderMonth(); }
+function goToday() { S.weekOffset = 0; renderWeek(); }
+
+function copyLastWeek() {
+  const cur = getWeekDates(S.weekOffset), prev = getWeekDates(S.weekOffset-1);
+  let n = 0;
+  S.employees.forEach(emp => {
+    cur.forEach((d,i) => {
+      const ck = `${emp.id}_${fmtKey(d)}`, pk = `${emp.id}_${fmtKey(prev[i])}`;
+      if (S.schedule[pk] && !S.schedule[ck]) { S.schedule[ck] = S.schedule[pk]; n++; }
+    });
+  });
+  saveAll(); renderWeek();
+  showToast(n > 0 ? `已複製 ${n} 筆班別` : '上週無可複製資料');
+}
+
+// ══════════════════════════════════════════════
+// EMPLOYEE MANAGEMENT
+// ══════════════════════════════════════════════
+let newEmpColor = 0;
+function openAddEmp() {
+  newEmpColor = 0;
+  const dots = EMP_COLORS.map((c,i) => `<div class="cp${i===0?' on':''}" style="background:${c}" onclick="selColor(${i})" id="cp-${i}"></div>`).join('');
+  openModal(`<div class="mt">新增員工</div>
+    <input class="mi" id="nm" placeholder="姓名" autofocus onkeydown="if(event.key==='Enter')confirmAddEmp()" />
+    <input class="mi" id="dept" placeholder="院區（如：本院 / 豐濱）" />
+    <input class="mi" id="etype" placeholder="班型（如：夜班 / 正常班）" />
+    <div style="font-size:12px;color:var(--tx3);margin-bottom:7px">顏色</div>
+    <div class="crow">${dots}</div>
+    <div class="ma">
+      <button class="btn" onclick="closeModal()" style="flex:1">取消</button>
+      <button class="btn btn-teal" onclick="confirmAddEmp()" style="flex:2">新增</button>
+    </div>`);
+  setTimeout(() => document.getElementById('nm')?.focus(), 60);
+}
+function selColor(i) {
+  newEmpColor = i;
+  document.querySelectorAll('.cp').forEach((d,j) => d.classList.toggle('on', j===i));
+}
+function confirmAddEmp() {
+  const n = document.getElementById('nm')?.value?.trim();
+  if (!n) return;
+  S.employees.push({ id: Date.now(), name: n, dept: document.getElementById('dept')?.value?.trim()||'', type: document.getElementById('etype')?.value?.trim()||'', colorIdx: newEmpColor });
+  saveAll(); closeModal(); renderAll();
+}
+function removeEmp(id) {
+  S.employees = S.employees.filter(e => e.id !== id);
+  Object.keys(S.schedule).forEach(k => { if (k.startsWith(id+'_')) delete S.schedule[k]; });
+  saveAll(); renderAll();
+}
+
+// ══════════════════════════════════════════════
+// SHIFT MODAL
+// ══════════════════════════════════════════════
+let editingShift = null;
+function openShiftModal(empId, dateKey, empName, dateLabel) {
+  editingShift = { empId, dateKey };
+  const cur = S.schedule[`${empId}_${dateKey}`] || null;
+  let choices = SHIFT_KEYS.map(sv => {
+    const s = SHIFTS[sv];
+    return `<button class="sc2" style="background:${s.bg};color:${s.tx};border-color:${s.bd}${cur===sv?';outline:2px solid '+s.tx:''}" onclick="pickShift('${sv}')">${s.label}</button>`;
+  }).join('');
+  choices += `<button class="sc2" style="background:var(--s2);color:var(--tx2);border-color:var(--bd);grid-column:span 2" onclick="pickShift(null)">清除班別</button>`;
+  openModal(`<div class="mt">編輯班別</div><div class="ms">${empName} · ${dateLabel}</div><div class="sg">${choices}</div>`);
+}
+function pickShift(sv) {
+  const key = `${editingShift.empId}_${editingShift.dateKey}`;
+  if (sv === null) delete S.schedule[key]; else S.schedule[key] = sv;
+  saveAll(); closeModal(); renderAll();
+}
+
+// ══════════════════════════════════════════════
+// EXCEL IMPORT — 花醫格式
+// ══════════════════════════════════════════════
+function doDrag(e, on) { e.preventDefault(); document.getElementById('drop-z').classList.toggle('drag', on); }
+function doDrop(e) { e.preventDefault(); doDrag(e, false); handleFile(e.dataTransfer.files[0]); }
+
+function handleFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'array', cellDates:true});
+      let totalImported = 0, totalSkipped = 0, sheetsProcessed = 0;
+      const previewRows = [];
+
+      wb.SheetNames.forEach(sname => {
+        const ws = wb.Sheets[sname];
+        const raw = XLSX.utils.sheet_to_json(ws, {header:1, defval:null, raw:false});
+        if (raw.length < 8) return;
+
+        // Find the header row (contains '院區','工作','姓名','日期')
+        let headerRow = -1, dateRowNum = -1;
+        for (let i = 0; i < Math.min(raw.length, 12); i++) {
+          const r = raw[i];
+          if (r && r[0]==='院區' && r[2]==='姓名') { headerRow = i; break; }
+        }
+        if (headerRow < 0) return;
+
+        // Determine the month/year from the sheet itself
+        // Dates are in columns 4+ of the header row
+        const headerR = raw[headerRow];
+        const dates = [];
+        for (let c = 4; c < headerR.length - 1; c++) {
+          const v = headerR[c];
+          if (!v) { dates.push(null); continue; }
+          let d = null;
+          if (typeof v === 'string' && v.match(/\d{4}-\d{2}-\d{2}/)) {
+            d = new Date(v);
+          } else if (v instanceof Date) {
+            d = v;
+          } else if (typeof v === 'string') {
+            const m = v.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+            if (m) d = new Date(`${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`);
+          }
+          dates.push(d);
+        }
+        if (!dates.some(d => d)) return;
+
+        // Process employee rows (odd rows starting from headerRow+2, every 2 rows)
+        sheetsProcessed++;
+        for (let ri = headerRow + 2; ri < raw.length; ri += 2) {
+          const row = raw[ri];
+          if (!row || !row[2]) continue;
+          const empName = String(row[2]).trim();
+          const empDept = String(row[0]||'').trim();
+          const empType = String(row[3]||'').trim();
+          if (!empName) continue;
+
+          // Find or create employee
+          let emp = S.employees.find(e => e.name === empName);
+          if (!emp) {
+            emp = { id: Date.now() + Math.random(), name: empName, dept: empDept, type: empType, colorIdx: S.employees.length % EMP_COLORS.length };
+            S.employees.push(emp);
+          }
+
+          // Import shifts
+          dates.forEach((d, ci) => {
+            if (!d) return;
+            const sv = row[ci + 4] ? String(row[ci+4]).trim() : null;
+            if (!sv || !SHIFTS[sv]) { if(sv && sv!='/') totalSkipped++; return; }
+            const dk = fmtKey(d);
+            S.schedule[`${emp.id}_${dk}`] = sv;
+            totalImported++;
+          });
+
+          if (previewRows.length < 5) {
+            previewRows.push({ name: empName, dept: empDept, type: empType, sample: dates.slice(0,7).map((d,ci) => d ? (row[ci+4]||'—') : '').join(' ') });
+          }
+        }
+      });
+
+      if (sheetsProcessed === 0) {
+        document.getElementById('xp-result').innerHTML = '<div class="imp-err">❌ 找不到符合格式的工作表。請確認工作表包含「院區 / 工作 / 姓名 / 日期」標題列。</div>';
+        return;
+      }
+
+      saveAll(); renderAll();
+      document.getElementById('xp-result').innerHTML = `<div class="imp-ok">✅ 成功匯入 ${totalImported} 筆班別，處理 ${sheetsProcessed} 個工作表${totalSkipped>0?`，略過 ${totalSkipped} 筆`:''}</div>`;
+
+      // Show preview
+      if (previewRows.length) {
+        document.getElementById('xp-preview').style.display = '';
+        let ph = `<table class="pt"><thead><tr><th>姓名</th><th>院區</th><th>班型</th><th>前7天班別</th></tr></thead><tbody>`;
+        previewRows.forEach(r => { ph += `<tr><td>${r.name}</td><td>${r.dept}</td><td>${r.type}</td><td style="font-family:monospace">${r.sample}</td></tr>`; });
+        ph += `</tbody></table>`;
+        document.getElementById('preview-tbl').innerHTML = ph;
+      }
+
+      setTimeout(() => switchTab('month'), 1800);
+    } catch(err) {
+      document.getElementById('xp-result').innerHTML = `<div class="imp-err">❌ 讀取失敗：${err.message}</div>`;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ══════════════════════════════════════════════
+// SHARE / EXPORT
+// ══════════════════════════════════════════════
+function doShare() {
+  const enc = btoa(JSON.stringify({employees:S.employees, schedule:S.schedule}));
+  const url = `${location.origin}${location.pathname}?view=share&d=${enc}`;
+  navigator.clipboard.writeText(url).catch(()=>{});
+  showToast('🔗 分享連結已複製！');
+}
+
+function doExport() {
+  if (!window.XLSX) { showToast('請稍候...'); return; }
+  const wb = XLSX.utils.book_new();
+  // Group by month
+  const monthMap = {};
+  Object.keys(S.schedule).forEach(k => {
+    const [eid, dk] = k.split('_');
+    const m = dk.slice(0,7); // YYYY-MM
+    if (!monthMap[m]) monthMap[m] = [];
+    monthMap[m].push({eid, dk, sv: S.schedule[k]});
+  });
+  if (!Object.keys(monthMap).length) { showToast('目前沒有排班資料'); return; }
+
+  Object.keys(monthMap).sort().forEach(ym => {
+    const [y,m] = ym.split('-');
+    const daysInMonth = new Date(+y, +m, 0).getDate();
+    const dates = Array.from({length:daysInMonth}, (_,i) => `${ym}-${String(i+1).padStart(2,'0')}`);
+    const header = ['院區','工作','姓名','班型', ...dates.map(d=>`${+d.slice(5,7)}/${+d.slice(8)}`)];
+    const rows = S.employees.map(emp => [
+      emp.dept||'', '', emp.name, emp.type||'',
+      ...dates.map(dk => S.schedule[`${emp.id}_${dk}`] || '')
+    ]);
+    const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+    ws['!cols'] = [{wch:6},{wch:6},{wch:8},{wch:8}, ...dates.map(()=>({wch:5}))];
+    XLSX.utils.book_append_sheet(wb, ws, MONTHS_TW[+m-1]);
+  });
+  XLSX.writeFile(wb, `花醫班表_匯出.xlsx`);
+  showToast('✅ 已匯出 Excel');
+}
+
+// ══════════════════════════════════════════════
+// MODAL / TOAST
+// ══════════════════════════════════════════════
+function openModal(html) {
+  document.body.insertAdjacentHTML('beforeend', `<div class="modal-bg" id="modal-bg" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()">${html}</div></div>`);
+}
+function closeModal() { document.getElementById('modal-bg')?.remove(); }
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 2800);
+}
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+loadLocal();
+
+// Firebase config — hardcoded
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCCJ_CQWryrLrs3iVhaOkO1SH4I6m7uHog",
+  authDomain: "schedule-516bd.firebaseapp.com",
+  databaseURL: "https://schedule-516bd-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "schedule-516bd",
+  storageBucket: "schedule-516bd.firebasestorage.app",
+  messagingSenderId: "93806822119",
+  appId: "1:93806822119:web:d7f13d8e983934b2bfd842",
+  measurementId: "G-E4YQ6D6WGZ"
+};
+
+// Pre-fill setup fields
+document.getElementById('fb-apiKey').value = FIREBASE_CONFIG.apiKey;
+document.getElementById('fb-authDomain').value = FIREBASE_CONFIG.authDomain;
+document.getElementById('fb-dbUrl').value = FIREBASE_CONFIG.databaseURL;
+document.getElementById('fb-projectId').value = FIREBASE_CONFIG.projectId;
+document.getElementById('fb-storageBucket').value = FIREBASE_CONFIG.storageBucket;
+document.getElementById('fb-msgSenderId').value = FIREBASE_CONFIG.messagingSenderId;
+document.getElementById('fb-appId').value = FIREBASE_CONFIG.appId;
+
+// Auto-init Firebase
+document.getElementById('setup-banner').style.display = 'none';
+initFirebase(FIREBASE_CONFIG);
+
+renderAll();
+</script>
+</body>
+</html>
