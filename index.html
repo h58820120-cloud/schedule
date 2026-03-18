@@ -240,8 +240,8 @@ td.ec2{padding:4px 8px;white-space:nowrap}
       <button class="btn btn-amber" onclick="switchTab('excel')">📊 匯入班表</button>
       <button class="btn" onclick="doExport()">⬇ 匯出</button>
       <button class="btn btn-blue" id="share-btn" onclick="doShare()">🔗 分享</button>
-      <button class="btn btn-teal" id="login-btn" onclick="openLoginModal()" style="display:none">🔐 登入同步</button>
-      <button class="btn" id="logout-btn" onclick="doLogout()" style="display:none">登出</button>
+      <button class="btn btn-teal" id="login-btn" onclick="openLoginModal()">🔐 登入同步</button>
+      <button class="btn" id="logout-btn" onclick="confirmLogout()" style="display:none">登出</button>
     </div>
   </div>
 
@@ -252,6 +252,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
     <div class="tab" id="tab-my" onclick="switchTab('my')">📋 我的班表</div>
     <div class="tab" id="tab-stats" onclick="switchTab('stats')">統計</div>
     <div class="tab" id="tab-excel" onclick="switchTab('excel')">匯入 Excel</div>
+    <div class="tab" id="tab-leave-log" onclick="switchTab('leave-log')">📋 休假紀錄</div>
     <div class="tab" id="tab-review" onclick="switchTab('review')">🔔 審核<span id="review-badge" style="display:none;background:#E24B4A;color:#fff;border-radius:10px;font-size:10px;padding:1px 5px;margin-left:4px">0</span></div>
     <div class="tab" id="tab-setup" onclick="switchTab('setup')">⚙ 設定</div>
   </div>
@@ -357,6 +358,27 @@ td.ec2{padding:4px 8px;white-space:nowrap}
     </div>
   </div>
 
+  <!-- ══ LEAVE LOG PANE ══ -->
+  <div id="pane-leave-log" style="display:none">
+    <div style="padding:22px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+        <div>
+          <div style="font-size:15px;font-weight:600">休假紀錄</div>
+          <div style="font-size:12px;color:var(--tx3);margin-top:2px">所有休假填寫的操作紀錄</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select id="leave-log-month-filter" style="padding:6px 10px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px" onchange="renderLeaveLog()">
+            <option value="">全部月份</option>
+          </select>
+          <select id="leave-log-emp-filter" style="padding:6px 10px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px" onchange="renderLeaveLog()">
+            <option value="">全部員工</option>
+          </select>
+        </div>
+      </div>
+      <div id="leave-log-list"></div>
+    </div>
+  </div>
+
   <!-- ══ REVIEW PANE ══ -->
   <div id="pane-review" style="display:none">
     <div style="padding:22px">
@@ -376,7 +398,12 @@ td.ec2{padding:4px 8px;white-space:nowrap}
 
   <!-- ══ SETUP PANE ══ -->
   <div id="pane-setup" style="display:none">
-    <div class="fb-setup">
+    <div id="setup-no-access" style="display:none;padding:60px 22px;text-align:center;color:var(--tx3)">
+      <div style="font-size:36px;margin-bottom:14px">🔒</div>
+      <div style="font-size:15px;font-weight:500;margin-bottom:6px">無存取權限</div>
+      <div style="font-size:13px">此頁面僅限維護帳號使用</div>
+    </div>
+    <div id="setup-content" class="fb-setup">
       <h2>Firebase 雲端同步設定</h2>
       <p style="font-size:13px;color:var(--tx2);margin-bottom:18px;line-height:1.6">設定後，班表資料會自動同步到 Firebase，網頁版與手機 App 都可以即時看到最新班表。</p>
 
@@ -424,7 +451,25 @@ td.ec2{padding:4px 8px;white-space:nowrap}
           <input type="number" id="free-edit-days" min="0" max="365" value="7" style="width:72px;padding:7px 10px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;text-align:center"/>
           <span style="font-size:13px;color:var(--tx3)">天（0 = 全部需申請）</span>
         </div>
-        <button class="btn btn-teal" onclick="savePolicySettings()" style="font-size:13px">💾 儲存期限設定</button>
+        <hr style="border:none;border-top:0.5px solid var(--bd);margin:16px 0"/>
+        <h2 style="font-size:15px;font-weight:600;margin-bottom:6px">每日休假上限設定</h2>
+        <p style="font-size:13px;color:var(--tx2);margin-bottom:12px;line-height:1.6">超過上限需提申請審核才能生效。半天（上午休/下午休）算 0.5 人次。</p>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+          <label style="font-size:13px;color:var(--tx2);font-weight:500">預設上限（每天）</label>
+          <input type="number" id="max-leave-default" min="0" max="20" value="2"
+            style="width:64px;padding:7px 10px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;text-align:center"/>
+          <span style="font-size:13px;color:var(--tx3)">人次（0 = 不限制）</span>
+        </div>
+        <div style="font-size:13px;font-weight:500;color:var(--tx2);margin-bottom:8px">特定日期另設上限</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+          <input type="date" id="override-date" style="padding:7px 10px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px"/>
+          <input type="number" id="override-limit" min="0" max="20" value="1"
+            style="width:64px;padding:7px 10px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;text-align:center"/>
+          <span style="font-size:13px;color:var(--tx3)">人次</span>
+          <button class="btn btn-blue" style="font-size:12px" onclick="addDailyOverride()">＋ 新增</button>
+        </div>
+        <div id="daily-override-list" style="margin-bottom:12px"></div>
+        <button class="btn btn-teal" onclick="savePolicySettings()" style="font-size:13px">💾 儲存所有期限設定</button>
         <div id="policy-result" style="margin-top:10px"></div>
 
         <hr style="border:none;border-top:0.5px solid var(--bd);margin:20px 0"/>
@@ -467,6 +512,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
       </div>
       <div id="view-result" style="margin-top:10px"></div>
     </div>
+    </div><!-- end setup-content -->
   </div>
 
 </div><!-- end main-card -->
@@ -479,12 +525,15 @@ td.ec2{padding:4px 8px;white-space:nowrap}
 // SHIFT DEFINITIONS
 // ══════════════════════════════════════════════
 const SHIFTS = {
-  '日': { label:'日班', short:'日', bg:'#fff8e8', bd:'#fcd34d', tx:'#92610a', cls:'sp-日' },
-  '小': { label:'小夜', short:'小', bg:'#edfafa', bd:'#90ddd9', tx:'#0a6e6b', cls:'sp-小' },
-  '大': { label:'大夜', short:'大', bg:'#f0eeff', bd:'#c4bbff', tx:'#4438a0', cls:'sp-大' },
-  '休': { label:'休假', short:'休', bg:'#edfbf4', bd:'#90e0b0', tx:'#1a6040', cls:'sp-休' },
+  '日': { label:'日班',  short:'日', bg:'#fff8e8', bd:'#fcd34d', tx:'#92610a', cls:'sp-日' },
+  '小': { label:'小夜',  short:'小', bg:'#edfafa', bd:'#90ddd9', tx:'#0a6e6b', cls:'sp-小' },
+  '大': { label:'大夜',  short:'大', bg:'#f0eeff', bd:'#c4bbff', tx:'#4438a0', cls:'sp-大' },
+  '休': { label:'休假',  short:'休', bg:'#edfbf4', bd:'#90e0b0', tx:'#1a6040', cls:'sp-休', isLeave:true, halfDay:false },
+  '上': { label:'上午休', short:'上', bg:'#fdf2f8', bd:'#f0abda', tx:'#9d174d', cls:'sp-上', isLeave:true, halfDay:true },
+  '下': { label:'下午休', short:'下', bg:'#fdf2f8', bd:'#f0abda', tx:'#9d174d', cls:'sp-下', isLeave:true, halfDay:true },
 };
-const SHIFT_KEYS = ['日','小','大','休'];
+const SHIFT_KEYS = ['日','小','大','休','上','下'];
+const LEAVE_KEYS = ['休','上','下']; // 休假相關班別
 const EMP_COLORS = ['#E24B4A','#EF9F27','#1D9E75','#378ADD','#7F77DD','#D4537E','#639922','#BA7517','#0F6E56','#534AB7'];
 const MONTHS_TW = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
 
@@ -496,6 +545,7 @@ let S = {
   schedule: {},    // { "empId_YYYY-MM-DD": "日|小|大|休" }
   holidays: {},    // { "YYYY-MM-DD": true }
   excluded: {},   // { "empName": true } — previously unchecked
+  leaveLog: [],   // [{empId, empName, dateKey, shift, action, by, at}]
   myPrefs: {},    // per-user prefs { empName, events:{} }
   excludedEmps: new Set(), // names of employees user has excluded
   monthOffset: 0,
@@ -541,11 +591,11 @@ function loadLocal() {
     const params = new URLSearchParams(location.search);
     if (params.get('view')==='share') {
       const d = params.get('d');
-      if (d) { const x=JSON.parse(atob(d)); S.employees=x.employees||[]; S.schedule=x.schedule||{}; S.holidays=x.holidays||{}; S.excluded=x.excluded||{}; S.myPrefs=x.myPrefs||{}; S.excludedEmps=new Set(); S.isReadOnly=true; }
+      if (d) { const x=JSON.parse(atob(d)); S.employees=x.employees||[]; S.schedule=x.schedule||{}; S.holidays=x.holidays||{}; S.excluded=x.excluded||{}; S.leaveLog=x.leaveLog||[]; S.myPrefs=x.myPrefs||{}; S.excludedEmps=new Set(); S.isReadOnly=true; }
       return;
     }
     const raw = localStorage.getItem(LS_DATA);
-    if (raw) { const x=JSON.parse(raw); S.employees=x.employees||[]; S.schedule=x.schedule||{}; S.holidays=x.holidays||{}; S.excluded=x.excluded||{}; S.myPrefs=x.myPrefs||{}; S.excludedEmps=new Set(x.excludedEmps||[]); }
+    if (raw) { const x=JSON.parse(raw); S.employees=x.employees||[]; S.schedule=x.schedule||{}; S.holidays=x.holidays||{}; S.excluded=x.excluded||{}; S.leaveLog=x.leaveLog||[]; S.myPrefs=x.myPrefs||{}; S.excludedEmps=new Set(x.excludedEmps||[]); }
   } catch(e) {}
 }
 
@@ -575,7 +625,6 @@ function initFirebase(cfg) {
     });
 
     updateSyncStatus('off', '已連線，請登入');
-    document.getElementById('login-btn').style.display = '';
     return true;
   } catch(e) {
     updateSyncStatus('err', '連線失敗: ' + e.message);
@@ -592,6 +641,7 @@ function startSync() {
       S.schedule = data.schedule || {};
       S.holidays = data.holidays || {};
       S.excluded = data.excluded || {};
+      S.leaveLog = data.leaveLog || [];
       // myPrefs is per-user, loaded separately
       S.excludedEmps = new Set(data.excludedEmps||[]);
       saveLocal();
@@ -695,10 +745,10 @@ function updateAuthUI() {
       if (curTab === 'setup') renderViewEmpList();
     });
   } else {
-    lb.style.display = firebaseAuth ? '' : 'none';
+    lb.style.display = '';
     lo.style.display = 'none';
     ul.textContent = '';
-    if (firebaseAuth) updateSyncStatus('off', '請登入以啟用同步');
+    updateSyncStatus('off', firebaseAuth ? '請登入以啟用同步' : '未連線 Firebase');
   }
 }
 
@@ -738,7 +788,7 @@ function clearFirebaseConfig() {
   currentUser = null;
   updateSyncStatus('off', '本機模式');
   document.getElementById('setup-banner').style.display = '';
-  document.getElementById('login-btn').style.display = 'none';
+  document.getElementById('login-btn').style.display = '';
   document.getElementById('logout-btn').style.display = 'none';
   showToast('已清除 Firebase 設定');
 }
@@ -796,9 +846,13 @@ function renderMonth() {
     const isHol = !!S.holidays[fmtKey(d)];
     const isSatH = d.getDay()===6;
     const isSunH = d.getDay()===0;
+    const leaveCnt = countLeaveOnDate(fmtKey(d));
+    const maxLv = getMaxLeave(fmtKey(d));
+    const lvOver = maxLv > 0 && leaveCnt >= maxLv;
     h += `<div class="mg-hcell${isT?' today':(isHol||isSunH)?' holiday':isSatH?' sat-hdr':''}">
       <div style="font-size:10px;color:${(isHol||isSun)?'#be185d':isSat?'#166534':'var(--tx3)'}">${dw}</div>
       <div style="font-size:12px;font-weight:600;color:${isT?'var(--teal-tx)':(isHol||isSun)?'#be185d':isSat?'#166534':'var(--tx)'}">${d.getDate()}</div>
+      ${leaveCnt>0?`<div style="font-size:10px;font-weight:700;color:${lvOver?'#b91c1c':'#1a6040'}">休${leaveCnt}</div>`:''}
     </div>`;
   });
   h += `</div>`; // end header
@@ -1481,6 +1535,43 @@ function doExport() {
 }
 
 // ══════════════════════════════════════════════
+// SETUP PANE RENDERER
+// ══════════════════════════════════════════════
+function renderSetupPane() {
+  const isSuper = isSuperAdmin();
+  const noAccess = document.getElementById('setup-no-access');
+  const setupContent = document.getElementById('setup-content');
+  if (noAccess) noAccess.style.display = isSuper ? 'none' : '';
+  if (setupContent) setupContent.style.display = isSuper ? '' : 'none';
+  if (!isSuper) return;
+
+  // Show/hide admin section
+  const adminSec = document.getElementById('role-mgmt-section');
+  if (adminSec) adminSec.style.display = '';
+
+  // Load policy values
+  const fld = document.getElementById('free-edit-days');
+  if (fld) fld.value = policy.freeEditDays ?? 7;
+  const fl2 = document.getElementById('review-flow');
+  if (fl2) fl2.value = policy.reviewFlow || 'two';
+
+  // Pre-fill Firebase config fields
+  const fbCfg = loadFbConfig();
+  if (fbCfg) {
+    if(document.getElementById('fb-apiKey')) document.getElementById('fb-apiKey').value = fbCfg.apiKey||'';
+    if(document.getElementById('fb-authDomain')) document.getElementById('fb-authDomain').value = fbCfg.authDomain||'';
+    if(document.getElementById('fb-dbUrl')) document.getElementById('fb-dbUrl').value = fbCfg.databaseURL||'';
+    if(document.getElementById('fb-projectId')) document.getElementById('fb-projectId').value = fbCfg.projectId||'';
+    if(document.getElementById('fb-storageBucket')) document.getElementById('fb-storageBucket').value = fbCfg.storageBucket||'';
+    if(document.getElementById('fb-msgSenderId')) document.getElementById('fb-msgSenderId').value = fbCfg.messagingSenderId||'';
+    if(document.getElementById('fb-appId')) document.getElementById('fb-appId').value = fbCfg.appId||'';
+  }
+
+  renderRoleUserList();
+  renderViewEmpList();
+}
+
+// ══════════════════════════════════════════════
 // ACCOUNT VIEW SETTINGS
 // ══════════════════════════════════════════════
 function renderViewEmpList() {
@@ -1685,6 +1776,251 @@ initFirebase(FIREBASE_CONFIG);
 
 renderAll();
 
+
+// ══════════════════════════════════════════════
+// LOGOUT
+// ══════════════════════════════════════════════
+function confirmLogout() {
+  openModal(`<div class="mt">確定要登出嗎？</div>
+    <div class="ms">登出後班表資料仍保留在本機</div>
+    <div class="ma" style="margin-top:8px">
+      <button class="btn" onclick="closeModal()" style="flex:1">取消</button>
+      <button class="btn btn-red" onclick="doLogout();closeModal();" style="flex:2">登出</button>
+    </div>`);
+}
+
+// ══════════════════════════════════════════════
+// LEAVE LIMIT & LOG
+// ══════════════════════════════════════════════
+
+// Count leave usage for a given date (full=1, half=0.5)
+function countLeaveOnDate(dateKey) {
+  let total = 0;
+  S.employees.forEach(emp => {
+    const sv = S.schedule[`${emp.id}_${dateKey}`];
+    if (sv === '休') total += 1;
+    else if (sv === '上' || sv === '下') total += 0.5;
+  });
+  return total;
+}
+
+// Check if adding a leave on dateKey would exceed limit
+function getMaxLeave(dateKey) {
+  // Per-day overrides take priority, then default
+  const ll = policy.leaveLimit || {};
+  if (ll.overrides && ll.overrides[dateKey] !== undefined) return ll.overrides[dateKey];
+  return ll.default ?? 2;
+}
+
+function checkLeaveLimit(dateKey, currentShift, newShift) {
+  const max = getMaxLeave(dateKey);
+  if (max === 0) return { ok: true }; // 0 = unlimited
+  const currentCount = countLeaveOnDate(dateKey);
+  const currentContrib = (currentShift === '休') ? 1 : (currentShift === '上' || currentShift === '下') ? 0.5 : 0;
+  const newContrib = (newShift === '休') ? 1 : (newShift === '上' || newShift === '下') ? 0.5 : 0;
+  const projected = currentCount - currentContrib + newContrib;
+  if (projected > max) {
+    return { ok: false, projected, max, msg: `該日已有 ${currentCount} 人次休假，上限為 ${max} 人次` };
+  }
+  return { ok: true, projected };
+}
+
+// Log a leave action
+function logLeaveAction(empId, dateKey, fromShift, toShift) {
+  if (!LEAVE_KEYS.includes(toShift) && !LEAVE_KEYS.includes(fromShift)) return; // not leave related
+  const emp = S.employees.find(e => e.id == empId);
+  const entry = {
+    empId, empName: emp ? emp.name : String(empId),
+    dateKey,
+    from: fromShift || '（空白）',
+    to: toShift || '（空白）',
+    by: currentUser ? currentUser.email : '未登入',
+    at: new Date().toISOString(),
+  };
+  S.leaveLog = [entry, ...(S.leaveLog || [])].slice(0, 500); // keep last 500
+  saveAll();
+}
+
+// ── Override pickShift to add leave logging + limit check ────────────────
+const _origPickShift = pickShift;
+function pickShift(sv) {
+  if (!editingShift) return;
+  const { empId, dateKey } = editingShift;
+  const fromShift = S.schedule[`${empId}_${dateKey}`] || null;
+  const toShift = sv || null;
+
+  // If adding a leave shift, check limit
+  if (toShift && LEAVE_KEYS.includes(toShift)) {
+    const check = checkLeaveLimit(dateKey, fromShift, toShift);
+    if (!check.ok) {
+      // Over limit → must go through review flow
+      closeModal();
+      const fromLabel = fromShift ? (SHIFTS[fromShift]?.label || fromShift) : '（空白）';
+      const toLabel = SHIFTS[toShift]?.label || toShift;
+      const emp = S.employees.find(e => e.id == empId);
+      openModal(`<div class="mt">超過休假上限，需提出申請</div>
+        <div class="ms" style="color:var(--red-tx)">⚠️ ${check.msg}</div>
+        <div style="font-size:13px;color:var(--tx2);margin:10px 0">申請將「${fromLabel}」改為「${toLabel}」，由主任→管理員審核後生效。</div>
+        <input class="mi" id="leave-req-reason" placeholder="申請原因（必填）" />
+        <div class="ma">
+          <button class="btn" onclick="closeModal()" style="flex:1">取消</button>
+          <button class="btn btn-teal" onclick="submitLeaveRequest(${empId},'${dateKey}','${fromLabel}','${toLabel}','${sv}')" style="flex:2">送出申請</button>
+        </div>`);
+      setTimeout(()=>document.getElementById('leave-req-reason')?.focus(),60);
+      return;
+    }
+  }
+  // Log leave action
+  if ((toShift && LEAVE_KEYS.includes(toShift)) || (fromShift && LEAVE_KEYS.includes(fromShift))) {
+    logLeaveAction(empId, dateKey, fromShift, toShift);
+  }
+  _origPickShift(sv);
+}
+
+function forcePickShift(sv) {
+  if (!editingShift) { closeModal(); return; }
+  const { empId, dateKey } = editingShift;
+  const fromShift = S.schedule[`${empId}_${dateKey}`] || null;
+  logLeaveAction(empId, dateKey, fromShift, sv || null);
+  closeModal();
+  const key = `${empId}_${dateKey}`;
+  if (sv) S.schedule[key] = sv;
+  else delete S.schedule[key];
+  saveAll(); renderAll();
+}
+
+function submitLeaveRequest(empId, dateKey, fromLabel, toLabel, toSv) {
+  const reason = document.getElementById('leave-req-reason')?.value?.trim();
+  if (!reason) { showToast('請填寫申請原因'); return; }
+  submitChangeRequest(empId, dateKey, fromLabel, toLabel, reason + '（超休假上限申請）');
+  // Log the attempt
+  logLeaveAction(empId, dateKey, fromLabel, toLabel + '（申請中）');
+  closeModal();
+}
+
+// ── Leave Log Render ──────────────────────────────────────────────────────
+function renderLeaveLog() {
+  const list = document.getElementById('leave-log-list');
+  if (!list) return;
+
+  const logs = S.leaveLog || [];
+
+  // Populate month filter
+  const monthSel = document.getElementById('leave-log-month-filter');
+  const empSel = document.getElementById('leave-log-emp-filter');
+  if (monthSel && monthSel.options.length <= 1) {
+    const months = [...new Set(logs.map(l => l.dateKey ? l.dateKey.slice(0,7) : ''))].filter(Boolean).sort().reverse();
+    months.forEach(m => { const o = document.createElement('option'); o.value = m; o.textContent = m.replace('-','年')+'月'; monthSel.appendChild(o); });
+  }
+  if (empSel && empSel.options.length <= 1) {
+    const emps = [...new Set(logs.map(l => l.empName))].filter(Boolean).sort();
+    emps.forEach(e => { const o = document.createElement('option'); o.value = e; o.textContent = e; empSel.appendChild(o); });
+  }
+
+  const mf = monthSel?.value || '';
+  const ef = empSel?.value || '';
+  let filtered = logs.filter(l => {
+    if (mf && !(l.dateKey||'').startsWith(mf)) return false;
+    if (ef && l.empName !== ef) return false;
+    return true;
+  });
+
+  if (!filtered.length) {
+    list.innerHTML = '<div style="text-align:center;padding:48px;color:var(--tx3);font-size:13px">目前沒有休假紀錄</div>';
+    return;
+  }
+
+  const ACTION_COLORS = {
+    '休': '#1a6040', '上': '#9d174d', '下': '#9d174d',
+    '（空白）': '#888'
+  };
+  list.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead><tr style="border-bottom:0.5px solid var(--bd);background:var(--s2)">
+      <th style="padding:8px 10px;text-align:left;font-weight:500;color:var(--tx2)">員工</th>
+      <th style="padding:8px 10px;text-align:left;font-weight:500;color:var(--tx2)">日期</th>
+      <th style="padding:8px 8px;text-align:center;font-weight:500;color:var(--tx2)">原班別</th>
+      <th style="padding:8px 8px;text-align:center;font-weight:500;color:var(--tx2)">改為</th>
+      <th style="padding:8px 10px;text-align:left;font-weight:500;color:var(--tx2)">操作者</th>
+      <th style="padding:8px 10px;text-align:left;font-weight:500;color:var(--tx2)">時間</th>
+    </tr></thead><tbody>` +
+    filtered.map(l => {
+      const toSh = SHIFTS[l.to];
+      const fromSh = SHIFTS[l.from];
+      const dt = l.at ? l.at.slice(0,16).replace('T',' ') : '';
+      return `<tr style="border-bottom:0.5px solid var(--bd)">
+        <td style="padding:7px 10px;font-weight:600">${l.empName}</td>
+        <td style="padding:7px 10px">${l.dateKey}</td>
+        <td style="padding:7px 8px;text-align:center">
+          <span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:${fromSh?fromSh.bg:'var(--s2)'};color:${fromSh?fromSh.tx:'var(--tx3)'}">${fromSh?fromSh.label:l.from}</span>
+        </td>
+        <td style="padding:7px 8px;text-align:center">
+          <span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:${toSh?toSh.bg:'var(--s2)'};color:${toSh?toSh.tx:'var(--tx3)'}">${toSh?toSh.label:l.to}</span>
+        </td>
+        <td style="padding:7px 10px;font-size:12px;color:var(--tx3)">${l.by}</td>
+        <td style="padding:7px 10px;font-size:12px;color:var(--tx3)">${dt}</td>
+      </tr>`;
+    }).join('') + '</tbody></table>';
+}
+
+
+// ══════════════════════════════════════════════
+// DAILY LEAVE LIMIT OVERRIDES
+// ══════════════════════════════════════════════
+let _pendingOverrides = {}; // local edits before save
+
+function addDailyOverride() {
+  const dateEl = document.getElementById('override-date');
+  const limitEl = document.getElementById('override-limit');
+  const dk = dateEl?.value;
+  const lim = parseInt(limitEl?.value);
+  if (!dk) { showToast('請選擇日期'); return; }
+  if (isNaN(lim) || lim < 0) { showToast('請輸入有效人數'); return; }
+  _pendingOverrides[dk] = lim;
+  renderDailyOverrideList();
+}
+
+function removeDailyOverride(dk) {
+  delete _pendingOverrides[dk];
+  renderDailyOverrideList();
+}
+
+function renderDailyOverrideList() {
+  const list = document.getElementById('daily-override-list');
+  if (!list) return;
+  const entries = Object.entries(_pendingOverrides).sort((a,b) => a[0].localeCompare(b[0]));
+  if (!entries.length) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--tx3);padding:6px 0">無特定日期設定（全部使用預設上限）</div>';
+    return;
+  }
+  list.innerHTML = entries.map(([dk, lim]) =>
+    `<div style="display:flex;align-items:center;gap:10px;padding:6px 10px;border:0.5px solid var(--bd);border-radius:var(--r);margin-bottom:5px;background:var(--s2);font-size:13px">
+      <span style="flex:1;font-weight:500">${dk}</span>
+      <span style="color:var(--teal-tx);font-weight:600">${lim} 人次</span>
+      <button class="btn-red btn" style="font-size:11px;padding:3px 8px" onclick="removeDailyOverride('${dk}')">移除</button>
+    </div>`
+  ).join('');
+}
+
+function saveDailyLimits() {
+  if (!policyRef) return;
+  // Save all overrides to Firebase
+  const updates = {};
+  // First clear old overrides, then set new ones
+  Object.entries(_pendingOverrides).forEach(([dk, lim]) => {
+    updates[`leaveLimit/overrides/${dk}`] = lim;
+  });
+  if (Object.keys(updates).length) policyRef.update(updates);
+}
+
+function loadDailyOverridesIntoEditor() {
+  const overrides = (policy.leaveLimit || {}).overrides || {};
+  _pendingOverrides = { ...overrides };
+  renderDailyOverrideList();
+  // Set default value
+  const defEl = document.getElementById('max-leave-default');
+  if (defEl) defEl.value = (policy.leaveLimit || {}).default ?? 2;
+}
+
 // ══════════════════════════════════════════════
 // PERMISSION & REVIEW SYSTEM
 // ══════════════════════════════════════════════
@@ -1733,10 +2069,11 @@ function initPolicyAndRequests() {
     if (d) policy = d;
     // Show/hide admin section in setup
     const adminSec = document.getElementById('role-mgmt-section');
-    if (adminSec) adminSec.style.display = (myRole() === 'admin') ? '' : 'none';
+    if (adminSec) adminSec.style.display = isSuperAdmin() ? '' : 'none';
     // Load policy values into fields
     const fld = document.getElementById('free-edit-days');
     if (fld) fld.value = policy.freeEditDays ?? 7;
+    loadDailyOverridesIntoEditor();
     const fl2 = document.getElementById('review-flow');
     if (fl2) fl2.value = policy.reviewFlow || 'two';
     // Register current user in roles if not present
@@ -1765,10 +2102,14 @@ function registerUserRole() {
 
 // ── Policy settings (admin only) ─────────────────────────────────────────
 function savePolicySettings() {
-  if (myRole() !== 'admin') { showToast('權限不足'); return; }
+  if (!isSuperAdmin()) { showToast('權限不足'); return; }
   const days = parseInt(document.getElementById('free-edit-days')?.value) || 7;
   const flow = document.getElementById('review-flow')?.value || 'two';
-  policyRef.update({ freeEditDays: days, reviewFlow: flow });
+  const maxLeave = parseInt(document.getElementById('max-leave-default')?.value) ?? 2;
+  const updates = { freeEditDays: days, reviewFlow: flow };
+  updates['leaveLimit/default'] = maxLeave;
+  policyRef.update(updates);
+  saveDailyLimits();
   const el = document.getElementById('policy-result');
   if (el) { el.innerHTML = '<div class="imp-ok">✅ 期限設定已儲存</div>'; setTimeout(()=>el.innerHTML='',3000); }
 }
@@ -2038,16 +2379,19 @@ const _origSwitchTab = switchTab;
 function switchTab(t) {
   // update tab list to include review
   curTab = t;
-  ['month','week','my','stats','excel','setup','review'].forEach(id => {
+  // Redirect non-superadmin away from setup tab
+  if (t === 'setup' && !isSuperAdmin()) { t = 'month'; curTab = 'month'; }
+  ['month','week','my','stats','excel','setup','review','leave-log'].forEach(id => {
     const pane = document.getElementById('pane-'+id);
     const tab = document.getElementById('tab-'+id);
     if (pane) pane.style.display = id===t ? '' : 'none';
     if (tab) tab.classList.toggle('on', id===t);
   });
   if (t==='stats') renderStats();
-  if (t==='setup') { renderViewEmpList(); renderRoleUserList(); const admin=document.getElementById('role-mgmt-section'); if(admin) admin.style.display=(myRole()==='admin')?'':'none'; }
+  if (t==='setup') { renderSetupPane(); }
   if (t==='my') renderMy();
   if (t==='review') renderReviewPane();
+  if (t==='leave-log') renderLeaveLog();
 }
 
 // ── Init hook ─────────────────────────────────────────────────────────────
@@ -2055,6 +2399,14 @@ const _origUpdateAuthUI = updateAuthUI;
 function updateAuthUI() {
   _origUpdateAuthUI();
   if (currentUser && firebaseDb) initPolicyAndRequests();
+  // Hide setup tab for non-superadmin
+  const setupTab = document.getElementById('tab-setup');
+  if (setupTab) setupTab.style.display = isSuperAdmin() ? '' : 'none';
+  // Update role display in sync label
+  setTimeout(() => {
+    const roleLabels = {admin:'管理員', chief:'主任', staff:'一般員工'};
+    updateSyncStatus('ok', currentUser ? ('即時同步中・' + (roleLabels[myRole()]||'')) : '');
+  }, 500);
 }
 
 // ══════════════════════════════════════════════
@@ -2186,48 +2538,8 @@ function notifyRequesterDecision(req, approved) {
   }).catch(e => console.warn('Email failed:', e));
 }
 
-// ── Hook email notifications into existing functions ──────────────────────
-const _origSubmitChangeRequest = submitChangeRequest;
-function submitChangeRequest(empId, dateKey, fromShift, toShift, reason) {
-  _origSubmitChangeRequest(empId, dateKey, fromShift, toShift, reason);
-  // Notify chiefs after a short delay (let Firebase write first)
-  setTimeout(() => {
-    const emp = S.employees.find(e => e.id == empId);
-    notifyChiefsNewRequest({
-      empName: emp ? emp.name : String(empId),
-      dateKey, from: fromShift, to: toShift, reason,
-      requestedBy: currentUser?.email || '未知',
-    });
-  }, 800);
-}
 
-const _origReviewRequest = reviewRequest;
-function reviewRequest(reqId, action, note) {
-  const req = changeRequests[reqId];
-  _origReviewRequest(reqId, action, note);
-  if (!req) return;
-  setTimeout(() => {
-    if (action === 'approve_chief') {
-      notifyAdminsChiefApproved(req);
-    } else if (action === 'approve_admin') {
-      notifyRequesterDecision(req, true);
-    } else if (action === 'reject') {
-      notifyRequesterDecision(req, false);
-    }
-  }, 800);
-}
-
-// Load EmailJS config on init
-document.addEventListener('DOMContentLoaded', () => {
-  setTimeout(loadEmailJsConfig, 500);
-});
-
-// Also reload when switching to setup tab (to show saved values)
-const _origRenderViewEmpList = renderViewEmpList;
-function renderViewEmpList() {
-  _origRenderViewEmpList();
-  loadEmailJsConfig();
-}
 </script>
 </body>
 </html>
+
