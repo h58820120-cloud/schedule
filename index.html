@@ -1714,22 +1714,8 @@ function renderSetupPane() {
   renderRoleUserList();
   renderViewEmpList();
 
-  // Load weekday limit table + cutoff day from Firebase
-  if (policyRef) {
-    policyRef.once('value', snap => {
-      const d = snap.val();
-      if (d) policy = { ...policy, ...d };
-      renderWeekdayLimitTable();
-      const cfd = document.getElementById('free-edit-cutoff-day');
-      if (cfd) cfd.value = policy.cutoffDay ?? 25;
-      const fl2 = document.getElementById('review-flow');
-      if (fl2) fl2.value = policy.reviewFlow || 'two';
-    });
-  } else {
-    renderWeekdayLimitTable();
-    const cfd = document.getElementById('free-edit-cutoff-day');
-    if (cfd) cfd.value = policy.cutoffDay ?? 25;
-  }
+  // Render table with current policy (already loaded by policyUnsub)
+  renderWeekdayLimitTable();
 }
 
 // ══════════════════════════════════════════════
@@ -2182,19 +2168,19 @@ function checkLeaveLimitWeekday(dateKey, fromShift, toShift) {
 }
 
 function renderWeekdayLimitTable() {
-  // Table rows are static HTML - just update the input values from policy
+  // Update all static input values from policy
   const wl = policy.weekdayLimits || {};
   for (let i = 0; i < 7; i++) {
     const row = wl[i] || {};
     ['full','am','pm'].forEach(type => {
       const el = document.getElementById('wl-' + i + '-' + type);
-      if (el) el.value = (row[type] !== undefined && row[type] !== null) ? row[type] : 2;
+      if (el && row[type] !== undefined) el.value = row[type];
     });
   }
   const cfd = document.getElementById('free-edit-cutoff-day');
-  if (cfd) cfd.value = policy.cutoffDay ?? 25;
+  if (cfd && policy.cutoffDay !== undefined) cfd.value = policy.cutoffDay;
   const fl2 = document.getElementById('review-flow');
-  if (fl2) fl2.value = policy.reviewFlow || 'two';
+  if (fl2 && policy.reviewFlow) fl2.value = policy.reviewFlow;
 }
 
 // ══════════════════════════════════════════════
@@ -2279,33 +2265,16 @@ function initPolicyAndRequests() {
   policyUnsub = policyRef.on('value', snap => {
     const d = snap.val();
     if (d) policy = d;
-    // Show/hide admin section in setup
-    const adminSec = document.getElementById('role-mgmt-section');
-    if (adminSec) adminSec.style.display = isSuperAdmin() ? '' : 'none';
-    // Load policy values into fields
-    const fld = document.getElementById('free-edit-days');
-    if (fld) fld.value = policy.freeEditDays ?? 7;
-    loadDailyOverridesIntoEditor();
-    // Reload policy from Firebase then render table
-    if (policyRef) {
-      policyRef.once('value', snap => {
-        const d = snap.val(); if (d) policy = { ...policy, ...d };
-        renderWeekdayLimitTable();
-        const cfd = document.getElementById('free-edit-cutoff-day');
-        if (cfd) cfd.value = policy.cutoffDay ?? 25;
-        const fl2 = document.getElementById('review-flow');
-        if (fl2) fl2.value = policy.reviewFlow || 'two';
-      });
-    } else {
-      renderWeekdayLimitTable();
-      const cfd = document.getElementById('free-edit-cutoff-day');
-      if (cfd) cfd.value = policy.cutoffDay ?? 25;
-    }
-    const fl2 = document.getElementById('review-flow');
-    if (fl2) fl2.value = policy.reviewFlow || 'two';
-    // Register current user in roles if not present
+    // Fill all setup fields immediately (inputs exist in static HTML)
+    renderWeekdayLimitTable();
+    // Register current user if not present
     if (currentUser && !(currentUser.uid.replace(/[.#$[\]]/g,'_') in (policy.roles||{}))) {
       registerUserRole();
+    }
+    // If setup tab is open, refresh the role list too
+    if (curTab === 'setup') {
+      _roleListLoaded = false;
+      renderRoleUserList();
     }
   });
 
