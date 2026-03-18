@@ -240,8 +240,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
       <button class="btn btn-amber" onclick="switchTab('excel')">📊 匯入班表</button>
       <button class="btn" onclick="doExport()">⬇ 匯出</button>
       <button class="btn btn-blue" id="share-btn" onclick="doShare()">🔗 分享</button>
-      <button class="btn btn-teal" id="login-btn" onclick="openLoginModal()">登入</button>
-      <button class="btn" id="logout-btn" onclick="confirmLogout()" style="display:none">登出</button>
+      <button class="btn btn-teal" id="auth-btn" onclick="handleAuthBtn()">登入</button>
     </div>
   </div>
 
@@ -687,7 +686,11 @@ function doGoogleLogin() {
   if (!firebaseAuth) { showToast('Firebase 未連線'); return; }
   const provider = new firebase.auth.GoogleAuthProvider();
   firebaseAuth.signInWithPopup(provider)
-    .then(() => closeModal())
+    .then((result) => {
+      closeModal();
+      // Force UI update in case onAuthStateChanged is slow
+      setTimeout(() => updateAuthUI(), 300);
+    })
     .catch(e => {
       const errEl = document.getElementById('login-err');
       const msg = e.code === 'auth/popup-blocked' ? '彈出視窗被封鎖，請允許此網站開啟彈出視窗'
@@ -720,7 +723,10 @@ function doLogin() {
   const errEl = document.getElementById('login-err');
   if (!email || !pw) { if(errEl){errEl.style.display='';errEl.textContent='請填入 Email 和密碼';} return; }
   firebaseAuth.signInWithEmailAndPassword(email, pw)
-    .then(() => closeModal())
+    .then(() => {
+      closeModal();
+      setTimeout(() => updateAuthUI(), 300);
+    })
     .catch(e => {
       const msg = e.code==='auth/wrong-password'||e.code==='auth/user-not-found'?'Email 或密碼錯誤':
                   e.code==='auth/invalid-email'?'Email 格式不正確':
@@ -739,7 +745,7 @@ function doRegister() {
   if (pw !== pw2) { if(errEl){errEl.style.display='';errEl.textContent='兩次密碼不一致';} return; }
   if (pw.length < 6) { if(errEl){errEl.style.display='';errEl.textContent='密碼至少需要 6 個字元';} return; }
   firebaseAuth.createUserWithEmailAndPassword(email, pw)
-    .then(() => { closeModal(); showToast('✅ 帳號建立成功，已登入！'); })
+    .then(() => { closeModal(); showToast('✅ 帳號建立成功，已登入！'); setTimeout(() => updateAuthUI(), 300); })
     .catch(e => {
       const msg = e.code==='auth/email-already-in-use'?'此 Email 已被使用':
                   e.code==='auth/invalid-email'?'Email 格式不正確':e.message;
@@ -751,12 +757,10 @@ function doLogout() {
 }
 
 function updateAuthUI() {
-  const lb = document.getElementById('login-btn');
-  const lo = document.getElementById('logout-btn');
   const ul = document.getElementById('user-label');
+  const ab = document.getElementById('auth-btn');
   if (currentUser) {
-    lb.style.display = 'none';
-    lo.style.display = '';
+    if (ab) { ab.textContent = '登出'; ab.className = 'btn'; }
     ul.textContent = currentUser.email + (currentUser.email === SUPER_ADMIN_EMAIL ? ' 👑' : '');
     const roleLabels = {admin:'管理員', chief:'主任', staff:'一般員工'};
     updateSyncStatus('ok', '即時同步中・' + (roleLabels[myRole()]||''));
@@ -769,8 +773,7 @@ function updateAuthUI() {
       if (curTab === 'setup') renderViewEmpList();
     });
   } else {
-    lb.style.display = '';
-    lo.style.display = 'none';
+    if (ab) { ab.textContent = '登入'; ab.className = 'btn btn-teal'; }
     ul.textContent = '';
     updateSyncStatus('off', firebaseAuth ? '請登入以啟用同步' : '未連線 Firebase');
   }
@@ -812,8 +815,8 @@ function clearFirebaseConfig() {
   currentUser = null;
   updateSyncStatus('off', '本機模式');
   document.getElementById('setup-banner').style.display = '';
-  document.getElementById('login-btn').style.display = '';
-  document.getElementById('logout-btn').style.display = 'none';
+  const ab2 = document.getElementById('auth-btn');
+  if (ab2) { ab2.textContent = '登入'; ab2.className = 'btn btn-teal'; }
   showToast('已清除 Firebase 設定');
 }
 
@@ -1804,6 +1807,11 @@ renderAll();
 // ══════════════════════════════════════════════
 // LOGOUT
 // ══════════════════════════════════════════════
+function handleAuthBtn() {
+  if (currentUser) confirmLogout();
+  else openLoginModal();
+}
+
 function confirmLogout() {
   openModal(`<div class="mt">確定要登出嗎？</div>
     <div class="ms">登出後班表資料仍保留在本機</div>
@@ -2426,6 +2434,9 @@ function updateAuthUI() {
   // Hide setup tab for non-superadmin
   const setupTab = document.getElementById('tab-setup');
   if (setupTab) setupTab.style.display = isSuperAdmin() ? '' : 'none';
+  // Ensure auth button state is correct
+  const abFinal = document.getElementById('auth-btn');
+  if (abFinal) { abFinal.textContent = currentUser ? '登出' : '登入'; abFinal.className = currentUser ? 'btn' : 'btn btn-teal'; }
   // Update role display in sync label
   setTimeout(() => {
     const roleLabels = {admin:'管理員', chief:'主任', staff:'一般員工'};
