@@ -470,7 +470,92 @@ td.ec2{padding:4px 8px;white-space:nowrap}
                 <th style="padding:8px 10px;text-align:center;font-weight:500;color:var(--tx2);border:0.5px solid var(--bd)">下午休 上限</th>
               </tr>
             </thead>
-            <tbody id="weekday-limit-tbody"></tbody>
+            <tbody id="weekday-limit-tbody">
+              <tr style="border-bottom:0.5px solid var(--bd);">
+                <td style="padding:8px 12px;font-weight:600;border:0.5px solid var(--bd);color:var(--tx)">週一</td>
+                <td style="padding:6px 10px;text-align:center;border:0.5px solid var(--bd)">
+                  <input type="number" id="wl-0-full" min="0" max="20" value="2" style="width:56px;padding:5px 6px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;text-align:center"/>
+                </td>
+                <td style="padding:6px 10px;text-align:center;border:0.5px solid var(--bd)">
+                  <input type="number" id="wl-0-am" min="0" max="20" value="2" style="width:56px;padding:5px 6px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;text-align:center"/>
+                </td>
+                <td style="padding:6px 10px;text-align:center;border:0.5px solid var(--bd)">
+                  <input type="number" id="wl-0-pm" min="0" max="20" value="2" style="width:56px;padding:5px 6px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;text-align:center"/>
+                </td>
+              </tr>
+              <tr style="border-bottom:0.5px solid var(--bd);">
+                <td style="padding:8px 12px;font-weight:600;border:0.5px solid var(--bd);color:var(--tx)">週二</td>
+                <td style="padding:6px 10px;text-align:center;border:0.5px solid var(--bd)">
+                  <input type="number" id="wl-1-full" min="0" max="20" value="2" style="width:56px;padding:5px 6px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;text-align:center"/>
+                </td>
+                <td style="padding:6px 10px;text-align:center;border:0.5px solid var(--bd)">
+                  <input type="number" id="wl-1-am" min="0" max="20" value="2" style="width:56px;padding:5px 6px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;text-align:center"/>
+                </td>
+                <td style="padding:6px 10px;text-align:center;border:0.5px solid var(--bd)">
+                  <input type="number" id="wl-1-pm" min="0" max="20" value="2" style="width:56px;padding:5px 6px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;text-align:center"/>
+                </td>
+              </tr>
+              <tr style="border-bottom:0.5px solid var(--bd);">
+                <td style="padding:8px 12px;font-weight:600;border:0.5px solid var(--bd);color:var(--tx)">週三</td>
+                <td style="padding:6px 10px;text-align:center;border:0.5px solid var(--bd)">
+                  <input type="number" id="wl-2-full" min="0" max="20" value="2" style="width:56px;padding:5px 6px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;text-align:center"/>
+                </td>
+                <td style="padding:6px 10px;text-align:center;border:0.5px solid var(--bd)">
+                  <input type="number" id="wl-2-am" min="0" max="20" value="2" style="width:56px;padding:5px 6px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;text-align:center"/>
+                </td>
+                <td style="padding:6px 10px;text-align:center;border:0.5px solid var(--bd)">
+                  <input type="number" id="wl-2-pm" min="0" max="20" value="2" style="width:56px;padding:5px 6px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;text-align:center"/>
+                </td>
+              </tr>
+              <tr style="border-bottom:0.5px solid var(--bd);">
+                <td style="padding:8px 12px;font-weight:600;border:0.5px solid var(--bd);color:var(--tx)">週四</td>
+                <td style="padding:6px 10px;text-align:center;border:0.5px solid var(--bd)">
+                  <input type="number" id="wl-3-full" min="0" max="20" value="2" style="width:56px;padding:5px 6px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;text-align:center"/>
+                </td>
+                <td style="padding:6px 10px;text-align:center;border:0.5px solid var(--bd)">
+                  <input type="number" id="wl-3-am" min="0" max="20" value="2" style="width:56px;padding:5px 6px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;text-align:center"/>
+                </td>
+                <td style="padding:6px 10px;text-align:center;border:0.5px solid var(--bd)">
+                  <input type="number" id="wl-3-pm" min="0" max="20" value="2" style="width:56px;padding:5px 6px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;text-align:center"/>
+                </td>
+              </tr>
+              <tr style="border-bottom:0.5px solid var(--bd);">
+                <td style="padding:8px 12px;font-weight:600;border:0.5px solid var(--bd);color:var(--tx)">週五</td>
+                <td style="padding:6px 10px;text-align:center;border:0.5px solid var(--bd)">
+                  <input type="number" id="wl-4-full" min="0" max="20" value="2" style="width:56px;padding:5px 6px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;text-align:center"/>
+                </td>
+                <td style="padding:6px 10px;text-align:center;border:0.5px solid var(--bd)">
+                  <input type="number" id="wl-4-am" min="0" max="20" value="2" style="width:56px;padding:5px 6px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;text-align:center"/>
+                </td>
+                <td style="padding:6px 10px;text-align:center;border:0.5px solid var(--bd)">
+                  <input type="number" id="wl-4-pm" min="0" max="20" value="2" style="width:56px;padding:5px 6px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;text-align:center"/>
+                </td>
+              </tr>
+              <tr style="border-bottom:0.5px solid var(--bd);background:#f0fff4">
+                <td style="padding:8px 12px;font-weight:600;border:0.5px solid var(--bd);color:#166534">週六</td>
+                <td style="padding:6px 10px;text-align:center;border:0.5px solid var(--bd)">
+                  <input type="number" id="wl-5-full" min="0" max="20" value="2" style="width:56px;padding:5px 6px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;text-align:center"/>
+                </td>
+                <td style="padding:6px 10px;text-align:center;border:0.5px solid var(--bd)">
+                  <input type="number" id="wl-5-am" min="0" max="20" value="2" style="width:56px;padding:5px 6px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;text-align:center"/>
+                </td>
+                <td style="padding:6px 10px;text-align:center;border:0.5px solid var(--bd)">
+                  <input type="number" id="wl-5-pm" min="0" max="20" value="2" style="width:56px;padding:5px 6px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;text-align:center"/>
+                </td>
+              </tr>
+              <tr style="border-bottom:0.5px solid var(--bd);background:#fff5f5">
+                <td style="padding:8px 12px;font-weight:600;border:0.5px solid var(--bd);color:#b91c1c">週日</td>
+                <td style="padding:6px 10px;text-align:center;border:0.5px solid var(--bd)">
+                  <input type="number" id="wl-6-full" min="0" max="20" value="2" style="width:56px;padding:5px 6px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;text-align:center"/>
+                </td>
+                <td style="padding:6px 10px;text-align:center;border:0.5px solid var(--bd)">
+                  <input type="number" id="wl-6-am" min="0" max="20" value="2" style="width:56px;padding:5px 6px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;text-align:center"/>
+                </td>
+                <td style="padding:6px 10px;text-align:center;border:0.5px solid var(--bd)">
+                  <input type="number" id="wl-6-pm" min="0" max="20" value="2" style="width:56px;padding:5px 6px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;text-align:center"/>
+                </td>
+              </tr>
+            </tbody>
           </table>
         </div>
         <button class="btn btn-teal" onclick="savePolicySettings()" style="font-size:13px">💾 儲存所有期限設定</button>
@@ -2097,24 +2182,19 @@ function checkLeaveLimitWeekday(dateKey, fromShift, toShift) {
 }
 
 function renderWeekdayLimitTable() {
-  const tbody = document.getElementById('weekday-limit-tbody');
-  if (!tbody) return;
+  // Table rows are static HTML - just update the input values from policy
   const wl = policy.weekdayLimits || {};
-  const def = 2; // default per slot
-  tbody.innerHTML = DAY_NAMES_JS.map((dn, i) => {
+  for (let i = 0; i < 7; i++) {
     const row = wl[i] || {};
-    const isSat = i === 5, isSun = i === 6;
-    const rowBg = isSun ? 'background:#fff5f5' : isSat ? 'background:#f0fff4' : '';
-    const mkInput = (type, defaultVal) =>
-      `<input type="number" id="wl-${i}-${type}" min="0" max="20" value="${(row[type] !== undefined && row[type] !== null) ? row[type] : defaultVal}"
-        style="width:56px;padding:5px 6px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;text-align:center"/>`;
-    return `<tr style="border-bottom:0.5px solid var(--bd);${rowBg}">
-      <td style="padding:8px 12px;font-weight:600;border:0.5px solid var(--bd);color:${isSun?'#b91c1c':isSat?'#166534':'var(--tx)'}">${dn}</td>
-      <td style="padding:6px 10px;text-align:center;border:0.5px solid var(--bd)">${mkInput('full', def)}</td>
-      <td style="padding:6px 10px;text-align:center;border:0.5px solid var(--bd)">${mkInput('am', def)}</td>
-      <td style="padding:6px 10px;text-align:center;border:0.5px solid var(--bd)">${mkInput('pm', def)}</td>
-    </tr>`;
-  }).join('');
+    ['full','am','pm'].forEach(type => {
+      const el = document.getElementById('wl-' + i + '-' + type);
+      if (el) el.value = (row[type] !== undefined && row[type] !== null) ? row[type] : 2;
+    });
+  }
+  const cfd = document.getElementById('free-edit-cutoff-day');
+  if (cfd) cfd.value = policy.cutoffDay ?? 25;
+  const fl2 = document.getElementById('review-flow');
+  if (fl2) fl2.value = policy.reviewFlow || 'two';
 }
 
 // ══════════════════════════════════════════════
