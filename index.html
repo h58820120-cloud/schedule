@@ -1602,6 +1602,7 @@ function renderSetupPane() {
     if(document.getElementById('fb-appId')) document.getElementById('fb-appId').value = fbCfg.appId||'';
   }
 
+  _roleListLoaded = false;
   renderRoleUserList();
   renderViewEmpList();
 }
@@ -2059,13 +2060,13 @@ function renderWeekdayLimitTable() {
   const tbody = document.getElementById('weekday-limit-tbody');
   if (!tbody) return;
   const wl = policy.weekdayLimits || {};
-  const def = (policy.leaveLimit || {}).default ?? 2;
+  const def = 2; // default per slot
   tbody.innerHTML = DAY_NAMES_JS.map((dn, i) => {
     const row = wl[i] || {};
     const isSat = i === 5, isSun = i === 6;
     const rowBg = isSun ? 'background:#fff5f5' : isSat ? 'background:#f0fff4' : '';
     const mkInput = (type, defaultVal) =>
-      `<input type="number" id="wl-${i}-${type}" min="0" max="20" value="${row[type] ?? defaultVal}"
+      `<input type="number" id="wl-${i}-${type}" min="0" max="20" value="${(row[type] !== undefined && row[type] !== null) ? row[type] : defaultVal}"
         style="width:56px;padding:5px 6px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;text-align:center"/>`;
     return `<tr style="border-bottom:0.5px solid var(--bd);${rowBg}">
       <td style="padding:8px 12px;font-weight:600;border:0.5px solid var(--bd);color:${isSun?'#b91c1c':isSat?'#166534':'var(--tx)'}">${dn}</td>
@@ -2144,6 +2145,7 @@ function loadDailyOverridesIntoEditor() {
 //   /changeRequests  { reqId: { empId, dateKey, from, to, reason, requestedBy, requestedAt, status, reviews:[] } }
 
 let policy = { freeEditDays: 7, reviewFlow: 'two', roles: {} };
+let _roleListLoaded = false;
 let changeRequests = {};
 let policyRef = null, requestsRef = null;
 let reqUnsub = null, policyUnsub = null;
@@ -2193,8 +2195,21 @@ function initPolicyAndRequests() {
     const fld = document.getElementById('free-edit-days');
     if (fld) fld.value = policy.freeEditDays ?? 7;
     loadDailyOverridesIntoEditor();
-    renderWeekdayLimitTable();
-    const cfd=document.getElementById('free-edit-cutoff-day'); if(cfd) cfd.value=policy.cutoffDay??25;
+    // Reload policy from Firebase then render table
+    if (policyRef) {
+      policyRef.once('value', snap => {
+        const d = snap.val(); if (d) policy = { ...policy, ...d };
+        renderWeekdayLimitTable();
+        const cfd = document.getElementById('free-edit-cutoff-day');
+        if (cfd) cfd.value = policy.cutoffDay ?? 25;
+        const fl2 = document.getElementById('review-flow');
+        if (fl2) fl2.value = policy.reviewFlow || 'two';
+      });
+    } else {
+      renderWeekdayLimitTable();
+      const cfd = document.getElementById('free-edit-cutoff-day');
+      if (cfd) cfd.value = policy.cutoffDay ?? 25;
+    }
     const fl2 = document.getElementById('review-flow');
     if (fl2) fl2.value = policy.reviewFlow || 'two';
     // Register current user in roles if not present
@@ -2213,11 +2228,13 @@ function initPolicyAndRequests() {
 function registerUserRole() {
   if (!currentUser || !policyRef) return;
   const uid = currentUser.uid.replace(/[.#$[\]]/g,'_');
-  // Super admin always registers as admin
+  // Super admin = admin, everyone else = staff (never auto-promote)
   const role = (currentUser.email === SUPER_ADMIN_EMAIL) ? 'admin' : 'staff';
-  // Only register if not already in roles (don't overwrite existing roles)
-  if (!(uid in (policy.roles || {}))) {
+  const existingRoles = policy.roles || {};
+  if (!(uid in existingRoles)) {
     policyRef.child('roles/' + uid).set({ email: currentUser.email, role });
+  } else if (currentUser.email === SUPER_ADMIN_EMAIL && existingRoles[uid]?.role !== 'admin') {
+    policyRef.child('roles/' + uid + '/role').set('admin');
   }
 }
 
@@ -2262,9 +2279,21 @@ function saveRoleSettings() {
 function renderRoleUserList() {
   const list = document.getElementById('role-user-list');
   if (!list) return;
+  // Always reload from Firebase first to get latest data
+  if (policyRef && !_roleListLoaded) {
+    _roleListLoaded = true;
+    policyRef.once('value', snap => {
+      const d = snap.val();
+      if (d) { policy = { ...policy, ...d }; }
+      renderRoleUserList();
+    });
+    list.innerHTML = '<div style="font-size:13px;color:var(--tx3);padding:10px">載入中...</div>';
+    return;
+  }
+  _roleListLoaded = false; // reset for next open
   const roles = policy.roles || {};
   if (!Object.keys(roles).length) {
-    list.innerHTML = '<div style="font-size:13px;color:var(--tx3)">尚無其他登入帳號。其他人登入後會自動出現在這裡。</div>';
+    list.innerHTML = '<div style="font-size:13px;color:var(--tx3)">尚無帳號紀錄。請先讓員工登入一次系統。</div>';
     return;
   }
   const ROLE_LABELS = { admin:'管理員', chief:'主任', staff:'一般員工' };
