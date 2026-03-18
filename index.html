@@ -1605,6 +1605,23 @@ function renderSetupPane() {
   _roleListLoaded = false;
   renderRoleUserList();
   renderViewEmpList();
+
+  // Load weekday limit table + cutoff day from Firebase
+  if (policyRef) {
+    policyRef.once('value', snap => {
+      const d = snap.val();
+      if (d) policy = { ...policy, ...d };
+      renderWeekdayLimitTable();
+      const cfd = document.getElementById('free-edit-cutoff-day');
+      if (cfd) cfd.value = policy.cutoffDay ?? 25;
+      const fl2 = document.getElementById('review-flow');
+      if (fl2) fl2.value = policy.reviewFlow || 'two';
+    });
+  } else {
+    renderWeekdayLimitTable();
+    const cfd = document.getElementById('free-edit-cutoff-day');
+    if (cfd) cfd.value = policy.cutoffDay ?? 25;
+  }
 }
 
 // ══════════════════════════════════════════════
@@ -2536,153 +2553,4 @@ function switchTab(t) {
   // update tab list to include review
   curTab = t;
   // Redirect non-superadmin away from setup tab
-  if (t === 'setup' && !isSuperAdmin()) { t = 'month'; curTab = 'month'; }
-  ['month','week','my','stats','excel','setup','review','leave-log'].forEach(id => {
-    const pane = document.getElementById('pane-'+id);
-    const tab = document.getElementById('tab-'+id);
-    if (pane) pane.style.display = id===t ? '' : 'none';
-    if (tab) tab.classList.toggle('on', id===t);
-  });
-  if (t==='stats') renderStats();
-  if (t==='setup') { renderSetupPane(); }
-  if (t==='my') renderMy();
-  if (t==='review') renderReviewPane();
-  if (t==='leave-log') renderLeaveLog();
-}
-
-// ── Init hook ─────────────────────────────────────────────────────────────
-
-
-// ══════════════════════════════════════════════
-// EMAILJS NOTIFICATION SYSTEM
-// ══════════════════════════════════════════════
-
-let ejsConfig = { publicKey: '', serviceId: '', templateId: '' };
-const EJS_LS = 'emailjs_config_v1';
-
-function loadEmailJsConfig() {
-  try {
-    const raw = localStorage.getItem(EJS_LS);
-    if (raw) ejsConfig = JSON.parse(raw);
-  } catch(e) {}
-  // Fill fields
-  const pk = document.getElementById('ejs-public-key');
-  const si = document.getElementById('ejs-service-id');
-  const ti = document.getElementById('ejs-template-id');
-  if (pk) pk.value = ejsConfig.publicKey || '';
-  if (si) si.value = ejsConfig.serviceId || '';
-  if (ti) ti.value = ejsConfig.templateId || '';
-  // Init EmailJS
-  if (ejsConfig.publicKey && window.emailjs) {
-    emailjs.init({ publicKey: ejsConfig.publicKey });
-  }
-}
-
-function saveEmailJsConfig() {
-  ejsConfig = {
-    publicKey: document.getElementById('ejs-public-key')?.value?.trim() || '',
-    serviceId: document.getElementById('ejs-service-id')?.value?.trim() || '',
-    templateId: document.getElementById('ejs-template-id')?.value?.trim() || '',
-  };
-  localStorage.setItem(EJS_LS, JSON.stringify(ejsConfig));
-  // Also save to Firebase policy so other admins can see it
-  if (policyRef && myRole() === 'admin') {
-    policyRef.update({ emailjs: ejsConfig });
-  }
-  if (ejsConfig.publicKey && window.emailjs) {
-    emailjs.init({ publicKey: ejsConfig.publicKey });
-  }
-  const el = document.getElementById('email-result');
-  if (el) { el.innerHTML = '<div class="imp-ok">✅ Email 設定已儲存</div>'; setTimeout(()=>el.innerHTML='',3000); }
-}
-
-function sendTestEmail() {
-  const cfg = getEmailConfig();
-  if (!cfg) return;
-  sendEmail({
-    to_email: currentUser?.email || '',
-    to_name: '管理員',
-    subject: '【花醫班表】Email 通知測試',
-    message: '這是一封測試信，Email 通知功能設定成功！',
-    action_url: window.location.href,
-  }).then(() => {
-    const el = document.getElementById('email-result');
-    if (el) { el.innerHTML = '<div class="imp-ok">✅ 測試信已發送，請檢查信箱</div>'; setTimeout(()=>el.innerHTML='',4000); }
-  }).catch(e => {
-    const el = document.getElementById('email-result');
-    if (el) { el.innerHTML = '<div class="imp-err">❌ 發送失敗：' + e.text + '</div>'; }
-  });
-}
-
-function getEmailConfig() {
-  // Try localStorage first, then Firebase policy
-  const cfg = ejsConfig.publicKey ? ejsConfig : (policy.emailjs || {});
-  if (!cfg.publicKey || !cfg.serviceId || !cfg.templateId) return null;
-  if (!window.emailjs) return null;
-  if (!emailjs._init) emailjs.init({ publicKey: cfg.publicKey });
-  return cfg;
-}
-
-function sendEmail(params) {
-  const cfg = getEmailConfig();
-  if (!cfg || !params.to_email) return Promise.resolve();
-  return emailjs.send(cfg.serviceId, cfg.templateId, params);
-}
-
-// Get emails of users by role
-function getEmailsByRole(role) {
-  const roles = policy.roles || {};
-  return Object.values(roles)
-    .filter(u => u.role === role && u.email)
-    .map(u => u.email);
-}
-
-// Notify all chiefs when new request submitted
-function notifyChiefsNewRequest(req) {
-  const chiefs = getEmailsByRole('chief');
-  const admins = getEmailsByRole('admin');
-  const targets = [...new Set([...chiefs, ...admins])];
-  targets.forEach(email => {
-    sendEmail({
-      to_email: email,
-      to_name: '主任/管理員',
-      subject: `【花醫班表】新的班表修改申請 — ${req.empName} ${req.dateKey}`,
-      message: `${req.requestedBy} 申請修改 ${req.empName} 在 ${req.dateKey} 的班別：\n${req.from} → ${req.to}\n\n原因：${req.reason}\n\n請登入班表系統審核。`,
-      action_url: window.location.href,
-    }).catch(e => console.warn('Email failed:', e));
-  });
-}
-
-// Notify admins when chief approves
-function notifyAdminsChiefApproved(req) {
-  const admins = getEmailsByRole('admin');
-  admins.forEach(email => {
-    sendEmail({
-      to_email: email,
-      to_name: '管理員',
-      subject: `【花醫班表】申請待您最終核可 — ${req.empName} ${req.dateKey}`,
-      message: `主任已同意 ${req.requestedBy} 的班表修改申請：\n${req.empName} ${req.dateKey}：${req.from} → ${req.to}\n\n請登入班表系統完成最終核可。`,
-      action_url: window.location.href,
-    }).catch(e => console.warn('Email failed:', e));
-  });
-}
-
-// Notify requester of final decision
-function notifyRequesterDecision(req, approved) {
-  const requesterEmail = req.requestedBy;
-  if (!requesterEmail) return;
-  sendEmail({
-    to_email: requesterEmail,
-    to_name: req.requestedBy.split('@')[0],
-    subject: `【花醫班表】您的申請已${approved?'核准':'駁回'} — ${req.empName} ${req.dateKey}`,
-    message: approved
-      ? `您申請修改 ${req.empName} 在 ${req.dateKey} 的班別（${req.from} → ${req.to}）已獲管理員核准，班表已自動更新。`
-      : `您申請修改 ${req.empName} 在 ${req.dateKey} 的班別（${req.from} → ${req.to}）已被駁回，請聯絡主任或管理員了解詳情。`,
-    action_url: window.location.href,
-  }).catch(e => console.warn('Email failed:', e));
-}
-
-
-</script>
-</body>
-</html>
+  if (
