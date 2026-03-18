@@ -240,7 +240,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
       <button class="btn btn-amber" onclick="switchTab('excel')">📊 匯入班表</button>
       <button class="btn" onclick="doExport()">⬇ 匯出</button>
       <button class="btn btn-blue" id="share-btn" onclick="doShare()">🔗 分享</button>
-      <button class="btn btn-teal" id="login-btn" onclick="openLoginModal()">🔐 登入同步</button>
+      <button class="btn btn-teal" id="login-btn" onclick="openLoginModal()">登入</button>
       <button class="btn" id="logout-btn" onclick="confirmLogout()" style="display:none">登出</button>
     </div>
   </div>
@@ -659,19 +659,43 @@ function pushToFirebase() {
 }
 
 function openLoginModal() {
-  openModal(`<div class="mt">登入雲端同步</div>
-    <div class="ms">使用 Email + 密碼登入，資料將同步到所有裝置</div>
+  openModal(`<div class="mt">登入帳號</div>
+    <div class="ms">選擇登入方式以啟用雲端同步</div>
+    <button class="btn" onclick="doGoogleLogin()" style="width:100%;padding:11px;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:10px;font-size:14px;font-weight:500;border:1px solid var(--bd2)">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      使用 Google 帳號登入
+    </button>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <div style="flex:1;height:0.5px;background:var(--bd)"></div>
+      <span style="font-size:12px;color:var(--tx3)">或</span>
+      <div style="flex:1;height:0.5px;background:var(--bd)"></div>
+    </div>
     <input class="mi" id="login-email" type="email" placeholder="Email" />
     <input class="mi" id="login-pw" type="password" placeholder="密碼" onkeydown="if(event.key==='Enter')doLogin()" />
-    <div id="login-err" style="font-size:12px;color:var(--red);margin-bottom:10px;display:none"></div>
+    <div id="login-err" style="font-size:12px;color:var(--red-tx);background:var(--red-bg);border-radius:var(--r);padding:6px 10px;margin-bottom:10px;display:none"></div>
     <div class="ma" style="margin-bottom:10px">
       <button class="btn" onclick="closeModal()" style="flex:1">取消</button>
-      <button class="btn btn-teal" onclick="doLogin()" style="flex:2">登入</button>
+      <button class="btn btn-teal" onclick="doLogin()" style="flex:2">Email 登入</button>
     </div>
     <div style="text-align:center;font-size:12px;color:var(--tx3)">
       沒有帳號？<a href="#" onclick="openRegisterModal();return false" style="color:var(--teal-tx)">註冊新帳號</a>
     </div>`);
   setTimeout(()=>document.getElementById('login-email')?.focus(),60);
+}
+
+function doGoogleLogin() {
+  if (!firebaseAuth) { showToast('Firebase 未連線'); return; }
+  const provider = new firebase.auth.GoogleAuthProvider();
+  firebaseAuth.signInWithPopup(provider)
+    .then(() => closeModal())
+    .catch(e => {
+      const errEl = document.getElementById('login-err');
+      const msg = e.code === 'auth/popup-blocked' ? '彈出視窗被封鎖，請允許此網站開啟彈出視窗'
+        : e.code === 'auth/popup-closed-by-user' ? '登入視窗已關閉'
+        : e.code === 'auth/cancelled-popup-request' ? ''
+        : e.message;
+      if (msg && errEl) { errEl.style.display=''; errEl.textContent=msg; }
+    });
 }
 
 function openRegisterModal() {
@@ -2542,4 +2566,3 @@ function notifyRequesterDecision(req, approved) {
 </script>
 </body>
 </html>
-
