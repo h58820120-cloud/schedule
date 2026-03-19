@@ -2,8 +2,18 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <title>花醫班表系統</title>
+<meta name="description" content="花蓮醫院檢驗科班表管理系統"/>
+<meta name="theme-color" content="#0d7377"/>
+<!-- PWA -->
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="花醫班表"/>
+<link rel="manifest" href="manifest.json"/>
+<!-- iOS icons -->
+<link rel="apple-touch-icon" sizes="180x180" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' rx='40' fill='%230d7377'/><text y='115' x='90' text-anchor='middle' font-size='100'>🏥</text></svg>"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <!-- Firebase v9 compat -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -24,7 +34,16 @@
   --green:#065f46;--green-bg:#d1fae5;--green-bd:#6ee7b7;--green-tx:#064e3b;
   --r:8px;--rl:14px;
 }
-body{font-family:'Noto Sans TC','PingFang TC',sans-serif;background:var(--bg);color:var(--tx);font-size:14px;min-height:100vh}
+body{font-family:'Noto Sans TC','PingFang TC',sans-serif;background:var(--bg);color:var(--tx);font-size:14px;min-height:100vh;
+  padding-top:env(safe-area-inset-top);
+  padding-bottom:env(safe-area-inset-bottom);
+  padding-left:env(safe-area-inset-left);
+  padding-right:env(safe-area-inset-right);
+}
+/* PWA standalone mode */
+@media (display-mode: standalone) {
+  .hdr { padding-top: max(16px, env(safe-area-inset-top)); }
+}
 input,select,button{font-family:inherit;font-size:13px}
 
 /* ── Layout ── */
@@ -236,6 +255,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
       </div>
     </div>
     <div class="hdr-r" id="hdr-r">
+      <button class="btn" id="install-btn" onclick="installPWA()" style="display:none;background:var(--teal-bg);color:var(--teal-tx);border-color:var(--teal-bd)">📲 安裝 App</button>
       <button class="btn btn-teal" id="add-emp-btn" onclick="openAddEmp()">＋ 員工</button>
       <button class="btn btn-amber" onclick="switchTab('excel')">📊 匯入班表</button>
       <button class="btn" onclick="doExport()">⬇ 匯出</button>
@@ -2506,335 +2526,4 @@ function reviewRequest(reqId, action, note) {
   let newStatus = req.status;
   if (action === 'reject') { newStatus = 'rejected'; }
   else if (action === 'approve_chief') {
-    newStatus = (policy.reviewFlow === 'one') ? 'approved' : 'pending_admin';
-  } else if (action === 'approve_admin') { newStatus = 'approved'; }
-
-  const updates = {
-    status: newStatus,
-    reviews: [...(req.reviews||[]), review]
-  };
-  if (newStatus === 'approved') {
-    // Actually apply the change
-    const key = req.empId + '_' + req.dateKey;
-    if (req.to && req.to !== '（空白）') S.schedule[key] = req.to;
-    else delete S.schedule[key];
-    saveAll();
-    updates.appliedAt = timestamp;
-  }
-  requestsRef.child(reqId).update(updates);
-  renderReviewPane();
-}
-
-// ── Review pane rendering ─────────────────────────────────────────────────
-let reviewFilter = 'pending';
-function setReviewFilter(f) {
-  reviewFilter = f;
-  document.getElementById('filter-pending-btn')?.classList.toggle('btn-teal', f==='pending');
-  document.getElementById('filter-pending-btn')?.classList.toggle('btn', true);
-  document.getElementById('filter-all-btn')?.classList.toggle('btn-teal', f==='all');
-  renderReviewPane();
-}
-
-function updateReviewBadge() {
-  const role = myRole();
-  let count = 0;
-  Object.values(changeRequests).forEach(req => {
-    if (req.status === 'pending_chief' && (role === 'chief' || role === 'admin')) count++;
-    else if (req.status === 'pending_admin' && role === 'admin') count++;
-  });
-  const badge = document.getElementById('review-badge');
-  if (badge) { badge.style.display = count > 0 ? '' : 'none'; badge.textContent = count; }
-}
-
-const STATUS_LABEL = {
-  pending_chief: { text:'待主任審核', color:'var(--amber-tx)', bg:'var(--amber-bg)' },
-  pending_admin: { text:'待管理員核可', color:'var(--blue-tx)', bg:'var(--blue-bg)' },
-  approved:      { text:'已核准', color:'var(--green-tx)', bg:'var(--green-bg)' },
-  rejected:      { text:'已駁回', color:'var(--red-tx)', bg:'var(--red-bg)' },
-};
-
-function renderReviewPane() {
-  const list = document.getElementById('review-list');
-  if (!list) return;
-  const role = myRole();
-  const reqs = Object.entries(changeRequests);
-  let filtered = reqs;
-  if (reviewFilter === 'pending') {
-    filtered = reqs.filter(([,r]) => r.status==='pending_chief'||r.status==='pending_admin');
-  }
-  filtered.sort((a,b) => (b[1].requestedAt||'').localeCompare(a[1].requestedAt||''));
-
-  if (!filtered.length) {
-    list.innerHTML = '<div style="text-align:center;padding:48px;color:var(--tx3);font-size:13px">' + (reviewFilter==='pending'?'目前沒有待審核申請':'尚無紀錄') + '</div>';
-    return;
-  }
-
-  list.innerHTML = filtered.map(([id, req]) => {
-    const sl = STATUS_LABEL[req.status] || STATUS_LABEL.rejected;
-    const dt = req.requestedAt ? req.requestedAt.slice(0,16).replace('T',' ') : '';
-    const canActChief = (role==='chief'||role==='admin') && req.status==='pending_chief';
-    const canActAdmin = role==='admin' && req.status==='pending_admin';
-    const history = (req.reviews||[]).map(r => {
-      const rl = STATUS_LABEL[r.action]||{};
-      const actionTxt = r.action==='approve_chief'?'主任同意':r.action==='approve_admin'?'管理員核可':r.action==='reject'?'駁回':'操作';
-      return `<div style="font-size:11px;color:var(--tx3);margin-top:4px">・${r.reviewer} ${actionTxt}${r.note?' — '+r.note:''} (${r.timestamp.slice(0,16).replace('T',' ')})</div>`;
-    }).join('');
-
-    const actions = (canActChief || canActAdmin) ? `
-      <div style="display:flex;gap:7px;margin-top:12px;flex-wrap:wrap">
-        <button class="btn btn-green" style="font-size:12px" onclick="openReviewAction('${id}','approve')">✓ 核准</button>
-        <button class="btn btn-red" style="font-size:12px" onclick="openReviewAction('${id}','reject')">✕ 駁回</button>
-      </div>` : '';
-
-    return `<div style="background:var(--surface);border:0.5px solid var(--bd);border-radius:var(--rl);padding:16px 18px;margin-bottom:10px">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap">
-        <div>
-          <div style="font-size:13px;font-weight:600">${req.empName} · ${req.dateKey}</div>
-          <div style="font-size:12px;color:var(--tx2);margin-top:3px">${req.from} → ${req.to}</div>
-          ${req.reason ? `<div style="font-size:12px;color:var(--tx3);margin-top:3px">原因：${req.reason}</div>` : ''}
-          <div style="font-size:11px;color:var(--tx3);margin-top:4px">申請人：${req.requestedBy} · ${dt}</div>
-          ${history}
-        </div>
-        <div style="padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600;background:${sl.bg};color:${sl.color};white-space:nowrap;flex-shrink:0">${sl.text}</div>
-      </div>
-      ${actions}
-    </div>`;
-  }).join('');
-}
-
-function openReviewAction(reqId, type) {
-  const req = changeRequests[reqId];
-  if (!req) return;
-  const role = myRole();
-  const isChiefAction = type === 'approve' && req.status === 'pending_chief';
-  const actionKey = type === 'reject' ? 'reject' : (isChiefAction ? 'approve_chief' : 'approve_admin');
-  const title = type === 'approve' ? '核准申請' : '駁回申請';
-
-  openModal(`<div class="mt">${title}</div>
-    <div class="ms">${req.empName} · ${req.dateKey} · ${req.from} → ${req.to}</div>
-    <input class="mi" id="review-note" placeholder="備註（選填）" />
-    <div class="ma">
-      <button class="btn" onclick="closeModal()" style="flex:1">取消</button>
-      <button class="btn ${type==='approve'?'btn-green':'btn-red'}" onclick="doReviewAction('${reqId}','${actionKey}')" style="flex:2">${title}</button>
-    </div>`);
-  setTimeout(()=>document.getElementById('review-note')?.focus(),60);
-}
-
-function doReviewAction(reqId, actionKey) {
-  const note = document.getElementById('review-note')?.value?.trim() || '';
-  reviewRequest(reqId, actionKey, note);
-  closeModal();
-}
-
-// ── Override openShiftModal to check permissions ──────────────────────────
-const _origOpenShiftModal = openShiftModal;
-function openShiftModal(empId, dateKey, empName, dateLabel) {
-  if (!currentUser) { _origOpenShiftModal(empId, dateKey, empName, dateLabel); return; }
-  const role = myRole();
-  const free = canEditFree(dateKey);
-
-  if (free || role === 'admin' || role === 'chief') {
-    _origOpenShiftModal(empId, dateKey, empName, dateLabel);
-    return;
-  }
-
-  // Staff beyond limit: show request modal
-  const cur = S.schedule[empId + '_' + dateKey] || null;
-  const curLabel = cur ? (SHIFTS[cur]?.label || cur) : '（空白）';
-  const choices = SHIFT_KEYS.map(sv => {
-    const s = SHIFTS[sv];
-    return `<button class="sc2" style="background:${s.bg};color:${s.tx};border-color:${s.bd}" onclick="selectRequestShift('${sv}')">${s.label}</button>`;
-  }).join('');
-  openModal(`
-    <div class="mt">申請修改班別</div>
-    <div class="ms">${empName} · ${dateLabel} · 目前：${curLabel}</div>
-    <div style="font-size:12px;color:var(--amber-tx);background:var(--amber-bg);border:0.5px solid var(--amber-bd);border-radius:var(--r);padding:8px 12px;margin-bottom:12px">
-      此日期已超過可自由修改期限，修改需提出申請由主任→管理員核可
-    </div>
-    <div style="font-size:12px;color:var(--tx2);margin-bottom:8px">申請改為：</div>
-    <div class="sg" style="margin-bottom:10px">${choices}
-      <button class="sc2" style="background:var(--s2);color:var(--tx2);border-color:var(--bd);grid-column:span 2" onclick="selectRequestShift('')">清除班別</button>
-    </div>
-    <div id="req-to-display" style="font-size:13px;color:var(--teal-tx);font-weight:600;margin-bottom:8px;display:none"></div>
-    <input class="mi" id="req-reason" placeholder="修改原因（必填）" />
-    <div class="ma">
-      <button class="btn" onclick="closeModal()" style="flex:1">取消</button>
-      <button class="btn btn-teal" onclick="submitRequest(${empId},'${dateKey}','${cur||''}','${curLabel}')" style="flex:2">送出申請</button>
-    </div>`);
-  document.getElementById('req-reason')?.focus?.();
-}
-
-let _pendingToShift = null;
-function selectRequestShift(sv) {
-  _pendingToShift = sv;
-  const label = sv ? (SHIFTS[sv]?.label || sv) : '（清除班別）';
-  const disp = document.getElementById('req-to-display');
-  if (disp) { disp.style.display=''; disp.textContent = '申請改為：' + label; }
-}
-
-function submitRequest(empId, dateKey, fromShift, fromLabel) {
-  const reason = document.getElementById('req-reason')?.value?.trim();
-  if (!reason) { showToast('請填寫修改原因'); return; }
-  if (_pendingToShift === null) { showToast('請選擇要改成的班別'); return; }
-  const toLabel = _pendingToShift ? (SHIFTS[_pendingToShift]?.label || _pendingToShift) : '（空白）';
-  submitChangeRequest(empId, dateKey, fromLabel, toLabel, reason);
-  _pendingToShift = null;
-  closeModal();
-}
-
-// ── Hook into switchTab for review ───────────────────────────────────────
-const _origSwitchTab = switchTab;
-function switchTab(t) {
-  // update tab list to include review
-  curTab = t;
-  // Redirect non-superadmin away from setup tab
-  if (t === 'setup' && !isSuperAdmin()) { t = 'month'; curTab = 'month'; }
-  ['month','week','my','stats','excel','setup','review','leave-log'].forEach(id => {
-    const pane = document.getElementById('pane-'+id);
-    const tab = document.getElementById('tab-'+id);
-    if (pane) pane.style.display = id===t ? '' : 'none';
-    if (tab) tab.classList.toggle('on', id===t);
-  });
-  if (t==='stats') renderStats();
-  if (t==='setup') { renderSetupPane(); }
-  if (t==='my') renderMy();
-  if (t==='review') renderReviewPane();
-  if (t==='leave-log') renderLeaveLog();
-}
-
-// ── Init hook ─────────────────────────────────────────────────────────────
-
-
-// ══════════════════════════════════════════════
-// EMAILJS NOTIFICATION SYSTEM
-// ══════════════════════════════════════════════
-
-let ejsConfig = { publicKey: '', serviceId: '', templateId: '' };
-const EJS_LS = 'emailjs_config_v1';
-
-function loadEmailJsConfig() {
-  try {
-    const raw = localStorage.getItem(EJS_LS);
-    if (raw) ejsConfig = JSON.parse(raw);
-  } catch(e) {}
-  // Fill fields
-  const pk = document.getElementById('ejs-public-key');
-  const si = document.getElementById('ejs-service-id');
-  const ti = document.getElementById('ejs-template-id');
-  if (pk) pk.value = ejsConfig.publicKey || '';
-  if (si) si.value = ejsConfig.serviceId || '';
-  if (ti) ti.value = ejsConfig.templateId || '';
-  // Init EmailJS
-  if (ejsConfig.publicKey && window.emailjs) {
-    emailjs.init({ publicKey: ejsConfig.publicKey });
-  }
-}
-
-function saveEmailJsConfig() {
-  ejsConfig = {
-    publicKey: document.getElementById('ejs-public-key')?.value?.trim() || '',
-    serviceId: document.getElementById('ejs-service-id')?.value?.trim() || '',
-    templateId: document.getElementById('ejs-template-id')?.value?.trim() || '',
-  };
-  localStorage.setItem(EJS_LS, JSON.stringify(ejsConfig));
-  // Also save to Firebase policy so other admins can see it
-  if (policyRef && myRole() === 'admin') {
-    policyRef.update({ emailjs: ejsConfig });
-  }
-  if (ejsConfig.publicKey && window.emailjs) {
-    emailjs.init({ publicKey: ejsConfig.publicKey });
-  }
-  const el = document.getElementById('email-result');
-  if (el) { el.innerHTML = '<div class="imp-ok">✅ Email 設定已儲存</div>'; setTimeout(()=>el.innerHTML='',3000); }
-}
-
-function sendTestEmail() {
-  const cfg = getEmailConfig();
-  if (!cfg) return;
-  sendEmail({
-    to_email: currentUser?.email || '',
-    to_name: '管理員',
-    subject: '【花醫班表】Email 通知測試',
-    message: '這是一封測試信，Email 通知功能設定成功！',
-    action_url: window.location.href,
-  }).then(() => {
-    const el = document.getElementById('email-result');
-    if (el) { el.innerHTML = '<div class="imp-ok">✅ 測試信已發送，請檢查信箱</div>'; setTimeout(()=>el.innerHTML='',4000); }
-  }).catch(e => {
-    const el = document.getElementById('email-result');
-    if (el) { el.innerHTML = '<div class="imp-err">❌ 發送失敗：' + e.text + '</div>'; }
-  });
-}
-
-function getEmailConfig() {
-  // Try localStorage first, then Firebase policy
-  const cfg = ejsConfig.publicKey ? ejsConfig : (policy.emailjs || {});
-  if (!cfg.publicKey || !cfg.serviceId || !cfg.templateId) return null;
-  if (!window.emailjs) return null;
-  if (!emailjs._init) emailjs.init({ publicKey: cfg.publicKey });
-  return cfg;
-}
-
-function sendEmail(params) {
-  const cfg = getEmailConfig();
-  if (!cfg || !params.to_email) return Promise.resolve();
-  return emailjs.send(cfg.serviceId, cfg.templateId, params);
-}
-
-// Get emails of users by role
-function getEmailsByRole(role) {
-  const roles = policy.roles || {};
-  return Object.values(roles)
-    .filter(u => u.role === role && u.email)
-    .map(u => u.email);
-}
-
-// Notify all chiefs when new request submitted
-function notifyChiefsNewRequest(req) {
-  const chiefs = getEmailsByRole('chief');
-  const admins = getEmailsByRole('admin');
-  const targets = [...new Set([...chiefs, ...admins])];
-  targets.forEach(email => {
-    sendEmail({
-      to_email: email,
-      to_name: '主任/管理員',
-      subject: `【花醫班表】新的班表修改申請 — ${req.empName} ${req.dateKey}`,
-      message: `${req.requestedBy} 申請修改 ${req.empName} 在 ${req.dateKey} 的班別：\n${req.from} → ${req.to}\n\n原因：${req.reason}\n\n請登入班表系統審核。`,
-      action_url: window.location.href,
-    }).catch(e => console.warn('Email failed:', e));
-  });
-}
-
-// Notify admins when chief approves
-function notifyAdminsChiefApproved(req) {
-  const admins = getEmailsByRole('admin');
-  admins.forEach(email => {
-    sendEmail({
-      to_email: email,
-      to_name: '管理員',
-      subject: `【花醫班表】申請待您最終核可 — ${req.empName} ${req.dateKey}`,
-      message: `主任已同意 ${req.requestedBy} 的班表修改申請：\n${req.empName} ${req.dateKey}：${req.from} → ${req.to}\n\n請登入班表系統完成最終核可。`,
-      action_url: window.location.href,
-    }).catch(e => console.warn('Email failed:', e));
-  });
-}
-
-// Notify requester of final decision
-function notifyRequesterDecision(req, approved) {
-  const requesterEmail = req.requestedBy;
-  if (!requesterEmail) return;
-  sendEmail({
-    to_email: requesterEmail,
-    to_name: req.requestedBy.split('@')[0],
-    subject: `【花醫班表】您的申請已${approved?'核准':'駁回'} — ${req.empName} ${req.dateKey}`,
-    message: approved
-      ? `您申請修改 ${req.empName} 在 ${req.dateKey} 的班別（${req.from} → ${req.to}）已獲管理員核准，班表已自動更新。`
-      : `您申請修改 ${req.empName} 在 ${req.dateKey} 的班別（${req.from} → ${req.to}）已被駁回，請聯絡主任或管理員了解詳情。`,
-    action_url: window.location.href,
-  }).catch(e => console.warn('Email failed:', e));
-}
-
-
-</script>
-</body>
-</html>
+    newStatus = (polic
