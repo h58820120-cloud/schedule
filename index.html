@@ -2022,8 +2022,12 @@ function showEmpSelectModal(data) {
   const emps = data.employees;
   emps.sort((a,b) => (a.sortOrder||999) - (b.sortOrder||999));
 
+  // Find employees new to the system (not in current S.employees)
+  const existingNames = new Set(S.employees.map(e => e.name));
+
   let rows = emps.map((emp, i) => {
     const c = EMP_COLORS[emp.colorIdx % EMP_COLORS.length];
+    const isNew = !existingNames.has(emp.name);
     // Default: checked unless explicitly excluded before
     const shouldCheck = !(data.excluded && data.excluded[emp.name]);
     return `<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r);cursor:pointer;border:0.5px solid var(--bd);margin-bottom:6px;background:${isNew?'var(--surface)':'var(--s2)'}" onmouseover="this.style.background='var(--s3)'" onmouseout="this.style.background='${isNew?'var(--surface)':'var(--s2)'}'">
