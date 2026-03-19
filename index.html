@@ -245,6 +245,16 @@ td.ec2{padding:4px 8px;white-space:nowrap}
   </div>
 
   <!-- Tabs -->
+  <div id="pending-banner" style="display:none;padding:40px 22px;text-align:center">
+    <div style="font-size:36px;margin-bottom:14px">⏳</div>
+    <div style="font-size:16px;font-weight:600;margin-bottom:8px">帳號審核中</div>
+    <div style="font-size:13px;color:var(--tx2);line-height:1.7;margin-bottom:20px">
+      你的帳號正在等待管理員審核，<br>審核通過後即可使用完整功能。<br>
+      <span style="font-size:12px;color:var(--tx3)">請聯絡管理員加速審核</span>
+    </div>
+    <button class="btn" onclick="confirmLogout()">登出</button>
+  </div>
+  <div id="main-tabs-content">
   <div class="tabs">
     <div class="tab on" id="tab-month" onclick="switchTab('month')">月視圖</div>
     <div class="tab" id="tab-week" onclick="switchTab('week')">週視圖</div>
@@ -604,6 +614,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
     </div><!-- end setup-content -->
   </div>
 
+  </div><!-- end main-tabs-content -->
 </div><!-- end main-card -->
 </div><!-- end wrap -->
 
@@ -651,8 +662,18 @@ function myRole() {
   if (!currentUser) return 'staff';
   if (currentUser.email === SUPER_ADMIN_EMAIL) return 'admin';
   const uid = currentUser.uid.replace(/[.#$[\]]/g,'_');
-  if (policy.roles && policy.roles[uid]) return policy.roles[uid].role || 'staff';
-  return 'staff';
+  const info = policy.roles && policy.roles[uid];
+  if (!info) return 'staff';
+  if (info.status === 'pending') return 'pending';
+  return info.role || 'staff';
+}
+
+function myDisplayName() {
+  if (!currentUser) return '';
+  if (currentUser.email === SUPER_ADMIN_EMAIL) return currentUser.displayName || currentUser.email;
+  const uid = currentUser.uid.replace(/[.#$[\]]/g,'_');
+  const info = policy.roles && policy.roles[uid];
+  return (info && info.displayName) ? info.displayName : (currentUser.displayName || currentUser.email);
 }
 
 function canEditFree(dateKey) {
@@ -813,16 +834,17 @@ function doGoogleLogin() {
 function openRegisterModal() {
   closeModal();
   openModal(`<div class="mt">註冊帳號</div>
-    <div class="ms">建立 Email 帳號以啟用雲端同步</div>
+    <div class="ms">建立後需等待管理員審核才能使用</div>
+    <input class="mi" id="reg-name" type="text" placeholder="你的名字（必填）" />
     <input class="mi" id="reg-email" type="email" placeholder="Email" />
     <input class="mi" id="reg-pw" type="password" placeholder="密碼（至少 6 碼）" />
     <input class="mi" id="reg-pw2" type="password" placeholder="確認密碼" onkeydown="if(event.key==='Enter')doRegister()" />
-    <div id="reg-err" style="font-size:12px;color:var(--red);margin-bottom:10px;display:none"></div>
+    <div id="reg-err" style="font-size:12px;color:var(--red-tx);background:var(--red-bg);border-radius:var(--r);padding:6px 10px;margin-bottom:10px;display:none"></div>
     <div class="ma">
-      <button class="btn" onclick="closeModal()" style="flex:1">取消</button>
-      <button class="btn btn-teal" onclick="doRegister()" style="flex:2">註冊</button>
+      <button class="btn" onclick="openLoginModal()" style="flex:1">返回</button>
+      <button class="btn btn-teal" onclick="doRegister()" style="flex:2">送出申請</button>
     </div>`);
-  setTimeout(()=>document.getElementById('reg-email')?.focus(),60);
+  setTimeout(()=>document.getElementById('reg-name')?.focus(),60);
 }
 
 function doLogin() {
@@ -843,15 +865,25 @@ function doLogin() {
 
 function doRegister() {
   if (!firebaseAuth) return;
+  const name = document.getElementById('reg-name')?.value?.trim();
   const email = document.getElementById('reg-email')?.value?.trim();
   const pw = document.getElementById('reg-pw')?.value;
   const pw2 = document.getElementById('reg-pw2')?.value;
   const errEl = document.getElementById('reg-err');
+  if (!name) { if(errEl){errEl.style.display='';errEl.textContent='請填寫你的名字';} return; }
   if (!email||!pw) { if(errEl){errEl.style.display='';errEl.textContent='請填入所有欄位';} return; }
   if (pw !== pw2) { if(errEl){errEl.style.display='';errEl.textContent='兩次密碼不一致';} return; }
   if (pw.length < 6) { if(errEl){errEl.style.display='';errEl.textContent='密碼至少需要 6 個字元';} return; }
   firebaseAuth.createUserWithEmailAndPassword(email, pw)
-    .then(() => { closeModal(); showToast('✅ 帳號建立成功，已登入！'); setTimeout(() => updateAuthUI(), 300); })
+    .then(result => {
+      // Save display name to Firebase Auth profile
+      return result.user.updateProfile({ displayName: name });
+    })
+    .then(() => {
+      closeModal();
+      showToast('✅ 申請已送出，請等待管理員審核');
+      updateAuthUI();
+    })
     .catch(e => {
       const msg = e.code==='auth/email-already-in-use'?'此 Email 已被使用':
                   e.code==='auth/invalid-email'?'Email 格式不正確':e.message;
@@ -866,25 +898,36 @@ function updateAuthUI() {
   const ab = document.getElementById('auth-btn');
   const ul = document.getElementById('user-label');
   const setupTab = document.getElementById('tab-setup');
+  const pendingBanner = document.getElementById('pending-banner');
+  const mainContent = document.getElementById('main-tabs-content');
 
   if (currentUser) {
     if (ab) { ab.textContent = '登出'; ab.onclick = confirmLogout; ab.className = 'btn'; }
-    if (ul) ul.textContent = currentUser.email + (currentUser.email === SUPER_ADMIN_EMAIL ? ' 👑' : '');
+    const role = myRole();
+    const isPending = role === 'pending';
+    // Show/hide pending banner vs main content
+    if (pendingBanner) pendingBanner.style.display = isPending ? '' : 'none';
+    if (mainContent) mainContent.style.display = isPending ? 'none' : '';
+    if (ul) ul.textContent = myDisplayName() + (isSuperAdmin() ? ' 👑' : '');
     if (setupTab) setupTab.style.display = isSuperAdmin() ? '' : 'none';
-    const roleLabels = {admin:'管理員', chief:'主任', staff:'一般員工'};
-    updateSyncStatus('ok', '即時同步中・' + (roleLabels[myRole()]||''));
-    if (currentUser && firebaseDb) initPolicyAndRequests();
-    loadUserPrefs(prefs => {
-      S.myPrefs = prefs;
-      if (curTab === 'my') renderMy();
-      else populateMyEmpSelect();
-      renderAll();
-      if (curTab === 'setup') renderViewEmpList();
-    });
+    const roleLabels = {admin:'管理員', chief:'主任', staff:'一般員工', pending:'待審核'};
+    updateSyncStatus('ok', '已登入・' + (roleLabels[role]||role));
+    if (firebaseDb) initPolicyAndRequests();
+    if (!isPending) {
+      loadUserPrefs(prefs => {
+        S.myPrefs = prefs;
+        if (curTab === 'my') renderMy();
+        else populateMyEmpSelect();
+        renderAll();
+        if (curTab === 'setup') renderViewEmpList();
+      });
+    }
   } else {
     if (ab) { ab.textContent = '登入'; ab.onclick = openLoginModal; ab.className = 'btn btn-teal'; }
     if (ul) ul.textContent = '';
     if (setupTab) setupTab.style.display = 'none';
+    if (pendingBanner) pendingBanner.style.display = 'none';
+    if (mainContent) mainContent.style.display = '';
     updateSyncStatus('off', firebaseAuth ? '請登入以啟用同步' : '未連線 Firebase');
   }
 }
@@ -2269,9 +2312,22 @@ function initPolicyAndRequests() {
     renderWeekdayLimitTable();
     // Re-render role list (fast, uses already-loaded data)
     renderRoleUserList();
-    // Register current user if not already in roles
-    if (currentUser && !(currentUser.uid.replace(/[.#$[\]]/g,'_') in (policy.roles||{}))) {
-      registerUserRole();
+    // Update displayed name in header
+    const ul = document.getElementById('user-label');
+    if (ul && currentUser) ul.textContent = myDisplayName() + (isSuperAdmin() ? ' 👑' : '');
+    // Re-check user status (admin may have approved/rejected)
+    if (currentUser) {
+      const uid = currentUser.uid.replace(/[.#$[\]]/g,'_');
+      if (!(uid in (policy.roles||{}))) {
+        registerUserRole();
+      } else {
+        // Status may have changed (e.g. approved) - update UI
+        const pendingBanner = document.getElementById('pending-banner');
+        const mainContent = document.getElementById('main-tabs-content');
+        const role = myRole();
+        if (pendingBanner) pendingBanner.style.display = role==='pending' ? '' : 'none';
+        if (mainContent) mainContent.style.display = role==='pending' ? 'none' : '';
+      }
     }
   });
 
@@ -2285,14 +2341,20 @@ function initPolicyAndRequests() {
 function registerUserRole() {
   if (!currentUser || !policyRef) return;
   const uid = currentUser.uid.replace(/[.#$[\]]/g,'_');
-  // Super admin = admin, everyone else = staff (never auto-promote)
-  const role = (currentUser.email === SUPER_ADMIN_EMAIL) ? 'admin' : 'staff';
   const existingRoles = policy.roles || {};
-  if (!(uid in existingRoles)) {
-    policyRef.child('roles/' + uid).set({ email: currentUser.email, role });
-  } else if (currentUser.email === SUPER_ADMIN_EMAIL && existingRoles[uid]?.role !== 'admin') {
-    policyRef.child('roles/' + uid + '/role').set('admin');
+  if (uid in existingRoles) {
+    if (currentUser.email === SUPER_ADMIN_EMAIL && existingRoles[uid]?.role !== 'admin') {
+      policyRef.child('roles/' + uid + '/role').set('admin');
+    }
+    return;
   }
+  const isSA = currentUser.email === SUPER_ADMIN_EMAIL;
+  policyRef.child('roles/' + uid).set({
+    email: currentUser.email,
+    displayName: currentUser.displayName || '',
+    role: isSA ? 'admin' : 'staff',
+    status: isSA ? 'approved' : 'pending'
+  });
 }
 
 // ── Policy settings (admin only) ─────────────────────────────────────────
@@ -2312,6 +2374,33 @@ function savePolicySettings() {
   }
   const el = document.getElementById('policy-result');
   if (el) { el.innerHTML = '<div class="imp-ok">✅ 期限設定已儲存</div>'; setTimeout(()=>el.innerHTML='',3000); }
+}
+
+function approveUser(uid) {
+  if (!policyRef) return;
+  policyRef.child('roles/' + uid).update({ status: 'approved' });
+  showToast('✅ 已核准帳號');
+}
+
+function rejectUser(uid) {
+  openModal(`<div class="mt">拒絕帳號</div>
+    <div class="ms">拒絕後此帳號將無法使用系統</div>
+    <div class="ma">
+      <button class="btn" onclick="closeModal()" style="flex:1">取消</button>
+      <button class="btn btn-red" onclick="doRejectUser('${uid}')" style="flex:2">確定拒絕</button>
+    </div>`.replace('${uid}', uid));
+}
+
+function doRejectUser(uid) {
+  if (!policyRef) return;
+  policyRef.child('roles/' + uid).update({ status: 'rejected', role: 'staff' });
+  closeModal();
+  showToast('已拒絕帳號');
+}
+
+function saveDisplayName(uid, name) {
+  if (!policyRef || !name.trim()) return;
+  policyRef.child('roles/' + uid + '/displayName').set(name.trim());
 }
 
 function saveRoleSettings() {
@@ -2365,12 +2454,21 @@ function renderRoleUserList() {
           <option value="chief" ${info.role==='chief'?'selected':''}>主任</option>
           <option value="staff" ${(info.role||'staff')==='staff'?'selected':''}>一般員工</option>
         </select>`;
+    const isPending = info.status === 'pending';
+    const pendingBadge = isPending ? '<span style="font-size:10px;background:var(--amber-bg);color:var(--amber-tx);border:0.5px solid var(--amber-bd);border-radius:10px;padding:1px 7px;margin-left:6px">待審核</span>' : '';
+    const approveBtn = isPending ? `<button class="btn btn-green" style="font-size:11px;padding:4px 10px" onclick="approveUser('${uid}')">✓ 核准</button>
+      <button class="btn btn-red" style="font-size:11px;padding:4px 10px" onclick="rejectUser('${uid}')">✕ 拒絕</button>` : '';
+    const nameEdit = !disabled && !isPending ? `<input style="width:80px;padding:3px 6px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--surface);font-size:12px;color:var(--tx)" 
+      id="name-${uid}" value="${info.displayName||''}" placeholder="名字" onblur="saveDisplayName('${uid}',this.value)"/>` : '';
     return `<div class="role-row" data-uid="${uid}" data-email="${info.email||''}"
-      style="display:flex;align-items:center;gap:10px;padding:8px 12px;border:0.5px solid ${isSuper?'var(--purple-bd)':'var(--bd)'};border-radius:var(--r);margin-bottom:6px;background:${isSuper?'var(--purple-bg)':'var(--s2)'}">
+      style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:0.5px solid ${isSuper?'var(--purple-bd)':isPending?'var(--amber-bd)':'var(--bd)'};border-radius:var(--r);margin-bottom:6px;background:${isSuper?'var(--purple-bg)':isPending?'var(--amber-bg)':'var(--s2)'}">
       <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${info.email||uid}${badge}</div>
+        <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${info.displayName||info.email||uid}${badge}${pendingBadge}</div>
+        <div style="font-size:11px;color:var(--tx3);margin-top:2px">${info.email||''}</div>
       </div>
+      ${nameEdit}
       ${sel}
+      ${approveBtn}
     </div>`;
   }).join('');
 }
