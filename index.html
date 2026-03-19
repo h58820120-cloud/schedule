@@ -225,9 +225,13 @@ td.ec2{padding:4px 8px;white-space:nowrap}
   .card{border-radius:0;border-left:none;border-right:none;margin-bottom:0}
   .hdr{padding:10px 12px;position:sticky;top:0;z-index:50;background:var(--s2)}
   .app-title{font-size:15px}
-  .hdr-r .btn span{display:none}
-  .hdr-r .btn{padding:6px 8px}
   .tabs{display:none!important}
+  /* Hide all header buttons on mobile except login/logout */
+  #add-emp-btn,#share-btn,#install-btn,
+  button[onclick="switchTab('excel')"],
+  button[onclick="doExport()"]{display:none!important}
+  /* Login/logout btn - compact */
+  #auth-btn{padding:6px 12px;font-size:13px}
   .nav,.month-grid-wrap,.week-wrap,.legend,.xp,.fb-setup,.stats-grid,.detail-wrap{padding-left:10px;padding-right:10px}
   .fb-fields{grid-template-columns:1fr}
   #pane-month,#pane-week,#pane-my,#pane-stats,#pane-excel,#pane-review,#pane-leave-log,#pane-setup{padding-bottom:72px}
@@ -259,6 +263,47 @@ td.ec2{padding:4px 8px;white-space:nowrap}
 }
 .more-menu-item:last-child{border-bottom:none}
 .more-menu-item:active{background:var(--s2)}
+/* Leave order list */
+.lo-row{display:flex;align-items:center;gap:10px;padding:9px 12px;
+  border:0.5px solid var(--bd);border-radius:var(--r);margin-bottom:6px;
+  background:var(--surface);transition:background 0.15s}
+.lo-row.lo-done{background:var(--green-bg);border-color:var(--green-bd)}
+.lo-row.lo-mine{border-color:var(--teal-bd);background:var(--teal-bg)}
+.lo-num{width:22px;height:22px;border-radius:50%;background:var(--s2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;color:var(--tx2);flex-shrink:0}
+.lo-name{font-size:13px;font-weight:600;flex:1}
+.lo-status{font-size:11px;color:var(--tx3)}
+.lo-dates{font-size:11px;color:var(--green-tx);margin-top:2px}
+.drag-handle{cursor:grab;color:var(--tx3);font-size:16px;padding:0 4px;user-select:none}
+.lo-row.dragging{opacity:0.5;background:var(--s3)}
+
+/* Leave mode */
+.leave-mode-btn.active{background:#fee2e2!important;color:#b91c1c!important;border-color:#fca5a5!important}
+.leave-cell{position:relative;overflow:hidden;cursor:pointer}
+.leave-cell-overlay{
+  position:absolute;inset:0;
+  background:rgba(220,38,38,0.12);
+  display:flex;flex-direction:column;
+  pointer-events:none;
+  border:1px solid rgba(220,38,38,0.3);
+  border-radius:4px;
+}
+.leave-cell-top{flex:1;display:flex;align-items:center;justify-content:center}
+.leave-cell-bot{height:40%;display:flex;align-items:center;justify-content:center;
+  border-top:1px dashed rgba(220,38,38,0.3);background:rgba(220,38,38,0.08)}
+.leave-cell-bot-only{
+  position:absolute;bottom:0;left:0;right:0;height:40%;
+  background:rgba(220,38,38,0.15);
+  border-top:1px dashed rgba(220,38,38,0.4);
+  display:flex;align-items:center;justify-content:center;
+  border-radius:0 0 4px 4px;
+}
+.leave-half-label{font-size:9px;font-weight:600;color:rgba(180,24,24,0.7)}
+.leave-full-label{font-size:9px;font-weight:600;color:rgba(180,24,24,0.7)}
+.leave-disabled{color:rgba(150,150,150,0.7)!important}
+/* Already-leave cell in leave mode */
+.leave-cell.has-leave .leave-cell-overlay{background:rgba(220,38,38,0.22);border-color:rgba(220,38,38,0.6)}
 </style>
 </head>
 <body>
@@ -330,12 +375,34 @@ td.ec2{padding:4px 8px;white-space:nowrap}
         <button class="nav-btn" onclick="changeMonth(1)">›</button>
         <button class="btn" id="cur-month-btn" style="display:none;font-size:12px;padding:5px 10px" onclick="goCurrentMonth()">本月</button>
       </div>
-      <div class="nav-r">
-        <button class="btn" style="font-size:12px" onclick="switchTab('week')">切換週視圖</button>
+      <div class="nav-r" style="display:flex;gap:7px;align-items:center">
+        <button class="btn leave-mode-btn" id="leave-mode-btn" onclick="toggleLeaveMode()" title="休假模式">
+          🏖 休假
+        </button>
+        <button class="btn" style="font-size:12px" onclick="switchTab('week')">週視圖</button>
       </div>
     </div>
     <div class="month-grid-wrap" id="month-grid-wrap"></div>
     <div class="legend" id="legend-month"></div>
+
+    <!-- Leave Order Panel -->
+    <div id="leave-order-panel" style="border-top:0.5px solid var(--bd);padding:16px 22px 24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+        <div>
+          <div style="font-size:14px;font-weight:600">🗓 休假填寫順序</div>
+          <div style="font-size:12px;color:var(--tx3);margin-top:2px" id="leave-order-month-label"></div>
+        </div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-green" id="leave-done-btn" onclick="markLeaveDone()" style="display:none">
+            ✅ 我已選完
+          </button>
+          <button class="btn btn-amber" id="leave-order-edit-btn" onclick="openLeaveOrderEdit()" style="display:none">
+            ✏️ 調整順序
+          </button>
+        </div>
+      </div>
+      <div id="leave-order-list"></div>
+    </div>
   </div>
 
   <!-- ══ WEEK PANE ══ -->
@@ -475,6 +542,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
   "schedule": {".read": "auth != null", ".write": "auth != null"},
   "policy":   {".read": "auth != null", ".write": "auth != null"},
   "changeRequests": {".read": "auth != null", ".write": "auth != null"},
+  "leaveOrder": {".read": "auth != null", ".write": "auth != null"},
   "userPrefs": {"$uid": {".read": "$uid === auth.uid", ".write": "$uid === auth.uid"}}
 }}</div></div></div>
         <div class="fb-step"><div class="fb-step-num">4</div><div class="fb-step-body">Authentication → Sign-in method → 啟用 <b>Email/Password</b></div></div>
@@ -700,6 +768,9 @@ td.ec2{padding:4px 8px;white-space:nowrap}
   <!-- More menu overlay -->
   <div id="more-menu" style="display:none;position:fixed;bottom:60px;right:0;left:0;z-index:99;
     background:var(--surface);border-top:0.5px solid var(--bd);padding:8px 0">
+    <button class="more-menu-item" id="more-add-emp" onclick="openAddEmp();toggleMoreMenu()">👤 新增員工</button>
+    <button class="more-menu-item" id="more-share" onclick="doShare();toggleMoreMenu()">🔗 分享班表</button>
+    <button class="more-menu-item" id="more-export" onclick="doExport();toggleMoreMenu()">⬇ 匯出 Excel</button>
     <button class="more-menu-item" onclick="switchTab('stats');toggleMoreMenu()">📊 統計</button>
     <button class="more-menu-item" onclick="switchTab('leave-log');toggleMoreMenu()">📋 休假紀錄</button>
     <button class="more-menu-item" onclick="switchTab('excel');toggleMoreMenu()">📂 匯入班表</button>
@@ -859,6 +930,7 @@ function initFirebase(cfg) {
 }
 
 function startSync() {
+  initLeaveOrder();
   if (syncUnsub) { dbRef.off('value', syncUnsub); }
   syncUnsub = dbRef.on('value', snap => {
     const data = snap.val();
@@ -1085,6 +1157,12 @@ function switchTab(t) {
     document.getElementById('tab-'+id).classList.toggle('on', id===t);
   });
   if (t==='stats') renderStats();
+  // Exit leave mode when switching away from month
+  if (t !== 'month' && leaveMode) {
+    leaveMode = false;
+    const lBtn = document.getElementById('leave-mode-btn');
+    if (lBtn) lBtn.classList.remove('active');
+  }
   if (t==='setup') renderViewEmpList();
   if (t==='my') renderMy();
 }
@@ -1153,9 +1231,39 @@ function renderMonth() {
         h += `<div class="mg-cell" style="${isT?'background:var(--teal-bg)':(isHol||isSunC)?'background:#fdf2f8':isSatC?'background:#f0fdf4':''}">
           <div class="shift-pill ro ${sh?sh.cls:'sp-empty'}">${sh?sh.short:'·'}</div>
         </div>`;
-      } else {
-        h += `<div class="mg-cell" style="${isT?'background:var(--teal-bg)':(isHol||isSunC)?'background:#fdf2f8':isSatC?'background:#f0fdf4':''}">
-          <div class="shift-pill ${sh?sh.cls:'sp-empty'}" onclick="openShiftModal(${emp.id},'${dk}','${emp.name}','${d.getMonth()+1}/${d.getDate()}')">${sh?sh.short:'·'}</div>
+      } else if (leaveMode) {
+        const cellBg = isT?'background:var(--teal-bg)':(isHol||isSunC)?'background:#fdf2f8':isSatC?'background:#f0fdf4':'';
+        const avFull = getLeaveAvailability(dk,'full');
+        const avAm   = getLeaveAvailability(dk,'am');
+        const avPm   = getLeaveAvailability(dk,'pm');
+        const isFull=sv==='休', isAm=sv==='上', isPm=sv==='下';
+        const isLeave=isFull||isAm||isPm;
+
+        // Label helper: ok=label, over=滿(grey), disabled=✕(grey), cur=checkmark
+        const lbl=(av,cur,txt)=>{
+          if(av==='disabled') return `<span style="font-size:9px;color:#bbb">✕</span>`;
+          if(av==='over') return `<span style="font-size:9px;color:#bbb">滿</span>`;
+          return cur?`<span style="font-size:9px;color:#b91c1c;font-weight:700">${txt}✓</span>`
+                    :`<span style="font-size:9px;color:rgba(185,28,28,0.7)">${txt}</span>`;
+        };
+
+        // Show current non-leave shift as small text behind overlay
+        const curLabel = sh && !isLeave ? `<span style="font-size:9px;color:rgba(0,0,0,0.25);position:absolute;top:2px;right:3px">${sh.short}</span>` : '';
+
+        h += `<div class="mg-cell leave-cell${isLeave?' has-leave':''}"
+          style="${cellBg};padding:0;position:relative"
+          onclick="handleLeaveCellClick(${emp.id},'${dk}')">
+          ${curLabel}
+          <div class="leave-cell-overlay" style="pointer-events:none">
+            <div class="leave-cell-top">${lbl(avAm,isAm,'上')}</div>
+            <div class="leave-cell-bot">${lbl(avPm,isPm,'下')}</div>
+          </div>
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-60%);pointer-events:none;z-index:2">
+            ${lbl(avFull,isFull,'休')}
+          </div>
+        </div>`;
+            } else {
+        h += `<div class="mg-cell" style="${isT?'background:var(--teal-bg)':(isHol||isSunC)?'background:#fdf2f8':isSatC?'background:#f0fdf4':''}"><div class="shift-pill ${sh?sh.cls:'sp-empty'}" onclick="openShiftModal(${emp.id},'${dk}','${emp.name}','${d.getMonth()+1}/${d.getDate()}')">${sh?sh.short:'·'}</div>
         </div>`;
       }
     });
@@ -1613,6 +1721,7 @@ function removeEmp(id) {
 // SHIFT MODAL
 // ══════════════════════════════════════════════
 let editingShift = null;
+let leaveMode = false; // leave mode: all cells show leave overlay
 function openShiftModal(empId, dateKey, empName, dateLabel) {
   editingShift = { empId, dateKey };
   const cur = S.schedule[`${empId}_${dateKey}`] || null;
@@ -2059,6 +2168,305 @@ initFirebase(FIREBASE_CONFIG);
 renderAll();
 
 
+
+// ══════════════════════════════════════════════
+// LEAVE ORDER SYSTEM
+// ══════════════════════════════════════════════
+// Firebase path: leaveOrder/{YYYY-MM} = {
+//   order: [empId, empId, ...],   // priority order
+//   done: { empId: { at: ISO, dates: ['2026-03-05',...] } }
+// }
+
+let leaveOrderRef = null;
+let leaveOrderData = {}; // { YYYY-MM: { order:[], done:{} } }
+let leaveOrderUnsub = null;
+
+function leaveOrderMonthKey(offset) {
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + (offset || S.monthOffset || 0));
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+
+function initLeaveOrder() {
+  if (!firebaseDb) return;
+  leaveOrderRef = firebaseDb.ref('leaveOrder');
+  if (leaveOrderUnsub) leaveOrderRef.off('value', leaveOrderUnsub);
+  leaveOrderUnsub = leaveOrderRef.on('value', snap => {
+    leaveOrderData = snap.val() || {};
+    renderLeaveOrderPanel();
+  });
+}
+
+function getLeaveOrderForMonth(monthKey) {
+  const data = leaveOrderData[monthKey] || {};
+  let order = data.order || [];
+  // If no order set for this month, try copying last month
+  if (!order.length && S.employees.length) {
+    const prev = getPrevMonthKey(monthKey);
+    const prevOrder = (leaveOrderData[prev] || {}).order || [];
+    if (prevOrder.length) {
+      order = prevOrder.filter(id => S.employees.find(e => e.id == id));
+    } else {
+      order = S.employees.map(e => e.id);
+    }
+  }
+  // Add any new employees not in order
+  S.employees.forEach(e => { if (!order.includes(e.id) && !order.includes(String(e.id))) order.push(e.id); });
+  return order;
+}
+
+function getPrevMonthKey(monthKey) {
+  const [y, m] = monthKey.split('-').map(Number);
+  const prev = new Date(y, m-2, 1);
+  return prev.getFullYear() + '-' + String(prev.getMonth()+1).padStart(2,'0');
+}
+
+function getMyEmpId() {
+  // Match logged-in user's displayName to employee name
+  if (!currentUser) return null;
+  const name = myDisplayName();
+  const emp = S.employees.find(e => e.name === name);
+  return emp ? emp.id : null;
+}
+
+function renderLeaveOrderPanel() {
+  const panel = document.getElementById('leave-order-panel');
+  const list = document.getElementById('leave-order-list');
+  const label = document.getElementById('leave-order-month-label');
+  const doneBtn = document.getElementById('leave-done-btn');
+  const editBtn = document.getElementById('leave-order-edit-btn');
+  if (!panel || !list) return;
+
+  const monthKey = leaveOrderMonthKey();
+  const [y, m] = monthKey.split('-').map(Number);
+  if (label) label.textContent = y + ' 年 ' + MONTHS_TW[m-1] + '月份順序';
+
+  const data = leaveOrderData[monthKey] || {};
+  const order = getLeaveOrderForMonth(monthKey);
+  const done = data.done || {};
+  const myEmpId = getMyEmpId();
+  const role = myRole();
+
+  // Show done button only for employees not yet marked done
+  if (doneBtn) {
+    const myIdStr = myEmpId ? String(myEmpId) : null;
+    const alreadyDone = myIdStr && done[myIdStr];
+    doneBtn.style.display = (myEmpId && !alreadyDone) ? '' : 'none';
+  }
+  // Show edit button for admin/chief
+  if (editBtn) editBtn.style.display = (role === 'admin' || role === 'chief') ? '' : 'none';
+
+  if (!order.length) {
+    list.innerHTML = '<div style="font-size:13px;color:var(--tx3)">尚無員工資料</div>';
+    return;
+  }
+
+  list.innerHTML = order.map((empId, idx) => {
+    const emp = S.employees.find(e => e.id == empId || String(e.id) === String(empId));
+    if (!emp) return '';
+    const empIdStr = String(empId);
+    const doneInfo = done[empIdStr];
+    const isMine = myEmpId && String(myEmpId) === empIdStr;
+    const c = EMP_COLORS[emp.colorIdx % EMP_COLORS.length];
+
+    let statusHtml = '';
+    if (doneInfo) {
+      const dt = doneInfo.at ? doneInfo.at.slice(0,16).replace('T',' ') : '';
+      const dates = (doneInfo.dates || []).join('、') || '（無休假）';
+      statusHtml = `<div class="lo-status" style="color:var(--green-tx)">✅ 已選完 ${dt}</div>
+        <div class="lo-dates">休假日期：${dates}</div>`;
+    } else {
+      statusHtml = `<div class="lo-status">⏳ 尚未完成</div>`;
+    }
+
+    return `<div class="lo-row${doneInfo?' lo-done':''}${isMine?' lo-mine':''}">
+      <div class="lo-num" style="background:${c}22;color:${c};border:0.5px solid ${c}44">${idx+1}</div>
+      <div style="flex:1">
+        <div class="lo-name" style="color:${isMine?'var(--teal-tx)':'var(--tx)'}">
+          ${emp.name}${isMine?' <span style="font-size:10px;color:var(--teal-tx)">(我)</span>':''}
+        </div>
+        ${statusHtml}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function markLeaveDone() {
+  const myEmpId = getMyEmpId();
+  if (!myEmpId || !leaveOrderRef) return;
+  const monthKey = leaveOrderMonthKey();
+
+  // Collect my leave dates this month
+  const [y, m] = monthKey.split('-').map(Number);
+  const days = new Date(y, m, 0).getDate();
+  const leaveDates = [];
+  for (let d = 1; d <= days; d++) {
+    const dk = monthKey + '-' + String(d).padStart(2,'0');
+    const sv = S.schedule[`${myEmpId}_${dk}`];
+    if (sv && LEAVE_KEYS.includes(sv)) {
+      leaveDates.push(dk.slice(5) + ' ' + SHIFTS[sv].label);
+    }
+  }
+
+  leaveOrderRef.child(monthKey + '/done/' + myEmpId).set({
+    at: new Date().toISOString(),
+    dates: leaveDates,
+  });
+  showToast('✅ 已標記完成！');
+}
+
+function openLeaveOrderEdit() {
+  const monthKey = leaveOrderMonthKey();
+  const order = getLeaveOrderForMonth(monthKey);
+
+  const rows = order.map((empId, i) => {
+    const emp = S.employees.find(e => e.id == empId || String(e.id) === String(empId));
+    if (!emp) return '';
+    const c = EMP_COLORS[emp.colorIdx % EMP_COLORS.length];
+    return `<div class="lo-row" id="lo-edit-${i}" data-empid="${empId}"
+      draggable="true"
+      ondragstart="loDragStart(event,${i})"
+      ondragover="loDragOver(event)"
+      ondrop="loDrop(event,${i})"
+      ondragend="loDragEnd(event)"
+      style="cursor:grab">
+      <span class="drag-handle">⠿</span>
+      <div class="lo-num" style="background:${c}22;color:${c}">${i+1}</div>
+      <span class="lo-name">${emp.name}</span>
+    </div>`;
+  }).join('');
+
+  openModal(`<div class="mt">調整填寫順序</div>
+    <div class="ms" style="margin-bottom:12px">拖曳調整優先順序（第 1 順最先填寫）</div>
+    <div id="lo-edit-list" style="max-height:380px;overflow-y:auto;margin-bottom:14px">${rows}</div>
+    <div class="ma">
+      <button class="btn" onclick="closeModal()" style="flex:1">取消</button>
+      <button class="btn btn-teal" onclick="saveLeaveOrder('${monthKey}')" style="flex:2">💾 儲存順序</button>
+    </div>`);
+}
+
+let loDragging = null;
+function loDragStart(e, idx) {
+  loDragging = idx;
+  e.currentTarget.classList.add('dragging');
+}
+function loDragOver(e) { e.preventDefault(); }
+function loDrop(e, targetIdx) {
+  e.preventDefault();
+  if (loDragging === null || loDragging === targetIdx) return;
+  const list = document.getElementById('lo-edit-list');
+  const rows = [...list.querySelectorAll('[id^="lo-edit-"]')];
+  const dragged = rows[loDragging];
+  const target = rows[targetIdx];
+  if (loDragging < targetIdx) list.insertBefore(dragged, target.nextSibling);
+  else list.insertBefore(dragged, target);
+  // Renumber
+  [...list.querySelectorAll('[id^="lo-edit-"]')].forEach((row, i) => {
+    row.querySelector('.lo-num').textContent = i+1;
+    row.id = 'lo-edit-' + i;
+  });
+  loDragging = null;
+}
+function loDragEnd(e) { e.currentTarget.classList.remove('dragging'); loDragging = null; }
+
+function saveLeaveOrder(monthKey) {
+  if (!leaveOrderRef) return;
+  const list = document.getElementById('lo-edit-list');
+  if (!list) return;
+  const newOrder = [...list.querySelectorAll('[data-empid]')].map(r => r.dataset.empid);
+  leaveOrderRef.child(monthKey + '/order').set(newOrder);
+  closeModal();
+  showToast('✅ 順序已儲存');
+}
+
+// ══════════════════════════════════════════════
+// LEAVE MODE
+// ══════════════════════════════════════════════
+function toggleLeaveMode() {
+  leaveMode = !leaveMode;
+  const btn = document.getElementById('leave-mode-btn');
+  if (btn) btn.classList.toggle('active', leaveMode);
+  renderMonth(); // re-render with leave overlays
+}
+
+function getLeaveAvailability(dateKey, type) {
+  // type: 'full'|'am'|'pm'
+  // Returns: 'ok' | 'over' | 'disabled'
+  const wdi = getWeekdayIndex(dateKey);
+  const wl = policy.weekdayLimits || {};
+  const row = wl[wdi] || wl[String(wdi)] || {};
+  const max = row[type] !== undefined ? Number(row[type]) : 2;
+  if (max === 0) return 'disabled'; // 0 = not allowed
+  const sv = type === 'full' ? '休' : type === 'am' ? '上' : '下';
+  const count = S.employees.filter(e => S.schedule[`${e.id}_${dateKey}`] === sv).length;
+  if (count >= max) return 'over';
+  return 'ok';
+}
+
+function handleLeaveCellClick(empId, dateKey) {
+  const cur = S.schedule[`${empId}_${dateKey}`] || null;
+  const curLabel = cur ? (SHIFTS[cur]?.label || cur) : '（空白）';
+  const emp = S.employees.find(e => e.id == empId);
+  const empName = emp ? emp.name : '';
+
+  // Build option button for each type
+  const mkBtn = (type, sv, label) => {
+    const avail = getLeaveAvailability(dateKey, type);
+    const isCur = cur === sv;
+    if (avail === 'disabled') return `<button class="sc2" style="background:var(--s2);color:#bbb;border-color:var(--bd);cursor:default">${label}<br><span style="font-size:10px">不可用</span></button>`;
+    if (avail === 'over' && !isCur) return `<button class="sc2" style="background:var(--s2);color:#bbb;border-color:var(--bd);cursor:default">${label}<br><span style="font-size:10px;color:var(--amber-tx)">已滿→申請</span></button>`;
+    const style = isCur ? `background:#fee2e2;color:#b91c1c;border-color:#fca5a5;font-weight:700` : `background:#fff0f0;color:#b91c1c;border-color:#fca5a5`;
+    return `<button class="sc2" style="${style}" onclick="confirmLeaveChoice(${empId},'${dateKey}','${sv}','${avail}')">${label}${isCur?' ✓':''}</button>`;
+  };
+
+  openModal(`<div class="mt">設定休假</div>
+    <div class="ms">${empName} · ${dateKey.slice(5)}</div>
+    <div style="font-size:12px;color:var(--tx3);margin-bottom:12px">目前：${curLabel}</div>
+    <div class="sg" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:10px">
+      ${mkBtn('full','休','全天休')}
+      ${mkBtn('am','上','上午休')}
+      ${mkBtn('pm','下','下午休')}
+    </div>
+    <button class="btn" style="width:100%;margin-bottom:4px" onclick="confirmLeaveChoice(${empId},'${dateKey}',null,'ok')">清除休假</button>
+    <button class="btn" style="width:100%;color:var(--tx3)" onclick="closeModal()">取消</button>`);
+}
+
+function confirmLeaveChoice(empId, dateKey, sv, avail) {
+  closeModal();
+  if (avail === 'over' && sv) {
+    // Need to submit request
+    editingShift = { empId, dateKey };
+    const cur = S.schedule[`${empId}_${dateKey}`] || null;
+    const fromLabel = cur ? (SHIFTS[cur]?.label || cur) : '（空白）';
+    const toLabel = SHIFTS[sv]?.label || sv;
+    openModal(`<div class="mt">申請超額休假</div>
+      <div class="ms" style="color:var(--red-tx)">⚠️ ${dateKey} ${toLabel}已達上限</div>
+      <div style="font-size:13px;color:var(--tx2);margin:10px 0">申請由主任→管理員審核後生效</div>
+      <input class="mi" id="leave-req-reason" placeholder="申請原因（必填）" />
+      <div class="ma">
+        <button class="btn" onclick="closeModal()" style="flex:1">取消</button>
+        <button class="btn btn-teal" onclick="submitLeaveRequest(${empId},'${dateKey}','${fromLabel}','${toLabel}','${sv}')" style="flex:2">送出申請</button>
+      </div>`);
+    return;
+  }
+  pickShiftInLeaveMode(empId, dateKey, sv);
+}
+
+function pickShiftInLeaveMode(empId, dateKey, sv) {
+  editingShift = { empId, dateKey };
+  const fromShift = S.schedule[`${empId}_${dateKey}`] || null;
+  if ((sv && LEAVE_KEYS.includes(sv)) || (fromShift && LEAVE_KEYS.includes(fromShift))) {
+    logLeaveAction(empId, dateKey, fromShift, sv);
+  }
+  const key = `${empId}_${dateKey}`;
+  if (sv) S.schedule[key] = sv;
+  else delete S.schedule[key];
+  saveAll();
+  // Only re-render the affected row cells (fast update)
+  renderMonth();
+}
+
 // ══════════════════════════════════════════════
 // BOTTOM NAV (mobile)
 // ══════════════════════════════════════════════
@@ -2066,8 +2474,23 @@ function toggleMoreMenu() {
   const menu = document.getElementById('more-menu');
   const overlay = document.getElementById('more-overlay');
   const isOpen = menu && menu.style.display !== 'none';
-  if (menu) menu.style.display = isOpen ? 'none' : '';
-  if (overlay) overlay.style.display = isOpen ? 'none' : '';
+  if (isOpen) {
+    if (menu) menu.style.display = 'none';
+    if (overlay) overlay.style.display = 'none';
+  } else {
+    // Update visibility of login-required items
+    const loggedIn = !!currentUser;
+    const items = ['more-add-emp','more-share','more-export','more-setup-btn'];
+    items.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        if (id === 'more-setup-btn') el.style.display = isSuperAdmin() ? '' : 'none';
+        else el.style.display = loggedIn ? '' : 'none';
+      }
+    });
+    if (menu) menu.style.display = '';
+    if (overlay) overlay.style.display = '';
+  }
 }
 
 function updateBnavBadge() {
@@ -2962,6 +3385,21 @@ function notifyRequesterDecision(req, approved) {
 
 
 </script>
+<script>
+// Click outside month grid to exit leave mode
+document.addEventListener('click', e => {
+  if (!leaveMode) return;
+  const grid = document.getElementById('month-grid-wrap');
+  const lBtn = document.getElementById('leave-mode-btn');
+  if (!grid) return;
+  if (!grid.contains(e.target) && (!lBtn || !lBtn.contains(e.target))) {
+    leaveMode = false;
+    if (lBtn) lBtn.classList.remove('active');
+    renderMonth();
+  }
+});
+</script>
+
 <script>
 // Register Service Worker for offline support
 if ('serviceWorker' in navigator) {
