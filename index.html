@@ -221,12 +221,44 @@ td.ec2{padding:4px 8px;white-space:nowrap}
 
 /* ── Responsive ── */
 @media(max-width:600px){
-  .wrap{padding:10px 10px 40px}
-  .hdr{padding:12px 14px}
-  .tabs{padding:0 14px}
-  .nav,.month-grid-wrap,.week-wrap,.legend,.xp,.fb-setup,.stats-grid,.detail-wrap{padding-left:14px;padding-right:14px}
+  .wrap{padding:0;max-width:100%}
+  .card{border-radius:0;border-left:none;border-right:none;margin-bottom:0}
+  .hdr{padding:10px 12px;position:sticky;top:0;z-index:50;background:var(--s2)}
+  .app-title{font-size:15px}
+  .hdr-r .btn span{display:none}
+  .hdr-r .btn{padding:6px 8px}
+  .tabs{display:none!important}
+  .nav,.month-grid-wrap,.week-wrap,.legend,.xp,.fb-setup,.stats-grid,.detail-wrap{padding-left:10px;padding-right:10px}
   .fb-fields{grid-template-columns:1fr}
+  #pane-month,#pane-week,#pane-my,#pane-stats,#pane-excel,#pane-review,#pane-leave-log,#pane-setup{padding-bottom:72px}
+  .mgrid-header,.mgrid-row{grid-template-columns:70px 46px repeat(31,1fr)}
+  .shift-pill{width:22px;height:20px;font-size:10px;border-radius:4px}
+  .shift-btn{width:54px;padding:6px 2px;font-size:11px}
+  .emp-nm{max-width:52px;font-size:11px}
+  .mg-hcell{padding:4px 1px;font-size:10px}
+  .nav-btn{width:38px;height:38px;font-size:18px}
 }
+@media(min-width:601px){
+  #bottom-nav{display:none!important}
+  #more-menu,#more-overlay{display:none!important}
+}
+.bnav-btn{
+  background:none;border:none;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:2px;padding:4px 0;font-family:inherit;position:relative;
+  color:var(--tx3);transition:color 0.15s;width:100%;
+}
+.bnav-btn.active,.bnav-btn.active .bnav-label{color:var(--teal)}
+.bnav-icon{font-size:20px;line-height:1.2}
+.bnav-label{font-size:10px;font-weight:500}
+.more-menu-item{
+  display:block;width:100%;text-align:left;
+  padding:16px 20px;border:none;background:none;
+  font-size:15px;font-family:inherit;color:var(--tx);cursor:pointer;
+  border-bottom:0.5px solid var(--bd);
+}
+.more-menu-item:last-child{border-bottom:none}
+.more-menu-item:active{background:var(--s2)}
 </style>
 </head>
 <body>
@@ -635,6 +667,47 @@ td.ec2{padding:4px 8px;white-space:nowrap}
   </div>
 
   </div><!-- end main-tabs-content -->
+
+  <!-- ══ BOTTOM NAV (mobile only) ══ -->
+  <nav id="bottom-nav" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:100;
+    background:var(--surface);border-top:0.5px solid var(--bd);
+    padding:6px 0 env(safe-area-inset-bottom,6px);
+    display:grid;grid-template-columns:repeat(5,1fr);gap:0">
+    <button class="bnav-btn" id="bnav-month" onclick="switchTab('month')">
+      <span class="bnav-icon">📅</span>
+      <span class="bnav-label">月視圖</span>
+    </button>
+    <button class="bnav-btn" id="bnav-week" onclick="switchTab('week')">
+      <span class="bnav-icon">📆</span>
+      <span class="bnav-label">週視圖</span>
+    </button>
+    <button class="bnav-btn" id="bnav-my" onclick="switchTab('my')">
+      <span class="bnav-icon">👤</span>
+      <span class="bnav-label">我的</span>
+    </button>
+    <button class="bnav-btn" id="bnav-review" onclick="switchTab('review')">
+      <span class="bnav-icon">🔔</span>
+      <span class="bnav-label">審核</span>
+      <span id="bnav-badge" style="display:none;position:absolute;top:4px;right:10px;
+        background:#E24B4A;color:#fff;border-radius:8px;font-size:9px;padding:1px 4px;font-weight:700">0</span>
+    </button>
+    <button class="bnav-btn" id="bnav-more" onclick="toggleMoreMenu()">
+      <span class="bnav-icon">⋯</span>
+      <span class="bnav-label">更多</span>
+    </button>
+  </nav>
+
+  <!-- More menu overlay -->
+  <div id="more-menu" style="display:none;position:fixed;bottom:60px;right:0;left:0;z-index:99;
+    background:var(--surface);border-top:0.5px solid var(--bd);padding:8px 0">
+    <button class="more-menu-item" onclick="switchTab('stats');toggleMoreMenu()">📊 統計</button>
+    <button class="more-menu-item" onclick="switchTab('leave-log');toggleMoreMenu()">📋 休假紀錄</button>
+    <button class="more-menu-item" onclick="switchTab('excel');toggleMoreMenu()">📂 匯入班表</button>
+    <button class="more-menu-item" id="more-setup-btn" style="display:none" onclick="switchTab('setup');toggleMoreMenu()">⚙ 設定</button>
+    <button class="more-menu-item" style="color:var(--red-tx)" onclick="confirmLogout();toggleMoreMenu()">🚪 登出</button>
+  </div>
+  <div id="more-overlay" style="display:none;position:fixed;inset:0;z-index:98" onclick="toggleMoreMenu()"></div>
+
 </div><!-- end main-card -->
 </div><!-- end wrap -->
 
@@ -1987,6 +2060,26 @@ renderAll();
 
 
 // ══════════════════════════════════════════════
+// BOTTOM NAV (mobile)
+// ══════════════════════════════════════════════
+function toggleMoreMenu() {
+  const menu = document.getElementById('more-menu');
+  const overlay = document.getElementById('more-overlay');
+  const isOpen = menu && menu.style.display !== 'none';
+  if (menu) menu.style.display = isOpen ? 'none' : '';
+  if (overlay) overlay.style.display = isOpen ? 'none' : '';
+}
+
+function updateBnavBadge() {
+  const badge = document.getElementById('bnav-badge');
+  const tabBadge = document.getElementById('review-badge');
+  if (badge && tabBadge) {
+    badge.textContent = tabBadge.textContent;
+    badge.style.display = tabBadge.style.display;
+  }
+}
+
+// ══════════════════════════════════════════════
 // LOGOUT
 // ══════════════════════════════════════════════
 function handleAuthBtn() {
@@ -2709,6 +2802,19 @@ function switchTab(t) {
   curTab = t;
   // Redirect non-superadmin away from setup tab
   if (t === 'setup' && !isSuperAdmin()) { t = 'month'; curTab = 'month'; }
+  // Update bottom nav active state
+  ['month','week','my','review'].forEach(id => {
+    const b = document.getElementById('bnav-' + id);
+    if (b) b.classList.toggle('active', id === t);
+  });
+  // More button active if showing extra tabs
+  const moreBtn = document.getElementById('bnav-more');
+  if (moreBtn) moreBtn.classList.toggle('active', ['stats','leave-log','excel','setup'].includes(t));
+  // Show/hide setup in more menu
+  const moreSetup = document.getElementById('more-setup-btn');
+  if (moreSetup) moreSetup.style.display = isSuperAdmin() ? '' : 'none';
+  // Update review badge in bottom nav
+  updateBnavBadge();
   ['month','week','my','stats','excel','setup','review','leave-log'].forEach(id => {
     const pane = document.getElementById('pane-'+id);
     const tab = document.getElementById('tab-'+id);
