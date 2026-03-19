@@ -1710,7 +1710,6 @@ function renderSetupPane() {
     if(document.getElementById('fb-appId')) document.getElementById('fb-appId').value = fbCfg.appId||'';
   }
 
-  _roleListLoaded = false;
   renderRoleUserList();
   renderViewEmpList();
 
@@ -2132,11 +2131,12 @@ function getWeekdayIndex(dateKey) {
 }
 
 function getWeekdayLimit(dateKey, type) {
-  // type: 'full' | 'am' | 'pm'
   const wdi = getWeekdayIndex(dateKey);
-  const wl = (policy.weekdayLimits || {})[wdi] || {};
-  if (wl[type] !== undefined) return wl[type];
-  return (policy.leaveLimit || {}).default ?? 2; // fallback to default
+  const wl = policy.weekdayLimits || {};
+  // Firebase stores numeric keys as strings, try both
+  const row = wl[wdi] || wl[String(wdi)] || {};
+  if (row[type] !== undefined) return Number(row[type]);
+  return 2; // default
 }
 
 function countLeaveTypeOnDate(dateKey, type) {
@@ -2168,19 +2168,19 @@ function checkLeaveLimitWeekday(dateKey, fromShift, toShift) {
 }
 
 function renderWeekdayLimitTable() {
-  // Update all static input values from policy
   const wl = policy.weekdayLimits || {};
   for (let i = 0; i < 7; i++) {
-    const row = wl[i] || {};
+    // Firebase may store keys as strings
+    const row = wl[i] || wl[String(i)] || {};
     ['full','am','pm'].forEach(type => {
       const el = document.getElementById('wl-' + i + '-' + type);
-      if (el && row[type] !== undefined) el.value = row[type];
+      if (el) el.value = (row[type] !== undefined) ? Number(row[type]) : 2;
     });
   }
   const cfd = document.getElementById('free-edit-cutoff-day');
-  if (cfd && policy.cutoffDay !== undefined) cfd.value = policy.cutoffDay;
+  if (cfd) cfd.value = (policy.cutoffDay !== undefined) ? policy.cutoffDay : 25;
   const fl2 = document.getElementById('review-flow');
-  if (fl2 && policy.reviewFlow) fl2.value = policy.reviewFlow;
+  if (fl2) fl2.value = policy.reviewFlow || 'two';
 }
 
 // ══════════════════════════════════════════════
@@ -2265,16 +2265,13 @@ function initPolicyAndRequests() {
   policyUnsub = policyRef.on('value', snap => {
     const d = snap.val();
     if (d) policy = d;
-    // Fill all setup fields immediately (inputs exist in static HTML)
+    // Update all setup inputs with latest values
     renderWeekdayLimitTable();
-    // Register current user if not present
+    // Re-render role list (fast, uses already-loaded data)
+    renderRoleUserList();
+    // Register current user if not already in roles
     if (currentUser && !(currentUser.uid.replace(/[.#$[\]]/g,'_') in (policy.roles||{}))) {
       registerUserRole();
-    }
-    // If setup tab is open, refresh the role list too
-    if (curTab === 'setup') {
-      _roleListLoaded = false;
-      renderRoleUserList();
     }
   });
 
@@ -2305,15 +2302,14 @@ function savePolicySettings() {
   const flow = document.getElementById('review-flow')?.value || 'two';
   const updates = { cutoffDay, reviewFlow: flow };
   // Save weekday limits
-  const weekdayLimits = {};
+  // Save each weekday limit directly as Firebase path to avoid key type issues
+  policyRef.update({ cutoffDay, reviewFlow: flow });
   for (let i = 0; i < 7; i++) {
-    const full = parseInt(document.getElementById(`wl-${i}-full`)?.value) ?? 2;
-    const am   = parseInt(document.getElementById(`wl-${i}-am`)?.value)   ?? 2;
-    const pm   = parseInt(document.getElementById(`wl-${i}-pm`)?.value)   ?? 2;
-    weekdayLimits[i] = { full, am, pm };
+    const full = parseInt(document.getElementById('wl-'+i+'-full')?.value) || 0;
+    const am   = parseInt(document.getElementById('wl-'+i+'-am')?.value)   || 0;
+    const pm   = parseInt(document.getElementById('wl-'+i+'-pm')?.value)   || 0;
+    policyRef.child('weekdayLimits/'+i).set({ full, am, pm });
   }
-  updates.weekdayLimits = weekdayLimits;
-  policyRef.update(updates);
   const el = document.getElementById('policy-result');
   if (el) { el.innerHTML = '<div class="imp-ok">✅ 期限設定已儲存</div>'; setTimeout(()=>el.innerHTML='',3000); }
 }
@@ -2339,19 +2335,17 @@ function saveRoleSettings() {
 function renderRoleUserList() {
   const list = document.getElementById('role-user-list');
   if (!list) return;
-  // Always reload from Firebase first to get latest data
-  if (policyRef && !_roleListLoaded) {
-    _roleListLoaded = true;
+  const roles = policy.roles || {};
+  // If roles empty and Firebase is connected, try a quick fetch
+  if (!Object.keys(roles).length && policyRef) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--tx3);padding:8px">載入中...</div>';
     policyRef.once('value', snap => {
       const d = snap.val();
-      if (d) { policy = { ...policy, ...d }; }
+      if (d && d.roles) { policy = { ...policy, ...d }; }
       renderRoleUserList();
     });
-    list.innerHTML = '<div style="font-size:13px;color:var(--tx3);padding:10px">載入中...</div>';
     return;
   }
-  _roleListLoaded = false; // reset for next open
-  const roles = policy.roles || {};
   if (!Object.keys(roles).length) {
     list.innerHTML = '<div style="font-size:13px;color:var(--tx3)">尚無帳號紀錄。請先讓員工登入一次系統。</div>';
     return;
