@@ -382,6 +382,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
         <button class="btn" style="font-size:12px" onclick="switchTab('week')">週視圖</button>
       </div>
     </div>
+    <div id="month-order-display"></div>
     <div class="month-grid-wrap" id="month-grid-wrap"></div>
     <div class="legend" id="legend-month"></div>
 
@@ -810,6 +811,8 @@ let S = {
   holidays: {},    // { "YYYY-MM-DD": true }
   excluded: {},   // { "empName": true } — previously unchecked
   leaveLog: [],   // [{empId, empName, dateKey, shift, action, by, at}]
+  overtimeOrder: [],  // [empName, ...] 緊急加班順序
+  leaveOrder: [],     // [empName, ...] 填假順序
   myPrefs: {},    // per-user prefs { empName, events:{} }
   excludedEmps: new Set(), // names of employees user has excluded
   monthOffset: 0,
@@ -888,11 +891,11 @@ function loadLocal() {
     const params = new URLSearchParams(location.search);
     if (params.get('view')==='share') {
       const d = params.get('d');
-      if (d) { const x=JSON.parse(atob(d)); S.employees=x.employees||[]; S.schedule=x.schedule||{}; S.holidays=x.holidays||{}; S.excluded=x.excluded||{}; S.leaveLog=x.leaveLog||[]; S.myPrefs=x.myPrefs||{}; S.excludedEmps=new Set(); S.isReadOnly=true; }
+      if (d) { const x=JSON.parse(atob(d)); S.employees=x.employees||[]; S.schedule=x.schedule||{}; S.holidays=x.holidays||{}; S.excluded=x.excluded||{}; S.leaveLog=x.leaveLog||[]; S.overtimeOrder=x.overtimeOrder||[]; S.leaveOrder=x.leaveOrder||[]; S.myPrefs=x.myPrefs||{}; S.excludedEmps=new Set(); S.isReadOnly=true; }
       return;
     }
     const raw = localStorage.getItem(LS_DATA);
-    if (raw) { const x=JSON.parse(raw); S.employees=x.employees||[]; S.schedule=x.schedule||{}; S.holidays=x.holidays||{}; S.excluded=x.excluded||{}; S.leaveLog=x.leaveLog||[]; S.myPrefs=x.myPrefs||{}; S.excludedEmps=new Set(x.excludedEmps||[]); }
+    if (raw) { const x=JSON.parse(raw); S.employees=x.employees||[]; S.schedule=x.schedule||{}; S.holidays=x.holidays||{}; S.excluded=x.excluded||{}; S.leaveLog=x.leaveLog||[]; S.overtimeOrder=x.overtimeOrder||[]; S.leaveOrder=x.leaveOrder||[]; S.myPrefs=x.myPrefs||{}; S.excludedEmps=new Set(x.excludedEmps||[]); }
   } catch(e) {}
 }
 
@@ -940,6 +943,8 @@ function startSync() {
       S.holidays = data.holidays || {};
       S.excluded = data.excluded || {};
       S.leaveLog = data.leaveLog || [];
+      S.overtimeOrder = data.overtimeOrder || [];
+      S.leaveOrder = data.leaveOrder || [];
       // myPrefs is per-user, loaded separately
       S.excludedEmps = new Set(data.excludedEmps||[]);
       saveLocal();
@@ -1271,6 +1276,21 @@ function renderMonth() {
   });
   h += `</div>`; // end mgrid
   wrap.innerHTML = h;
+
+  // Overtime / Leave order bar
+  const orderEl = document.getElementById('month-order-display');
+  if (orderEl) {
+    const ot = S.overtimeOrder || [];
+    const lv = S.leaveOrder || [];
+    if (ot.length || lv.length) {
+      orderEl.innerHTML = `<div style="display:flex;gap:16px;flex-wrap:wrap;padding:7px 16px;background:var(--s2);border-bottom:0.5px solid var(--bd);font-size:11px;color:var(--tx3)">
+        ${ot.length ? `<span><b style="color:var(--amber-tx)">🚨 緊急加班：</b>${ot.map((n,i)=>'<b>'+(i+1)+'.</b>'+n).join(' ')}</span>` : ''}
+        ${lv.length ? `<span><b style="color:var(--teal-tx)">📋 填假順序：</b>${lv.join(' → ')}</span>` : ''}
+      </div>`;
+    } else {
+      orderEl.innerHTML = '';
+    }
+  }
 
   // Legend
   document.getElementById('legend-month').innerHTML = SHIFT_KEYS.map(k =>
@@ -1755,6 +1775,7 @@ function handleFile(file) {
       let totalImported = 0, totalSkipped = 0, sheetsProcessed = 0;
       const previewRows = [];
       // Save original state in case user cancels
+      const data = {}; // extra parsed data (overtimeOrder, leaveOrder)
       const origEmployees = JSON.parse(JSON.stringify(S.employees));
       const origSchedule = JSON.parse(JSON.stringify(S.schedule));
       const origHolidays = JSON.parse(JSON.stringify(S.holidays));
@@ -1813,6 +1834,42 @@ function handleFile(file) {
 
         // Process employee rows every 2 rows from headerRow+2
         sheetsProcessed++;
+
+        // ── Parse 緊急加班順序 and 填假順序 rows ──────────────────────
+        for (let ri = headerRow + 2; ri < raw.length; ri++) {
+          const row = raw[ri];
+          if (!row) continue;
+          // Check col D (index 3) for keywords
+          const label = row[3] != null ? String(row[3]).trim() : '';
+          const label4 = row[4] != null ? String(row[4]).trim() : '';
+
+          if (label.includes('緊急加班')) {
+            // Read names from col 6 onwards (index 6 = C7)
+            const names = [];
+            for (let c = 6; c < row.length; c++) {
+              const v = row[c];
+              if (v == null) continue;
+              const s = String(v).trim();
+              if (!s) continue;
+              // Strip leading number and dots: "1.慧敏" → "慧敏", "2逸薇" → "逸薇"
+              const name = s.replace(/^\d+[.\s。、]?/, '').trim();
+              if (name) names.push(name);
+            }
+            if (names.length) data.overtimeOrder = names;
+          }
+
+          if (label4.includes('填假') || label.includes('填假')) {
+            const names = [];
+            for (let c = 6; c < row.length; c++) {
+              const v = row[c];
+              if (v == null) continue;
+              const s = String(v).trim();
+              if (s && !s.includes('備') && !s.includes('：')) names.push(s);
+            }
+            if (names.length) data.leaveOrder = names;
+          }
+        }
+
         for (let ri = headerRow + 2; ri < raw.length; ri += 2) {
           const row = raw[ri];
           if (!row) continue;
@@ -1868,7 +1925,8 @@ function handleFile(file) {
       }
 
       // Don't save yet — show employee selection modal
-      pendingImport = { employees: S.employees, schedule: S.schedule, holidays: S.holidays, excluded: S.excluded, sheetsProcessed, totalImported, totalSkipped };
+      pendingImport = { employees: S.employees, schedule: S.schedule, holidays: S.holidays, excluded: S.excluded, sheetsProcessed, totalImported, totalSkipped,
+        overtimeOrder: data.overtimeOrder || [], leaveOrder: data.leaveOrder || [] };
       // Reset S to original state while user selects
       S.employees = origEmployees;
       S.schedule = origSchedule;
@@ -2029,7 +2087,7 @@ function showEmpSelectModal(data) {
     const c = EMP_COLORS[emp.colorIdx % EMP_COLORS.length];
     const isNew = !existingNames.has(emp.name);
     // Default: checked unless explicitly excluded before
-    const shouldCheck = !(data.excluded && data.excluded[emp.name]);
+    const shouldCheck = !(S.excluded && S.excluded[emp.name]);
     return `<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r);cursor:pointer;border:0.5px solid var(--bd);margin-bottom:6px;background:${isNew?'var(--surface)':'var(--s2)'}" onmouseover="this.style.background='var(--s3)'" onmouseout="this.style.background='${isNew?'var(--surface)':'var(--s2)'}'">
       <input type="checkbox" id="emp-sel-${i}" ${shouldCheck?'checked':''} style="width:16px;height:16px;cursor:pointer;accent-color:var(--teal)">
       <div style="width:10px;height:10px;border-radius:50%;background:${c};flex-shrink:0"></div>
@@ -2073,19 +2131,27 @@ function confirmEmpSelect(count) {
   const emps = data.employees;
   emps.sort((a,b) => (a.sortOrder||999) - (b.sortOrder||999));
 
+  // Read checkbox states BEFORE closing modal
   const selectedIds = new Set();
+  const uncheckedNames = new Set();
   for (let i = 0; i < count; i++) {
     const el = document.getElementById('emp-sel-' + i);
-    if (el && el.checked) selectedIds.add(emps[i].id);
+    if (el) {
+      if (el.checked) selectedIds.add(emps[i].id);
+      else uncheckedNames.add(emps[i].name);
+    }
   }
 
   if (selectedIds.size === 0) { showToast('請至少選擇一位員工'); return; }
 
-  // Save excluded names so next import defaults them unchecked
-  S.excluded = {};
-  emps.forEach(e => { if (!selectedIds.has(e.id)) S.excluded[e.name] = true; });
+  // Persist excluded names for next import
+  const newExcluded = { ...S.excluded };
+  uncheckedNames.forEach(n => { newExcluded[n] = true; });
+  // Remove from excluded if now checked
+  emps.filter(e => selectedIds.has(e.id)).forEach(e => { delete newExcluded[e.name]; });
+  S.excluded = newExcluded;
 
-  // Build final employees in Excel order
+  // Build final employees in Excel order (sortOrder from Excel)
   const existingByName = {};
   S.employees.forEach(e => { existingByName[e.name] = e; });
   const finalEmps = [];
@@ -2106,21 +2172,35 @@ function confirmEmpSelect(count) {
   finalEmps.sort((a,b) => (a.sortOrder||999) - (b.sortOrder||999));
   S.employees = finalEmps;
 
-  // Remap schedule
+  // Remap schedule keys (Excel emp id → system emp id)
   const newSchedule = {};
   Object.keys(data.schedule).forEach(k => {
-    const parts = k.split('_');
-    const finalId = idRemap[+parts[0]];
-    if (finalId !== undefined) newSchedule[finalId + '_' + parts[1]] = data.schedule[k];
+    const us = k.indexOf('_');
+    const rawId = +k.slice(0, us);
+    const dateK = k.slice(us+1);
+    const finalId = idRemap[rawId];
+    if (finalId !== undefined) newSchedule[finalId + '_' + dateK] = data.schedule[k];
   });
   S.schedule = newSchedule;
   S.holidays = data.holidays;
+  // Store overtime/leave order from Excel
+  if (data.overtimeOrder && data.overtimeOrder.length) S.overtimeOrder = data.overtimeOrder;
+  if (data.leaveOrder && data.leaveOrder.length) S.leaveOrder = data.leaveOrder;
 
-  saveAll(); renderAll(); closeModal();
-  document.getElementById('xp-result').innerHTML = `<div class="imp-ok">✅ 匯入 ${S.employees.length} 位員工，共 ${Object.keys(S.schedule).length} 筆班別${data.totalSkipped>0?'，略過 '+data.totalSkipped+' 筆':''}</div>`;
-  document.getElementById('xp-preview').style.display = 'none';
+  closeModal();
+  saveAll();
+  renderAll();
   pendingImport = null;
-  setTimeout(() => switchTab('month'), 1600);
+
+  const resultEl = document.getElementById('xp-result');
+  if (resultEl) {
+    resultEl.innerHTML = `<div class="imp-ok">✅ 匯入 ${S.employees.length} 位員工，共 ${Object.keys(S.schedule).length} 筆班別${data.totalSkipped>0?'，略過 '+data.totalSkipped+' 筆':''}</div>`;
+  }
+  const previewEl = document.getElementById('xp-preview');
+  if (previewEl) previewEl.style.display = 'none';
+
+  showToast('✅ 匯入成功！已切換到月視圖');
+  setTimeout(() => switchTab('month'), 800);
 }
 
 // ══════════════════════════════════════════════
