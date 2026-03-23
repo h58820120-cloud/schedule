@@ -969,11 +969,43 @@ function stopSync() {
 }
 
 function pushToFirebase() {
-  if (!currentUser || !dbRef) return;
+  if (!currentUser) { console.warn('no user'); showToast('請先登入'); return; }
+  if (!dbRef) { console.warn('no dbRef'); return; }
   _pauseSync = true;
-  setTimeout(() => { _pauseSync = false; }, 3000); // resume after 3s
-  dbRef.set({ employees: S.employees, schedule: S.schedule||{}, holidays: S.holidays||{}, excluded: S.excluded||{},
-    leaveLog: (S.leaveLog||[]).slice(0,200), overtimeOrder: S.overtimeOrder||[], leaveOrder: S.leaveOrder||[] });
+  setTimeout(() => { _pauseSync = false; }, 5000);
+
+  let payload;
+  try {
+    payload = JSON.parse(JSON.stringify({
+      employees: S.employees || [],
+      schedule: S.schedule || {},
+      holidays: S.holidays || {},
+      excluded: S.excluded || {},
+      leaveLog: (S.leaveLog || []).slice(0, 100),
+      overtimeOrder: S.overtimeOrder || [],
+      leaveOrder: S.leaveOrder || [],
+    }));
+  } catch(e) {
+    console.error('Payload serialization error:', e);
+    showToast('資料序列化失敗: ' + e.message);
+    return;
+  }
+
+  console.log('Firebase write:', currentUser.email,
+    'emps:', payload.employees.length,
+    'schedule keys:', Object.keys(payload.schedule).length);
+
+  dbRef.set(payload)
+    .then(() => {
+      console.log('Firebase write OK');
+      updateSyncStatus('ok', '即時同步中');
+    })
+    .catch(e => {
+      _pauseSync = false;
+      console.error('Firebase write error:', e.code, e.message);
+      updateSyncStatus('err', '同步失敗');
+      showToast('⚠️ Firebase 寫入失敗: ' + (e.code || e.message));
+    });
 }
 
 function openLoginModal() {
