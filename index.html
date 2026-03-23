@@ -932,10 +932,13 @@ function initFirebase(cfg) {
   }
 }
 
+let _pauseSync = false;
+
 function startSync() {
   initLeaveOrder();
   if (syncUnsub) { dbRef.off('value', syncUnsub); }
   syncUnsub = dbRef.on('value', snap => {
+    if (_pauseSync) return;
     const data = snap.val();
     if (data) {
       S.employees = data.employees || [];
@@ -945,6 +948,7 @@ function startSync() {
       S.leaveLog = data.leaveLog || [];
       S.overtimeOrder = data.overtimeOrder || [];
       S.leaveOrder = data.leaveOrder || [];
+      saveLocal();
       // myPrefs is per-user, loaded separately
       S.excludedEmps = new Set(data.excludedEmps||[]);
       saveLocal();
@@ -958,6 +962,8 @@ function stopSync() {
 
 function pushToFirebase() {
   if (!currentUser || !dbRef) return;
+  _pauseSync = true;
+  setTimeout(() => { _pauseSync = false; }, 3000); // resume after 3s
   dbRef.set({ employees: S.employees, schedule: S.schedule, holidays: S.holidays, excludedEmps:[...S.excludedEmps] });
 }
 
@@ -2990,6 +2996,7 @@ function savePolicySettings() {
   const updates = { cutoffDay, reviewFlow: flow };
   // Save weekday limits
   // Save each weekday limit directly as Firebase path to avoid key type issues
+  if (!policyRef) { showToast('請先連線 Firebase'); return; }
   policyRef.update({ cutoffDay, reviewFlow: flow });
   for (let i = 0; i < 7; i++) {
     const full = parseInt(document.getElementById('wl-'+i+'-full')?.value) || 0;
