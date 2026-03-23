@@ -883,7 +883,15 @@ const LS_DATA = 'huayi_sched_v1', LS_FB = 'huayi_fb_config';
 
 function saveLocal() {
   if (!S.isReadOnly) {
-    try { localStorage.setItem(LS_DATA, JSON.stringify({employees:S.employees,schedule:S.schedule,holidays:S.holidays,excludedEmps:[...S.excludedEmps]})); } catch(e) {}
+    try { localStorage.setItem(LS_DATA, JSON.stringify({
+        employees: S.employees||[],
+        schedule: S.schedule||{},
+        holidays: S.holidays||{},
+        excluded: S.excluded||{},
+        leaveLog: (S.leaveLog||[]).slice(0,200),
+        overtimeOrder: S.overtimeOrder||[],
+        leaveOrder: S.leaveOrder||[],
+      })); } catch(e) {}
   }
 }
 function loadLocal() {
@@ -950,7 +958,7 @@ function startSync() {
       S.leaveOrder = data.leaveOrder || [];
       saveLocal();
       // myPrefs is per-user, loaded separately
-      S.excludedEmps = new Set(data.excludedEmps||[]);
+      // excludedEmps kept for legacy compat
       saveLocal();
       renderAll();
     }
@@ -964,7 +972,8 @@ function pushToFirebase() {
   if (!currentUser || !dbRef) return;
   _pauseSync = true;
   setTimeout(() => { _pauseSync = false; }, 3000); // resume after 3s
-  dbRef.set({ employees: S.employees, schedule: S.schedule, holidays: S.holidays, excludedEmps:[...S.excludedEmps] });
+  dbRef.set({ employees: S.employees, schedule: S.schedule||{}, holidays: S.holidays||{}, excluded: S.excluded||{},
+    leaveLog: (S.leaveLog||[]).slice(0,200), overtimeOrder: S.overtimeOrder||[], leaveOrder: S.leaveOrder||[] });
 }
 
 function openLoginModal() {
