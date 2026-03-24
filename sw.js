@@ -1,54 +1,34 @@
-const CACHE_NAME = 'huayi-schedule-v1';
-const STATIC_ASSETS = [
-  './index.html',
-  './manifest.json',
-];
+// 每次更新版本號，強制清除舊快取
+const CACHE_NAME = 'huayi-schedule-v3';
 
-// Install: cache static assets
 self.addEventListener('install', event => {
+  self.skipWaiting(); // 立刻取代舊 SW
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
+    caches.open(CACHE_NAME).then(cache => cache.addAll(['./index.html', './manifest.json']))
   );
-  self.skipWaiting();
 });
 
-// Activate: clean old caches
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
+      Promise.all(keys.map(k => caches.delete(k))) // 刪除所有舊快取
+    ).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-// Fetch: network first, fallback to cache
 self.addEventListener('fetch', event => {
-  // Skip Firebase and CDN requests - always need network
   const url = event.request.url;
-  if (url.includes('firebase') || url.includes('cloudflare') || url.includes('gstatic')) {
-    return;
-  }
+  // Firebase/CDN 永遠走網路
+  if (url.includes('firebase') || url.includes('cloudflare') || url.includes('gstatic') || url.includes('googleapis')) return;
 
   event.respondWith(
-    fetch(event.request)
-      .then(response => {
-        // Cache successful responses
-        if (response.ok) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-        }
-        return response;
-      })
-      .catch(() => {
-        // Network failed, try cache
-        return caches.match(event.request).then(cached => {
-          if (cached) return cached;
-          // Return offline page for navigation requests
-          if (event.request.mode === 'navigate') {
-            return caches.match('./index.html');
-          }
-        });
-      })
+    // 永遠優先從網路取最新版本
+    fetch(event.request).then(response => {
+      if (response.ok) {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+      }
+      return response;
+    }).catch(() => caches.match(event.request))
   );
 });
