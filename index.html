@@ -330,7 +330,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
         <div class="app-sub" id="app-sub">
           <span class="sync-dot sync-off" id="sync-dot"></span>
           <span id="sync-label">本機模式</span>
-          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.0.4</span>
+          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.0.5</span>
         </div>
       </div>
     </div>
@@ -822,7 +822,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.0.4';
+const APP_VERSION = '1.0.5';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -1317,8 +1317,7 @@ function renderMonth() {
         const isDayOff = !!S.holidays[dk] || dObj.getDay() === 0 || dObj.getDay() === 6;
         if (isDayOff) {
           h += `<div class="mg-cell" style="${cellBg}"><div class="shift-pill ${sh?sh.cls:'sp-empty'}" onclick="openShiftModal(${emp.id},'${dk}','${emp.name}','${dObj.getMonth()+1}/${dObj.getDate()}')">${sh?sh.short:'·'}</div></div>`;
-          continue; // skip leave overlay
-        }
+        } else {
         const avFull = getLeaveAvailability(dk,'full');
         const avAm   = getLeaveAvailability(dk,'am');
         const avPm   = getLeaveAvailability(dk,'pm');
@@ -1348,7 +1347,8 @@ function renderMonth() {
             ${lbl(avFull,isFull,'休')}
           </div>
         </div>`;
-            } else {
+        } // end isDayOff else
+      } else {
         h += `<div class="mg-cell" style="${isT?'background:var(--teal-bg)':(isHol||isSunC)?'background:#fdf2f8':isSatC?'background:#f0fdf4':''}"><div class="shift-pill ${sh?sh.cls:'sp-empty'}" onclick="openShiftModal(${emp.id},'${dk}','${emp.name}','${d.getMonth()+1}/${d.getDate()}')">${sh?sh.short:'·'}</div>
         </div>`;
       }
@@ -2269,7 +2269,12 @@ function confirmEmpSelect(count) {
   if (data.leaveOrder && data.leaveOrder.length) S.leaveOrder = data.leaveOrder;
 
   closeModal();
-  saveAll();
+  // Force immediate Firebase write
+  if (currentUser && dbRef) {
+    pushToFirebase();
+  } else {
+    saveLocal();
+  }
   renderAll();
   pendingImport = null;
 
