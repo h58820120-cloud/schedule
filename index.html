@@ -330,7 +330,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
         <div class="app-sub" id="app-sub">
           <span class="sync-dot sync-off" id="sync-dot"></span>
           <span id="sync-label">本機模式</span>
-          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.0.6</span>
+          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.0.7</span>
         </div>
       </div>
     </div>
@@ -822,7 +822,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.0.6';
+const APP_VERSION = '1.0.7';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -843,6 +843,12 @@ const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
     localStorage.setItem('app_version', APP_VERSION);
   }
 })();
+
+let policy = { freeEditDays: 7, reviewFlow: 'two', roles: {} };
+let _roleListLoaded = false;
+let changeRequests = {};
+let policyRef = null, requestsRef = null;
+let reqUnsub = null, policyUnsub = null;
 
 function isSuperAdmin() {
   return !!(currentUser && currentUser.email === SUPER_ADMIN_EMAIL);
@@ -1306,6 +1312,7 @@ function renderMonth() {
       const sv = S.schedule[key] || null;
       const sh = sv ? SHIFTS[sv] : null;
       const isT = dk === tk; const isHol = !!S.holidays[dk]; const isSun = d.getDay()===0; const isSat = d.getDay()===6; const isSatC = d.getDay()===6; const isSunC = d.getDay()===0;
+      const isWPink = isHol || isSun; const isWSat = isSat;
       if (S.isReadOnly) {
         h += `<div class="mg-cell" style="${isT?'background:var(--teal-bg)':(isHol||isSunC)?'background:#fdf2f8':isSatC?'background:#f0fdf4':''}">
           <div class="shift-pill ro ${sh?sh.cls:'sp-empty'}">${sh?sh.short:'·'}</div>
@@ -1965,7 +1972,7 @@ function handleFile(file) {
           let emp = S.employees.find(e => e.name === empName);
           const sortOrder = row[1] != null && !isNaN(+row[1]) ? +row[1] : 999;
           if (!emp) {
-            emp = { id: Date.now() + Math.random(), name: empName, dept: empDept, type: empType, colorIdx: S.employees.length % EMP_COLORS.length, sortOrder };
+            emp = { id: Date.now() + Math.floor(Math.random() * 1000), name: empName, dept: empDept, type: empType, colorIdx: S.employees.length % EMP_COLORS.length, sortOrder };
             S.employees.push(emp);
           } else {
             emp.sortOrder = sortOrder; // always update order from latest Excel
@@ -3004,12 +3011,6 @@ function loadDailyOverridesIntoEditor() {
 // Firebase paths:
 //   /policy          { freeEditDays, reviewFlow, roles:{uid: {email,role}} }
 //   /changeRequests  { reqId: { empId, dateKey, from, to, reason, requestedBy, requestedAt, status, reviews:[] } }
-
-let policy = { freeEditDays: 7, reviewFlow: 'two', roles: {} };
-let _roleListLoaded = false;
-let changeRequests = {};
-let policyRef = null, requestsRef = null;
-let reqUnsub = null, policyUnsub = null;
 
 
 function initPolicyAndRequests() {
