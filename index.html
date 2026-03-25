@@ -330,7 +330,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
         <div class="app-sub" id="app-sub">
           <span class="sync-dot sync-off" id="sync-dot"></span>
           <span id="sync-label">本機模式</span>
-          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.0.7</span>
+          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.0.8</span>
         </div>
       </div>
     </div>
@@ -822,7 +822,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.0.7';
+const APP_VERSION = '1.0.8';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -978,8 +978,27 @@ function startSync() {
     if (_pauseSync) return;
     const data = snap.val();
     if (data) {
-      S.employees = data.employees || [];
-      S.schedule = data.schedule || {};
+      // Sanitize employee ids (remove dots from old data)
+      S.employees = (data.employees || []).map(e => ({
+        ...e, id: Math.floor(Number(e.id)) || e.id
+      }));
+      // Remap schedule keys to use sanitized ids
+      const rawSched = data.schedule || {};
+      const schedFixed = {};
+      const empIdMap = {};
+      (data.employees || []).forEach(e => {
+        const cleanId = Math.floor(Number(e.id)) || e.id;
+        if (cleanId != e.id) empIdMap[e.id] = cleanId;
+      });
+      Object.entries(rawSched).forEach(([k, v]) => {
+        const us = k.indexOf('_');
+        if (us < 0) return;
+        const rawId = k.slice(0, us);
+        const dk = k.slice(us+1);
+        const cleanId = empIdMap[rawId] || rawId;
+        if (!String(cleanId).includes('.')) schedFixed[cleanId + '_' + dk] = v;
+      });
+      S.schedule = schedFixed;
       S.holidays = data.holidays || {};
       S.excluded = data.excluded || {};
       S.leaveLog = data.leaveLog || [];
@@ -1005,9 +1024,19 @@ function pushToFirebase() {
 
   let payload;
   try {
+    // Sanitize schedule keys - remove keys with dots (invalid Firebase keys)
+    const cleanSchedule = {};
+    Object.entries(S.schedule || {}).forEach(([k, v]) => {
+      if (!k.includes('.')) cleanSchedule[k] = v;
+    });
+    // Also sanitize employee ids
+    const cleanEmployees = (S.employees || []).map(e => ({
+      ...e,
+      id: Math.floor(Number(e.id)) || e.id
+    }));
     payload = JSON.parse(JSON.stringify({
-      employees: S.employees || [],
-      schedule: S.schedule || {},
+      employees: cleanEmployees,
+      schedule: cleanSchedule,
       holidays: S.holidays || {},
       excluded: S.excluded || {},
       leaveLog: (S.leaveLog || []).slice(0, 100),
