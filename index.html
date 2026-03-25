@@ -330,7 +330,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
         <div class="app-sub" id="app-sub">
           <span class="sync-dot sync-off" id="sync-dot"></span>
           <span id="sync-label">本機模式</span>
-          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.0.8</span>
+          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.0.9</span>
         </div>
       </div>
     </div>
@@ -822,7 +822,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.0.8';
+const APP_VERSION = '1.0.9';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -970,6 +970,8 @@ function initFirebase(cfg) {
 }
 
 let _pauseSync = false;
+let leaveOrderRef = null;
+let leaveOrderData = {}; // { YYYY-MM: { order:[], done:{} } }
 
 function startSync() {
   initLeaveOrder();
@@ -1458,7 +1460,7 @@ function renderWeek() {
     h += `</div></td>`;
     days.forEach(d => {
       const dk = fmtKey(d), key = `${emp.id}_${dk}`, sv = S.schedule[key]||null, sh = sv?SHIFTS[sv]:null;
-      const isT = dk===tk;
+      const isT = dk===tk; const isHolW = !!S.holidays[dk]; const isWPink = isHolW||d.getDay()===0; const isWSat = d.getDay()===6;
       if (S.isReadOnly) {
         h += `<td style="text-align:center${isT?';background:var(--teal-bg)':(isWPink?';background:#fdf2f8':(isWSat?';background:#f0fdf4':''))}"><div class="sft-ro" style="background:${sh?sh.bg:'transparent'};color:${sh?sh.tx:'#ccc'};border-color:${sh?sh.bd:'transparent'}">${sh?sh.label:'—'}</div></td>`;
       } else {
@@ -2383,8 +2385,6 @@ renderAll();
 //   done: { empId: { at: ISO, dates: ['2026-03-05',...] } }
 // }
 
-let leaveOrderRef = null;
-let leaveOrderData = {}; // { YYYY-MM: { order:[], done:{} } }
 let leaveOrderUnsub = null;
 
 function leaveOrderMonthKey(offset) {
