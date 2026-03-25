@@ -330,7 +330,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
         <div class="app-sub" id="app-sub">
           <span class="sync-dot sync-off" id="sync-dot"></span>
           <span id="sync-label">本機模式</span>
-          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.0.5</span>
+          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.0.6</span>
         </div>
       </div>
     </div>
@@ -822,7 +822,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.0.5';
+const APP_VERSION = '1.0.6';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -3561,8 +3561,7 @@ function notifyRequesterDecision(req, approved) {
 }
 
 
-</script>
-<script>
+
 // Click outside month grid to exit leave mode
 document.addEventListener('click', e => {
   if (!leaveMode) return;
@@ -3575,9 +3574,8 @@ document.addEventListener('click', e => {
     renderMonth();
   }
 });
-</script>
 
-<script>
+
 // Register Service Worker for offline support
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
