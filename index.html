@@ -103,9 +103,9 @@ input,select,button{font-family:inherit;font-size:13px}
 
 /* ── Month view ── */
 .month-lbl{padding:13px 22px 0;font-size:15px;font-weight:600;color:var(--tx2)}
-.month-grid-wrap{overflow-x:auto;padding:0 22px 22px}
-.mgrid{display:grid;min-width:700px;border:0.5px solid var(--bd);border-radius:var(--r);overflow:hidden}
-.mgrid-header{display:grid;grid-template-columns:110px 70px repeat(31,1fr);background:var(--s2);border-bottom:0.5px solid var(--bd)}
+.month-grid-wrap{overflow-x:auto;padding:0 22px 22px;-webkit-overflow-scrolling:touch}
+.mgrid{display:grid;width:max-content;border:0.5px solid var(--bd);border-radius:var(--r);overflow:hidden}
+.mgrid-header{display:grid;grid-template-columns:90px 54px repeat(31,34px);background:var(--s2);border-bottom:0.5px solid var(--bd)}
 .mg-hcell{padding:6px 3px;text-align:center;font-size:11px;font-weight:500;color:var(--tx3);border-right:0.5px solid var(--bd)}
 .mg-hcell:last-child{border-right:none}
 .mg-hcell.today{background:var(--teal-bg);color:var(--teal-tx)}
@@ -114,7 +114,7 @@ input,select,button{font-family:inherit;font-size:13px}
 .mg-hcell.saturday{background:#f0fdf4;color:#166534}
 .mg-hcell.saturday{background:#f0fdf4;color:#166534}
 .mg-hcell.sat-hdr{background:#f0fdf4;color:#166534}
-.mgrid-row{display:grid;grid-template-columns:110px 70px repeat(31,1fr);border-bottom:0.5px solid var(--bd)}
+.mgrid-row{display:grid;grid-template-columns:90px 54px repeat(31,34px);border-bottom:0.5px solid var(--bd)}
 .mgrid-row:last-child{border-bottom:none}
 .mgrid-row:hover{background:var(--s2)}
 .mg-cell{padding:5px 2px;text-align:center;border-right:0.5px solid var(--bd);display:flex;align-items:center;justify-content:center}
@@ -330,7 +330,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
         <div class="app-sub" id="app-sub">
           <span class="sync-dot sync-off" id="sync-dot"></span>
           <span id="sync-label">本機模式</span>
-          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.0.9</span>
+          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.1.0</span>
         </div>
       </div>
     </div>
@@ -387,6 +387,17 @@ td.ec2{padding:4px 8px;white-space:nowrap}
     </div>
     <div id="month-order-display"></div>
     <div class="month-grid-wrap" id="month-grid-wrap"></div>
+    <div id="month-notes-wrap" style="padding:14px 22px 8px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <span style="font-size:13px;font-weight:500;color:var(--tx2)">📝 本月備註</span>
+        <span id="notes-saved-dot" style="font-size:11px;color:var(--teal-tx);display:none">✓ 已儲存</span>
+      </div>
+      <textarea id="month-notes-text"
+        style="width:100%;min-height:64px;padding:9px 12px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box;line-height:1.5"
+        placeholder="本月備註（管理員／主任可編輯）"
+        oninput="onNotesInput()"
+      ></textarea>
+    </div>
     <div class="legend" id="legend-month"></div>
 
     <!-- Leave Order Panel -->
@@ -822,7 +833,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.0.9';
+const APP_VERSION = '1.1.0';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -1189,7 +1200,7 @@ function updateAuthUI() {
     if (setupTab) setupTab.style.display = isSuperAdmin() ? '' : 'none';
     const roleLabels = {admin:'管理員', chief:'主任', staff:'一般員工', pending:'待審核'};
     updateSyncStatus('ok', '已登入・' + (roleLabels[role]||role));
-    if (firebaseDb) initPolicyAndRequests();
+    if (firebaseDb) { initPolicyAndRequests(); initNotes(); }
     if (!isPending) {
       loadUserPrefs(prefs => {
         S.myPrefs = prefs;
@@ -1269,6 +1280,7 @@ function switchTab(t) {
     document.getElementById('tab-'+id).classList.toggle('on', id===t);
   });
   if (t==='stats') renderStats();
+  if (t==='month') { _notesLoadedKey=''; loadNotes(); }
   // Exit leave mode when switching away from month
   if (t !== 'month' && leaveMode) {
     leaveMode = false;
@@ -1362,6 +1374,11 @@ function renderMonth() {
         const isFull=sv==='休', isAm=sv==='上', isPm=sv==='下';
         const isLeave=isFull||isAm||isPm;
 
+        // If all types unavailable → show normal cell, no red overlay
+        const allUnavail = ['over','disabled'].includes(avFull) && ['over','disabled'].includes(avAm) && ['over','disabled'].includes(avPm);
+        if (allUnavail) {
+          h += `<div class="mg-cell" style="${cellBg}"><div class="shift-pill ${sh?sh.cls:'sp-empty'}" onclick="openShiftModal(${emp.id},'${dk}','${emp.name}','${dObj.getMonth()+1}/${dObj.getDate()}')">${sh?sh.short:'·'}</div></div>`;
+        } else {
         // Label helper: ok=label, over=滿(grey), disabled=✕(grey), cur=checkmark
         const lbl=(av,cur,txt)=>{
           if(av==='disabled') return `<span style="font-size:9px;color:#bbb">✕</span>`;
@@ -1385,6 +1402,7 @@ function renderMonth() {
             ${lbl(avFull,isFull,'休')}
           </div>
         </div>`;
+        } // end allUnavail else
         } // end isDayOff else
       } else {
         h += `<div class="mg-cell" style="${isT?'background:var(--teal-bg)':(isHol||isSunC)?'background:#fdf2f8':isSatC?'background:#f0fdf4':''}"><div class="shift-pill ${sh?sh.cls:'sp-empty'}" onclick="openShiftModal(${emp.id},'${dk}','${emp.name}','${d.getMonth()+1}/${d.getDate()}')">${sh?sh.short:'·'}</div>
@@ -1803,9 +1821,9 @@ function renderAll() {
 // ══════════════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════════════
-function changeMonth(d) { S.monthOffset += d; renderMonth(); if(curTab==='stats') renderStats(); }
+function changeMonth(d) { S.monthOffset += d; renderMonth(); _notesLoadedKey=''; loadNotes(); if(curTab==='stats') renderStats(); }
 function changeWeek(d) { S.weekOffset += d; renderWeek(); }
-function goCurrentMonth() { S.monthOffset = 0; renderMonth(); }
+function goCurrentMonth() { S.monthOffset = 0; renderMonth(); _notesLoadedKey=''; loadNotes(); }
 function goToday() { S.weekOffset = 0; renderWeek(); }
 
 function copyLastWeek() {
@@ -2677,6 +2695,55 @@ function pickShiftInLeaveMode(empId, dateKey, sv) {
   saveAll();
   // Only re-render the affected row cells (fast update)
   renderMonth();
+}
+
+
+// ══════════════════════════════════════════════
+// MONTHLY NOTES
+// ══════════════════════════════════════════════
+let notesRef = null;
+let _notesTimer = null;
+let _notesLoadedKey = '';
+
+function getNotesMonthKey() {
+  const d = new Date();
+  d.setMonth(d.getMonth() + (S.monthOffset || 0));
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+
+function initNotes() {
+  if (!firebaseDb) return;
+  notesRef = firebaseDb.ref('notes');
+}
+
+function loadNotes() {
+  const key = getNotesMonthKey();
+  if (!notesRef) return;
+  if (key === _notesLoadedKey) return;
+  _notesLoadedKey = key;
+  notesRef.child(key).once('value', snap => {
+    const txt = snap.val() || '';
+    const el = document.getElementById('month-notes-text');
+    if (el) {
+      el.value = txt;
+      const canEdit = ['admin','chief'].includes(myRole());
+      el.readOnly = !canEdit;
+      el.style.opacity = canEdit ? '1' : '0.7';
+      el.style.cursor = canEdit ? 'text' : 'default';
+    }
+  });
+}
+
+function onNotesInput() {
+  if (!['admin','chief'].includes(myRole())) return;
+  clearTimeout(_notesTimer);
+  _notesTimer = setTimeout(() => {
+    const el = document.getElementById('month-notes-text');
+    const dot = document.getElementById('notes-saved-dot');
+    if (!el || !notesRef) return;
+    notesRef.child(getNotesMonthKey()).set(el.value || null)
+      .then(() => { if(dot){dot.style.display=''; setTimeout(()=>dot.style.display='none',2000);} });
+  }, 800);
 }
 
 // ══════════════════════════════════════════════
