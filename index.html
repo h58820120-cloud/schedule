@@ -333,7 +333,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
         <div class="app-sub" id="app-sub">
           <span class="sync-dot sync-off" id="sync-dot"></span>
           <span id="sync-label">本機模式</span>
-          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.1.2</span>
+          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.1.3</span>
         </div>
       </div>
     </div>
@@ -841,7 +841,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.1.2';
+const APP_VERSION = '1.1.3';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -2748,7 +2748,8 @@ function toggleSwapMode() {
   else showToast('🔄 點選第一位員工的姓名來交換班表');
 }
 
-function selectSwapEmp(empId, empName) {
+function selectSwapEmp(empId, empName, event) {
+  if (event) event.stopPropagation(); // prevent click-outside from firing
   if (!swapMode) return;
   if (!swapSelected) {
     swapSelected = { empId, empName };
@@ -2816,9 +2817,11 @@ function doSwapEmps(aId, aName, bId, bName) {
   showToast(`✅ ${aName} ↔ ${bName} 班表已交換（${swapCount} 天）`);
 }
 
-// Click outside to exit swap mode
+// Click outside to exit swap mode (but not when modal is open)
 document.addEventListener('click', e => {
   if (!swapMode) return;
+  // Don't exit if modal is open
+  if (document.getElementById('modal-bg')) return;
   const monthGrid = document.getElementById('month-grid-wrap');
   const weekGrid = document.getElementById('week-wrap');
   const swapBtns = document.querySelectorAll('.swap-mode-btn');
