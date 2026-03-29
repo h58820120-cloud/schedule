@@ -333,7 +333,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
         <div class="app-sub" id="app-sub">
           <span class="sync-dot sync-off" id="sync-dot"></span>
           <span id="sync-label">本機模式</span>
-          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.1.3</span>
+          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.1.4</span>
         </div>
       </div>
     </div>
@@ -841,7 +841,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.1.3';
+const APP_VERSION = '1.1.4';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -1371,7 +1371,7 @@ function renderMonth() {
         const isSwapSelected = swapMode && swapSelected && swapSelected.empId == emp.id;
     h += `<div class="mgrid-row">
       <div class="mg-cell mg-emp${isSwapSelected?' swap-select-1':swapMode?' swap-highlight':''}"
-        ${swapMode ? `onclick="selectSwapEmp(${emp.id},'${emp.name}')" style="cursor:pointer"` : ''}
+        ${swapMode ? `data-swap="1" onclick="selectSwapEmp(${emp.id},'${emp.name}')" style="cursor:pointer"` : ''}
       ><div class="emp-dot" style="background:${c}"></div>
       <span class="emp-nm" style="${isSwapSelected?'color:var(--blue-tx);font-weight:700':''}">
         ${swapMode?'🔄 ':''}${emp.name}</span>`;
@@ -2748,8 +2748,7 @@ function toggleSwapMode() {
   else showToast('🔄 點選第一位員工的姓名來交換班表');
 }
 
-function selectSwapEmp(empId, empName, event) {
-  if (event) event.stopPropagation(); // prevent click-outside from firing
+function selectSwapEmp(empId, empName) {
   if (!swapMode) return;
   if (!swapSelected) {
     swapSelected = { empId, empName };
@@ -2822,6 +2821,8 @@ document.addEventListener('click', e => {
   if (!swapMode) return;
   // Don't exit if modal is open
   if (document.getElementById('modal-bg')) return;
+  // Don't exit if clicking a swap cell
+  if (e.target.closest && e.target.closest('[data-swap]')) return;
   const monthGrid = document.getElementById('month-grid-wrap');
   const weekGrid = document.getElementById('week-wrap');
   const swapBtns = document.querySelectorAll('.swap-mode-btn');
@@ -2862,16 +2863,14 @@ function loadNotes() {
     const el = document.getElementById('month-notes-text');
     if (el) {
       el.value = txt;
-      const canEdit = ['admin','chief'].includes(myRole());
-      el.readOnly = !canEdit;
-      el.style.opacity = canEdit ? '1' : '0.7';
-      el.style.cursor = canEdit ? 'text' : 'default';
+      el.readOnly = false;
+      el.style.opacity = '1';
     }
   });
 }
 
 function onNotesInput() {
-  if (!['admin','chief'].includes(myRole())) return;
+  if (!currentUser) return;
   clearTimeout(_notesTimer);
   _notesTimer = setTimeout(() => {
     const el = document.getElementById('month-notes-text');
