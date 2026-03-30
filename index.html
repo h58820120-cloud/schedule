@@ -333,7 +333,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
         <div class="app-sub" id="app-sub">
           <span class="sync-dot sync-off" id="sync-dot"></span>
           <span id="sync-label">本機模式</span>
-          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.1.5</span>
+          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.1.6</span>
         </div>
       </div>
     </div>
@@ -841,7 +841,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.1.5';
+const APP_VERSION = '1.1.6';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -862,6 +862,12 @@ const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
     localStorage.setItem('app_version', APP_VERSION);
   }
 })();
+
+// ── Variables declared early to prevent TDZ errors ──
+let leaveMode = false; // leave mode: all cells show leave overlay
+let swapMode = false;
+let swapSelected = null; // { empId, empName, dateKey, dateLabel, shift }
+let leaveOrderUnsub = null;
 
 let notesRef = null;
 let _notesTimer = null;
@@ -1910,7 +1916,6 @@ function removeEmp(id) {
 // SHIFT MODAL
 // ══════════════════════════════════════════════
 let editingShift = null;
-let leaveMode = false; // leave mode: all cells show leave overlay
 function openShiftModal(empId, dateKey, empName, dateLabel) {
   editingShift = { empId, dateKey };
   const cur = S.schedule[`${empId}_${dateKey}`] || null;
@@ -2435,7 +2440,6 @@ renderAll();
 //   done: { empId: { at: ISO, dates: ['2026-03-05',...] } }
 // }
 
-let leaveOrderUnsub = null;
 
 function leaveOrderMonthKey(offset) {
   const d = new Date();
@@ -2734,8 +2738,6 @@ function pickShiftInLeaveMode(empId, dateKey, sv) {
 // ══════════════════════════════════════════════
 // SWAP MODE — exchange individual shift cells
 // ══════════════════════════════════════════════
-let swapMode = false;
-let swapSelected = null; // { empId, empName, dateKey, dateLabel, shift }
 
 function toggleSwapMode() {
   swapMode = !swapMode;
