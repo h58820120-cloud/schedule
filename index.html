@@ -333,7 +333,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
         <div class="app-sub" id="app-sub">
           <span class="sync-dot sync-off" id="sync-dot"></span>
           <span id="sync-label">本機模式</span>
-          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.1.4</span>
+          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.1.5</span>
         </div>
       </div>
     </div>
@@ -841,7 +841,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.1.4';
+const APP_VERSION = '1.1.5';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -863,8 +863,6 @@ const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
   }
 })();
 
-let swapMode = false;
-let swapSelected = null; // { empId, empName }
 let notesRef = null;
 let _notesTimer = null;
 let _notesLoadedKey = '';
@@ -1371,7 +1369,7 @@ function renderMonth() {
         const isSwapSelected = swapMode && swapSelected && swapSelected.empId == emp.id;
     h += `<div class="mgrid-row">
       <div class="mg-cell mg-emp${isSwapSelected?' swap-select-1':swapMode?' swap-highlight':''}"
-        ${swapMode ? `data-swap="1" onclick="selectSwapEmp(${emp.id},'${emp.name}')" style="cursor:pointer"` : ''}
+        ${swapMode ? '' : ''}
       ><div class="emp-dot" style="background:${c}"></div>
       <span class="emp-nm" style="${isSwapSelected?'color:var(--blue-tx);font-weight:700':''}">
         ${swapMode?'🔄 ':''}${emp.name}</span>`;
@@ -1434,7 +1432,12 @@ function renderMonth() {
         } // end allUnavail else
         } // end isDayOff else
       } else {
-        h += `<div class="mg-cell" style="${isT?'background:var(--teal-bg)':(isHol||isSunC)?'background:#fdf2f8':isSatC?'background:#f0fdf4':''}"><div class="shift-pill ${sh?sh.cls:'sp-empty'}" onclick="openShiftModal(${emp.id},'${dk}','${emp.name}','${d.getMonth()+1}/${d.getDate()}')">${sh?sh.short:'·'}</div>
+        const cellDate = d.getMonth()+1 + '/' + d.getDate();
+        const isSwapSel = swapMode && swapSelected && swapSelected.empId==emp.id && swapSelected.dateKey===dk;
+        h += `<div class="mg-cell" style="${isT?'background:var(--teal-bg)':(isHol||isSunC)?'background:#fdf2f8':isSatC?'background:#f0fdf4':''}">
+          <div class="shift-pill ${sh?sh.cls:'sp-empty'}${isSwapSel?' swap-select-1':swapMode?' swap-highlight':''}"
+            ${swapMode ? `data-swap="1" onclick="selectSwapCell(${emp.id},'${emp.name}','${dk}','${cellDate}')" style="cursor:pointer"` : `onclick="openShiftModal(${emp.id},'${dk}','${emp.name}','${d.getMonth()+1}/${d.getDate()}')"`}
+          >${sh?sh.short:'·'}</div>
         </div>`;
       }
     });
@@ -2729,91 +2732,90 @@ function pickShiftInLeaveMode(empId, dateKey, sv) {
 
 
 // ══════════════════════════════════════════════
-// SWAP MODE — exchange two employees' full month schedule
+// SWAP MODE — exchange individual shift cells
 // ══════════════════════════════════════════════
+let swapMode = false;
+let swapSelected = null; // { empId, empName, dateKey, dateLabel, shift }
 
 function toggleSwapMode() {
   swapMode = !swapMode;
   swapSelected = null;
-  // Update all swap buttons
   document.querySelectorAll('.swap-mode-btn').forEach(b => b.classList.toggle('active', swapMode));
-  // Exit leave mode if active
   if (swapMode && leaveMode) {
     leaveMode = false;
     const lb = document.getElementById('leave-mode-btn');
     if (lb) lb.classList.remove('active');
   }
   renderAll();
-  if (!swapMode) showToast('已離開交換模式');
-  else showToast('🔄 點選第一位員工的姓名來交換班表');
+  if (swapMode) showToast('🔄 點選要交換的第一個班別格');
 }
 
-function selectSwapEmp(empId, empName) {
+function selectSwapCell(empId, empName, dateKey, dateLabel) {
   if (!swapMode) return;
+  const shift = S.schedule[empId + '_' + dateKey] || null;
+  const shiftLabel = shift ? (SHIFTS[shift]?.label || shift) : '（空白）';
+
   if (!swapSelected) {
-    swapSelected = { empId, empName };
+    // First selection
+    swapSelected = { empId, empName, dateKey, dateLabel, shift, shiftLabel };
     renderAll();
-    showToast(`已選擇 ${empName}，再點另一位要交換的員工`);
+    showToast(`已選 ${empName} ${dateLabel} [${shiftLabel}]，再點另一格交換`);
   } else {
-    if (swapSelected.empId === empId) {
+    // Second selection - confirm swap
+    const a = swapSelected;
+    const b = { empId, empName, dateKey, dateLabel, shift, shiftLabel };
+    if (a.empId === empId && a.dateKey === dateKey) {
+      // Clicked same cell - cancel
       swapSelected = null;
       renderAll();
       showToast('已取消選擇');
       return;
     }
-    // Confirm swap
-    const a = swapSelected;
-    const b = { empId, empName };
-    openModal(`<div class="mt">交換班表確認</div>
-      <div class="ms">將 <b>${a.empName}</b> 與 <b>${b.empName}</b> 的<br>本月所有班別互相交換</div>
-      <div style="font-size:12px;color:var(--amber-tx);background:var(--amber-bg);border:0.5px solid var(--amber-bd);border-radius:var(--r);padding:8px 12px;margin-bottom:12px">
-        ⚠️ 此操作會覆蓋兩人本月所有班別，無法復原
+    openModal(`<div class="mt">確認交換班別</div>
+      <div style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--s2);border-radius:var(--r);margin-bottom:8px">
+          <div style="flex:1;font-size:13px"><b>${a.empName}</b> ${a.dateLabel}</div>
+          <div style="padding:4px 10px;border-radius:8px;background:${a.shift?SHIFTS[a.shift]?.bg:'var(--s3)'};color:${a.shift?SHIFTS[a.shift]?.tx:'var(--tx3)'};font-weight:600">${a.shiftLabel}</div>
+        </div>
+        <div style="text-align:center;color:var(--tx3);font-size:18px;margin:4px 0">⇅</div>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--s2);border-radius:var(--r)">
+          <div style="flex:1;font-size:13px"><b>${b.empName}</b> ${b.dateLabel}</div>
+          <div style="padding:4px 10px;border-radius:8px;background:${b.shift?SHIFTS[b.shift]?.bg:'var(--s3)'};color:${b.shift?SHIFTS[b.shift]?.tx:'var(--tx3)'};font-weight:600">${b.shiftLabel}</div>
+        </div>
       </div>
       <div class="ma">
         <button class="btn" onclick="closeModal()" style="flex:1">取消</button>
-        <button class="btn btn-teal" onclick="doSwapEmps(${a.empId},'${a.empName}',${b.empId},'${b.empName}')" style="flex:2">確認交換</button>
+        <button class="btn btn-teal" onclick="doSwapCells('${a.empId}','${a.dateKey}','${a.shiftLabel}','${b.empId}','${b.dateKey}','${b.shiftLabel}','${a.empName}','${b.empName}')" style="flex:2">確認交換</button>
       </div>`);
   }
 }
 
-function doSwapEmps(aId, aName, bId, bName) {
+function doSwapCells(aEmpId, aDate, aShiftLabel, bEmpId, bDate, bShiftLabel, aName, bName) {
   closeModal();
-  const days = getMonthDates(S.monthOffset);
-  const newSchedule = { ...S.schedule };
-  let swapCount = 0;
-  days.forEach(d => {
-    const dk = fmtKey(d);
-    const keyA = `${aId}_${dk}`;
-    const keyB = `${bId}_${dk}`;
-    const valA = S.schedule[keyA] || null;
-    const valB = S.schedule[keyB] || null;
-    if (valA) newSchedule[keyB] = valA; else delete newSchedule[keyB];
-    if (valB) newSchedule[keyA] = valB; else delete newSchedule[keyA];
-    if (valA || valB) swapCount++;
-  });
-  S.schedule = newSchedule;
+  const keyA = aEmpId + '_' + aDate;
+  const keyB = bEmpId + '_' + bDate;
+  const valA = S.schedule[keyA] || null;
+  const valB = S.schedule[keyB] || null;
+  if (valA) S.schedule[keyB] = valA; else delete S.schedule[keyB];
+  if (valB) S.schedule[keyA] = valB; else delete S.schedule[keyA];
 
-  // Record in leaveLog as a swap action
-  const now = new Date();
-  const monthLabel = now.getFullYear() + '/' + String(now.getMonth()+1).padStart(2,'0');
+  // Log
   const entry = {
-    empId: aId,
-    empName: aName + ' ↔ ' + bName,
-    dateKey: monthLabel,
-    from: aName + ' 的班別',
-    to: bName + ' 的班別（互換）',
+    type: 'swap',
+    empA: aName, empB: bName,
+    dateA: aDate, dateB: bDate,
+    shiftA: aShiftLabel, shiftB: bShiftLabel,
     by: currentUser ? currentUser.email : '未知',
-    at: now.toISOString(),
-    action: 'swap',
+    byName: (typeof myDisplayName === 'function') ? myDisplayName() : '',
+    at: new Date().toISOString(),
   };
   S.leaveLog = [entry, ...(S.leaveLog || [])].slice(0, 500);
-
   saveAll();
   swapMode = false;
   swapSelected = null;
   document.querySelectorAll('.swap-mode-btn').forEach(b => b.classList.remove('active'));
   renderAll();
-  showToast(`✅ ${aName} ↔ ${bName} 班表已交換（${swapCount} 天）`);
+  showToast(`✅ ${aName}(${aDate}) ↔ ${bName}(${bDate}) 已交換`);
 }
 
 // Click outside to exit swap mode (but not when modal is open)
@@ -2851,6 +2853,8 @@ function getNotesMonthKey() {
 function initNotes() {
   if (!firebaseDb) return;
   notesRef = firebaseDb.ref('notes');
+  _notesLoadedKey = ''; // force reload
+  loadNotes();
 }
 
 function loadNotes() {
@@ -3092,8 +3096,10 @@ function renderLeaveLog() {
       if (l.type === 'swap') {
         const dt2 = l.at ? l.at.slice(0,16).replace('T',' ') : '';
         return `<tr style="border-bottom:0.5px solid var(--bd);background:var(--s2)">
-          <td style="padding:7px 10px;font-weight:600" colspan="2">🔄 班表交換：${l.empA} ↔ ${l.empB}　${l.monthKey||''}月</td>
-          <td style="padding:7px 8px;text-align:center" colspan="2"><span style="font-size:11px;color:var(--tx3)">整月互換</span></td>
+          <td style="padding:7px 10px;font-weight:600">${l.empA}(${l.dateA||''}) ↔ ${l.empB}(${l.dateB||''})</td>
+          <td style="padding:7px 10px;font-size:12px;color:var(--tx3)">${l.dateA||''}→${l.dateB||''}</td>
+          <td style="padding:7px 8px;text-align:center"><span style="font-size:11px">${l.shiftA||''}</span></td>
+          <td style="padding:7px 8px;text-align:center"><span style="font-size:11px">${l.shiftB||''}</span></td>
           <td style="padding:7px 10px;font-size:12px;color:var(--tx3)">${l.byName||l.by}</td>
           <td style="padding:7px 10px;font-size:12px;color:var(--tx3)">${dt2}</td>
         </tr>`;
