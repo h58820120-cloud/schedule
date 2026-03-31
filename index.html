@@ -333,7 +333,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
         <div class="app-sub" id="app-sub">
           <span class="sync-dot sync-off" id="sync-dot"></span>
           <span id="sync-label">本機模式</span>
-          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.1.6</span>
+          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.1.7</span>
         </div>
       </div>
     </div>
@@ -841,7 +841,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.1.6';
+const APP_VERSION = '1.1.7';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -1440,11 +1440,10 @@ function renderMonth() {
       } else {
         const cellDate = d.getMonth()+1 + '/' + d.getDate();
         const isSwapSel = swapMode && swapSelected && swapSelected.empId==emp.id && swapSelected.dateKey===dk;
-        h += `<div class="mg-cell" style="${isT?'background:var(--teal-bg)':(isHol||isSunC)?'background:#fdf2f8':isSatC?'background:#f0fdf4':''}">
-          <div class="shift-pill ${sh?sh.cls:'sp-empty'}${isSwapSel?' swap-select-1':swapMode?' swap-highlight':''}"
-            ${swapMode ? `data-swap="1" onclick="selectSwapCell(${emp.id},'${emp.name}','${dk}','${cellDate}')" style="cursor:pointer"` : `onclick="openShiftModal(${emp.id},'${dk}','${emp.name}','${d.getMonth()+1}/${d.getDate()}')"`}
-          >${sh?sh.short:'·'}</div>
-        </div>`;
+        const cellOnClick = swapMode
+          ? `data-swap="1" onclick="selectSwapCell(${emp.id},'${emp.name}','${dk}','${cellDate}')" style="cursor:pointer"`
+          : `onclick="openShiftModal(${emp.id},'${dk}','${emp.name}','${d.getMonth()+1}/${d.getDate()}')"`;
+        h += `<div class="mg-cell" style="${isT?'background:var(--teal-bg)':(isHol||isSunC)?'background:#fdf2f8':isSatC?'background:#f0fdf4':''}"><div class="shift-pill ${sh?sh.cls:'sp-empty'}${isSwapSel?' swap-select-1':swapMode?' swap-highlight':''}" ${cellOnClick}>${sh?sh.short:'·'}</div></div>`;
       }
     });
     h += `</div>`;
