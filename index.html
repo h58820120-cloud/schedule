@@ -333,7 +333,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
         <div class="app-sub" id="app-sub">
           <span class="sync-dot sync-off" id="sync-dot"></span>
           <span id="sync-label">本機模式</span>
-          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.1.7</span>
+          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.1.8</span>
         </div>
       </div>
     </div>
@@ -835,13 +835,14 @@ let S = {
   leaveLog: [],   // [{empId, empName, dateKey, shift, action, by, at}]
   overtimeOrder: [],  // [empName, ...] 緊急加班順序
   leaveOrder: [],     // [empName, ...] 填假順序
+  monthEmpOrder: {},  // { "YYYY-MM": [empName, ...] } per-month sort order
   myPrefs: {},    // per-user prefs { empName, events:{} }
   excludedEmps: new Set(), // names of employees user has excluded
   monthOffset: 0,
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.1.7';
+const APP_VERSION = '1.1.8';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -957,11 +958,11 @@ function loadLocal() {
     const params = new URLSearchParams(location.search);
     if (params.get('view')==='share') {
       const d = params.get('d');
-      if (d) { const x=JSON.parse(atob(d)); S.employees=x.employees||[]; S.schedule=x.schedule||{}; S.holidays=x.holidays||{}; S.excluded=x.excluded||{}; S.leaveLog=x.leaveLog||[]; S.overtimeOrder=x.overtimeOrder||[]; S.leaveOrder=x.leaveOrder||[]; S.myPrefs=x.myPrefs||{}; S.excludedEmps=new Set(); S.isReadOnly=true; }
+      if (d) { const x=JSON.parse(atob(d)); S.employees=x.employees||[]; S.schedule=x.schedule||{}; S.holidays=x.holidays||{}; S.excluded=x.excluded||{}; S.leaveLog=x.leaveLog||[]; S.overtimeOrder=x.overtimeOrder||[]; S.leaveOrder=x.leaveOrder||[]; S.monthEmpOrder=x.monthEmpOrder||{}; S.myPrefs=x.myPrefs||{}; S.excludedEmps=new Set(); S.isReadOnly=true; }
       return;
     }
     const raw = localStorage.getItem(LS_DATA);
-    if (raw) { const x=JSON.parse(raw); S.employees=x.employees||[]; S.schedule=x.schedule||{}; S.holidays=x.holidays||{}; S.excluded=x.excluded||{}; S.leaveLog=x.leaveLog||[]; S.overtimeOrder=x.overtimeOrder||[]; S.leaveOrder=x.leaveOrder||[]; S.myPrefs=x.myPrefs||{}; S.excludedEmps=new Set(x.excludedEmps||[]); }
+    if (raw) { const x=JSON.parse(raw); S.employees=x.employees||[]; S.schedule=x.schedule||{}; S.holidays=x.holidays||{}; S.excluded=x.excluded||{}; S.leaveLog=x.leaveLog||[]; S.overtimeOrder=x.overtimeOrder||[]; S.leaveOrder=x.leaveOrder||[]; S.monthEmpOrder=x.monthEmpOrder||{}; S.myPrefs=x.myPrefs||{}; S.excludedEmps=new Set(x.excludedEmps||[]); }
   } catch(e) {}
 }
 
@@ -1035,6 +1036,7 @@ function startSync() {
       S.leaveLog = data.leaveLog || [];
       S.overtimeOrder = data.overtimeOrder || [];
       S.leaveOrder = data.leaveOrder || [];
+      S.monthEmpOrder = data.monthEmpOrder || {};
       saveLocal();
       // myPrefs is per-user, loaded separately
       // excludedEmps kept for legacy compat
@@ -1073,6 +1075,7 @@ function pushToFirebase() {
       leaveLog: (S.leaveLog || []).slice(0, 100),
       overtimeOrder: S.overtimeOrder || [],
       leaveOrder: S.leaveOrder || [],
+      monthEmpOrder: S.monthEmpOrder || {},
     }));
   } catch(e) {
     console.error('Payload serialization error:', e);
@@ -1370,7 +1373,13 @@ function renderMonth() {
   });
   h += `</div>`; // end header
 
-  S.employees.forEach(emp => {
+  // Use per-month order if available, fallback to global sortOrder
+  const curMonthKey = (() => { const d = new Date(); d.setMonth(d.getMonth() + S.monthOffset); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); })();
+  const monthOrderNames = S.monthEmpOrder && S.monthEmpOrder[curMonthKey];
+  const renderEmps = monthOrderNames
+    ? monthOrderNames.map(name => S.employees.find(e => e.name === name)).filter(Boolean)
+    : [...S.employees].sort((a,b) => (a.sortOrder||999) - (b.sortOrder||999));
+  renderEmps.forEach(emp => {
     const c = EMP_COLORS[emp.colorIdx % EMP_COLORS.length];
         const isSwapSelected = swapMode && swapSelected && swapSelected.empId == emp.id;
     h += `<div class="mgrid-row">
@@ -2324,24 +2333,42 @@ function confirmEmpSelect(count) {
   emps.filter(e => selectedIds.has(e.id)).forEach(e => { delete newExcluded[e.name]; });
   S.excluded = newExcluded;
 
-  // Build final employees in Excel order (sortOrder from Excel)
+  // Build final employees - preserve global order, save per-month order
   const existingByName = {};
   S.employees.forEach(e => { existingByName[e.name] = e; });
+  // Get the imported month key from schedule dates
+  const importedDates = Object.keys(data.schedule).map(k => k.split('_')[1]).filter(Boolean);
+  let importMonthKey = '';
+  if (importedDates.length > 0) {
+    const d0 = importedDates[0];
+    importMonthKey = d0.slice(0, 7); // "YYYY-MM"
+  }
+
   const finalEmps = [];
   const idRemap = {};
+  const monthOrder = []; // names in Excel import order for this month
   emps.filter(e => selectedIds.has(e.id)).forEach(newEmp => {
+    monthOrder.push(newEmp.name);
     const ex = existingByName[newEmp.name];
     if (ex) {
-      ex.sortOrder = newEmp.sortOrder;
+      // Only update dept/type, NOT sortOrder (keep global order intact)
       ex.dept = newEmp.dept || ex.dept;
       ex.type = newEmp.type || ex.type;
       idRemap[newEmp.id] = ex.id;
       finalEmps.push(ex);
     } else {
+      // New employee: add with this month's sort position
+      newEmp.sortOrder = newEmp.sortOrder;
       idRemap[newEmp.id] = newEmp.id;
       finalEmps.push(newEmp);
     }
   });
+  // Save per-month order
+  if (importMonthKey) {
+    if (!S.monthEmpOrder) S.monthEmpOrder = {};
+    S.monthEmpOrder[importMonthKey] = monthOrder;
+  }
+  // Keep existing global sort order for all employees
   finalEmps.sort((a,b) => (a.sortOrder||999) - (b.sortOrder||999));
   S.employees = finalEmps;
 
