@@ -333,7 +333,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
         <div class="app-sub" id="app-sub">
           <span class="sync-dot sync-off" id="sync-dot"></span>
           <span id="sync-label">本機模式</span>
-          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.1.8</span>
+          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.2.0</span>
         </div>
       </div>
     </div>
@@ -842,7 +842,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.1.8';
+const APP_VERSION = '1.2.0';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -1027,8 +1027,11 @@ function startSync() {
         if (us < 0) return;
         const rawId = k.slice(0, us);
         const dk = k.slice(us+1);
-        const cleanId = empIdMap[rawId] || rawId;
-        if (!String(cleanId).includes('.')) schedFixed[cleanId + '_' + dk] = v;
+        const cleanId = empIdMap[rawId] !== undefined ? empIdMap[rawId] : rawId;
+        const cleanIdStr = String(Math.floor(Number(cleanId)));
+        if (!cleanIdStr.includes('.') && cleanIdStr !== 'NaN') {
+          schedFixed[cleanIdStr + '_' + dk] = v;
+        }
       });
       S.schedule = schedFixed;
       S.holidays = data.holidays || {};
@@ -1091,12 +1094,15 @@ function pushToFirebase() {
     .then(() => {
       console.log('Firebase write OK');
       updateSyncStatus('ok', '即時同步中');
+      // If sync was stopped (during import), restart it
+      if (!syncUnsub) setTimeout(() => startSync(), 500);
     })
     .catch(e => {
       _pauseSync = false;
       console.error('Firebase write error:', e.code, e.message);
       updateSyncStatus('err', '同步失敗');
       showToast('⚠️ Firebase 寫入失敗: ' + (e.code || e.message));
+      if (!syncUnsub) setTimeout(() => startSync(), 500);
     });
 }
 
@@ -2373,29 +2379,50 @@ function confirmEmpSelect(count) {
   S.employees = finalEmps;
 
   // Remap schedule keys (Excel emp id → system emp id)
-  const newSchedule = {};
+  // MERGE: keep other months' data, only replace the imported month
+  const importedMonths = new Set();
+  Object.keys(data.schedule).forEach(k => {
+    const parts = k.split('_');
+    if (parts[1]) importedMonths.add(parts[1].slice(0,7)); // "YYYY-MM"
+  });
+
+  // Start with existing schedule, remove only the imported months' data
+  const mergedSchedule = { ...S.schedule };
+  Object.keys(mergedSchedule).forEach(k => {
+    const parts = k.split('_');
+    if (parts[1] && importedMonths.has(parts[1].slice(0,7))) {
+      delete mergedSchedule[k]; // clear old data for imported months
+    }
+  });
+
+  // Add newly imported data with remapped ids
   Object.keys(data.schedule).forEach(k => {
     const us = k.indexOf('_');
     const rawId = +k.slice(0, us);
     const dateK = k.slice(us+1);
     const finalId = idRemap[rawId];
-    if (finalId !== undefined) newSchedule[finalId + '_' + dateK] = data.schedule[k];
+    if (finalId !== undefined) mergedSchedule[String(finalId) + '_' + dateK] = data.schedule[k];
   });
-  S.schedule = newSchedule;
-  S.holidays = data.holidays;
+  S.schedule = mergedSchedule;
+
+  // Merge holidays too (don't replace all)
+  Object.assign(S.holidays, data.holidays);
   // Store overtime/leave order from Excel
   if (data.overtimeOrder && data.overtimeOrder.length) S.overtimeOrder = data.overtimeOrder;
   if (data.leaveOrder && data.leaveOrder.length) S.leaveOrder = data.leaveOrder;
 
   closeModal();
-  // Force immediate Firebase write
+  renderAll();
+  pendingImport = null;
+  // Stop sync, push, restart after completion
   if (currentUser && dbRef) {
+    stopSync();
     pushToFirebase();
+    // Wait for push to complete then restart sync
+    // pushToFirebase's .then() will handle restart
   } else {
     saveLocal();
   }
-  renderAll();
-  pendingImport = null;
 
   const resultEl = document.getElementById('xp-result');
   if (resultEl) {
