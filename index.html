@@ -333,7 +333,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
         <div class="app-sub" id="app-sub">
           <span class="sync-dot sync-off" id="sync-dot"></span>
           <span id="sync-label">本機模式</span>
-          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.2.0</span>
+          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.2.2</span>
         </div>
       </div>
     </div>
@@ -842,7 +842,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.2.2';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -1042,8 +1042,6 @@ function startSync() {
       S.monthEmpOrder = data.monthEmpOrder || {};
       saveLocal();
       // myPrefs is per-user, loaded separately
-      // excludedEmps kept for legacy compat
-      saveLocal();
       renderAll();
     }
   });
@@ -1094,15 +1092,12 @@ function pushToFirebase() {
     .then(() => {
       console.log('Firebase write OK');
       updateSyncStatus('ok', '即時同步中');
-      // If sync was stopped (during import), restart it
-      if (!syncUnsub) setTimeout(() => startSync(), 500);
     })
     .catch(e => {
       _pauseSync = false;
       console.error('Firebase write error:', e.code, e.message);
       updateSyncStatus('err', '同步失敗');
       showToast('⚠️ Firebase 寫入失敗: ' + (e.code || e.message));
-      if (!syncUnsub) setTimeout(() => startSync(), 500);
     });
 }
 
@@ -1379,12 +1374,26 @@ function renderMonth() {
   });
   h += `</div>`; // end header
 
-  // Use per-month order if available, fallback to global sortOrder
+  // Use per-month order if available, fallback to employees with data this month
   const curMonthKey = (() => { const d = new Date(); d.setMonth(d.getMonth() + S.monthOffset); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); })();
   const monthOrderNames = S.monthEmpOrder && S.monthEmpOrder[curMonthKey];
-  const renderEmps = monthOrderNames
-    ? monthOrderNames.map(name => S.employees.find(e => e.name === name)).filter(Boolean)
-    : [...S.employees].sort((a,b) => (a.sortOrder||999) - (b.sortOrder||999));
+  let renderEmps;
+  if (monthOrderNames && monthOrderNames.length > 0) {
+    // Use saved per-month order
+    renderEmps = monthOrderNames.map(name => S.employees.find(e => e.name === name)).filter(Boolean);
+  } else {
+    // Fallback: show employees who have any schedule data this month
+    const monthPrefix = curMonthKey + '-';
+    const empsWithData = new Set();
+    Object.keys(S.schedule).forEach(k => {
+      const us = k.indexOf('_');
+      if (us > 0 && k.slice(us+1).startsWith(monthPrefix)) empsWithData.add(k.slice(0, us));
+    });
+    renderEmps = S.employees
+      .filter(e => empsWithData.has(String(e.id)) || empsWithData.has(String(Math.floor(e.id))))
+      .sort((a,b) => (a.sortOrder||999) - (b.sortOrder||999));
+    if (renderEmps.length === 0) renderEmps = [...S.employees].sort((a,b) => (a.sortOrder||999) - (b.sortOrder||999));
+  }
   renderEmps.forEach(emp => {
     const c = EMP_COLORS[emp.colorIdx % EMP_COLORS.length];
         const isSwapSelected = swapMode && swapSelected && swapSelected.empId == emp.id;
@@ -2329,104 +2338,90 @@ function confirmEmpSelect(count) {
       else uncheckedNames.add(emps[i].name);
     }
   }
-
   if (selectedIds.size === 0) { showToast('請至少選擇一位員工'); return; }
 
-  // Persist excluded names for next import
+  // Persist excluded names
   const newExcluded = { ...S.excluded };
   uncheckedNames.forEach(n => { newExcluded[n] = true; });
-  // Remove from excluded if now checked
   emps.filter(e => selectedIds.has(e.id)).forEach(e => { delete newExcluded[e.name]; });
   S.excluded = newExcluded;
 
-  // Build final employees - preserve global order, save per-month order
+  // Determine which month is being imported
+  const importedDates = Object.keys(data.schedule).map(k => k.split('_')[1]).filter(Boolean);
+  const importMonthKey = importedDates.length > 0 ? importedDates[0].slice(0, 7) : '';
+
+  // Build idRemap: Excel temp id → system id
+  const idRemap = {};
+  const monthOrder = []; // employee names in Excel order for this month
   const existingByName = {};
   S.employees.forEach(e => { existingByName[e.name] = e; });
-  // Get the imported month key from schedule dates
-  const importedDates = Object.keys(data.schedule).map(k => k.split('_')[1]).filter(Boolean);
-  let importMonthKey = '';
-  if (importedDates.length > 0) {
-    const d0 = importedDates[0];
-    importMonthKey = d0.slice(0, 7); // "YYYY-MM"
-  }
 
-  const finalEmps = [];
-  const idRemap = {};
-  const monthOrder = []; // names in Excel import order for this month
   emps.filter(e => selectedIds.has(e.id)).forEach(newEmp => {
     monthOrder.push(newEmp.name);
     const ex = existingByName[newEmp.name];
     if (ex) {
-      // Only update dept/type, NOT sortOrder (keep global order intact)
+      // Existing employee: map new temp id → existing id, update metadata
+      idRemap[newEmp.id] = ex.id;
       ex.dept = newEmp.dept || ex.dept;
       ex.type = newEmp.type || ex.type;
-      idRemap[newEmp.id] = ex.id;
-      finalEmps.push(ex);
     } else {
-      // New employee: add with this month's sort position
-      newEmp.sortOrder = newEmp.sortOrder;
-      idRemap[newEmp.id] = newEmp.id;
-      finalEmps.push(newEmp);
+      // New employee: use stable id = Date.now() + index to avoid collisions
+      const stableId = Date.now() + Math.floor(Math.random() * 9000) + 1000;
+      idRemap[newEmp.id] = stableId;
+      newEmp.id = stableId;
+      S.employees.push(newEmp); // ADD to global list, never remove
     }
   });
-  // Save per-month order
+
+  // Save per-month employee order
   if (importMonthKey) {
     if (!S.monthEmpOrder) S.monthEmpOrder = {};
     S.monthEmpOrder[importMonthKey] = monthOrder;
   }
-  // Keep existing global sort order for all employees
-  finalEmps.sort((a,b) => (a.sortOrder||999) - (b.sortOrder||999));
-  S.employees = finalEmps;
 
-  // Remap schedule keys (Excel emp id → system emp id)
-  // MERGE: keep other months' data, only replace the imported month
-  const importedMonths = new Set();
-  Object.keys(data.schedule).forEach(k => {
-    const parts = k.split('_');
-    if (parts[1]) importedMonths.add(parts[1].slice(0,7)); // "YYYY-MM"
+  // Remap and MERGE schedule (keep other months, replace imported month)
+  const importedMonths = new Set(importedDates.map(d => d.slice(0, 7)));
+
+  const mergedSchedule = {};
+  // Keep schedule for months NOT being imported
+  Object.entries(S.schedule).forEach(([k, v]) => {
+    const d = k.split('_')[1];
+    if (d && !importedMonths.has(d.slice(0, 7))) mergedSchedule[k] = v;
   });
-
-  // Start with existing schedule, remove only the imported months' data
-  const mergedSchedule = { ...S.schedule };
-  Object.keys(mergedSchedule).forEach(k => {
-    const parts = k.split('_');
-    if (parts[1] && importedMonths.has(parts[1].slice(0,7))) {
-      delete mergedSchedule[k]; // clear old data for imported months
-    }
-  });
-
-  // Add newly imported data with remapped ids
-  Object.keys(data.schedule).forEach(k => {
+  // Add newly imported schedule with remapped ids
+  Object.entries(data.schedule).forEach(([k, v]) => {
     const us = k.indexOf('_');
     const rawId = +k.slice(0, us);
-    const dateK = k.slice(us+1);
+    const dateK = k.slice(us + 1);
     const finalId = idRemap[rawId];
-    if (finalId !== undefined) mergedSchedule[String(finalId) + '_' + dateK] = data.schedule[k];
+    if (finalId !== undefined) mergedSchedule[String(finalId) + '_' + dateK] = v;
   });
   S.schedule = mergedSchedule;
 
-  // Merge holidays too (don't replace all)
-  Object.assign(S.holidays, data.holidays);
-  // Store overtime/leave order from Excel
+  // Merge holidays
+  Object.assign(S.holidays, data.holidays || {});
   if (data.overtimeOrder && data.overtimeOrder.length) S.overtimeOrder = data.overtimeOrder;
   if (data.leaveOrder && data.leaveOrder.length) S.leaveOrder = data.leaveOrder;
 
   closeModal();
   renderAll();
   pendingImport = null;
-  // Stop sync, push, restart after completion
+
   if (currentUser && dbRef) {
     stopSync();
     pushToFirebase();
-    // Wait for push to complete then restart sync
-    // pushToFirebase's .then() will handle restart
+    setTimeout(() => startSync(), 4000);
   } else {
     saveLocal();
   }
 
   const resultEl = document.getElementById('xp-result');
   if (resultEl) {
-    resultEl.innerHTML = `<div class="imp-ok">✅ 匯入 ${S.employees.length} 位員工，共 ${Object.keys(S.schedule).length} 筆班別${data.totalSkipped>0?'，略過 '+data.totalSkipped+' 筆':''}</div>`;
+    const imported = Object.keys(S.schedule).filter(k => {
+      const d = k.split('_')[1];
+      return d && importedMonths.has(d.slice(0,7));
+    }).length;
+    resultEl.innerHTML = `<div class="imp-ok">✅ 匯入 ${monthOrder.length} 位員工，共 ${imported} 筆班別${data.totalSkipped>0?'，略過 '+data.totalSkipped+' 筆':''}</div>`;
   }
   const previewEl = document.getElementById('xp-preview');
   if (previewEl) previewEl.style.display = 'none';
