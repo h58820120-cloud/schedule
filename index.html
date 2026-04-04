@@ -333,7 +333,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
         <div class="app-sub" id="app-sub">
           <span class="sync-dot sync-off" id="sync-dot"></span>
           <span id="sync-label">本機模式</span>
-          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.2.2</span>
+          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.2.3</span>
         </div>
       </div>
     </div>
@@ -842,7 +842,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.2.2';
+const APP_VERSION = '1.2.3';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -1377,22 +1377,26 @@ function renderMonth() {
   // Use per-month order if available, fallback to employees with data this month
   const curMonthKey = (() => { const d = new Date(); d.setMonth(d.getMonth() + S.monthOffset); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); })();
   const monthOrderNames = S.monthEmpOrder && S.monthEmpOrder[curMonthKey];
-  let renderEmps;
-  if (monthOrderNames && monthOrderNames.length > 0) {
-    // Use saved per-month order
-    renderEmps = monthOrderNames.map(name => S.employees.find(e => e.name === name)).filter(Boolean);
-  } else {
-    // Fallback: show employees who have any schedule data this month
-    const monthPrefix = curMonthKey + '-';
-    const empsWithData = new Set();
-    Object.keys(S.schedule).forEach(k => {
-      const us = k.indexOf('_');
-      if (us > 0 && k.slice(us+1).startsWith(monthPrefix)) empsWithData.add(k.slice(0, us));
-    });
-    renderEmps = S.employees
-      .filter(e => empsWithData.has(String(e.id)) || empsWithData.has(String(Math.floor(e.id))))
-      .sort((a,b) => (a.sortOrder||999) - (b.sortOrder||999));
-    if (renderEmps.length === 0) renderEmps = [...S.employees].sort((a,b) => (a.sortOrder||999) - (b.sortOrder||999));
+  // Show only employees with schedule data this month, sorted by per-month order
+  const monthPrefix = curMonthKey + '-';
+  const empsWithData = new Set();
+  Object.keys(S.schedule).forEach(k => {
+    const us = k.indexOf('_');
+    if (us > 0 && k.slice(us+1).startsWith(monthPrefix)) empsWithData.add(k.slice(0, us));
+  });
+  let renderEmps = S.employees.filter(e =>
+    empsWithData.has(String(e.id)) || empsWithData.has(String(Math.floor(Number(e.id))))
+  );
+  // Sort: use monthSortOrder for this month if available, else global sortOrder
+  renderEmps.sort((a, b) => {
+    const ao = (a.monthSortOrder && a.monthSortOrder[curMonthKey]) !== undefined
+      ? a.monthSortOrder[curMonthKey] : (a.sortOrder || 999);
+    const bo = (b.monthSortOrder && b.monthSortOrder[curMonthKey]) !== undefined
+      ? b.monthSortOrder[curMonthKey] : (b.sortOrder || 999);
+    return ao - bo;
+  });
+  if (renderEmps.length === 0) {
+    renderEmps = [...S.employees].sort((a,b) => (a.sortOrder||999) - (b.sortOrder||999));
   }
   renderEmps.forEach(emp => {
     const c = EMP_COLORS[emp.colorIdx % EMP_COLORS.length];
@@ -2081,10 +2085,13 @@ function handleFile(file) {
           let emp = S.employees.find(e => e.name === empName);
           const sortOrder = row[1] != null && !isNaN(+row[1]) ? +row[1] : 999;
           if (!emp) {
-            emp = { id: Date.now() + Math.floor(Math.random() * 1000), name: empName, dept: empDept, type: empType, colorIdx: S.employees.length % EMP_COLORS.length, sortOrder };
+            emp = { id: Date.now() + Math.floor(Math.random() * 1000), name: empName, dept: empDept, type: empType, colorIdx: S.employees.length % EMP_COLORS.length, sortOrder, monthSortOrder: {} };
             S.employees.push(emp);
           } else {
-            emp.sortOrder = sortOrder; // always update order from latest Excel
+            // Store per-month sort order without changing global sortOrder
+            if (!emp.monthSortOrder) emp.monthSortOrder = {};
+            const parseMonthKey = dates.find(d=>d) ? (() => { const d=dates.find(d=>d); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); })() : '';
+            if (parseMonthKey) emp.monthSortOrder[parseMonthKey] = sortOrder;
           }
 
           dates.forEach((d, ci) => {
