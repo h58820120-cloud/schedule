@@ -333,7 +333,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
         <div class="app-sub" id="app-sub">
           <span class="sync-dot sync-off" id="sync-dot"></span>
           <span id="sync-label">本機模式</span>
-          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.2.5</span>
+          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.2.6</span>
         </div>
       </div>
     </div>
@@ -842,7 +842,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.2.5';
+const APP_VERSION = '1.2.6';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -1000,6 +1000,7 @@ function initFirebase(cfg) {
 }
 
 let _pauseSync = false;
+let _importSeq = 0; // increments on each import, prevents old data from overwriting
 let leaveOrderRef = null;
 let leaveOrderData = {}; // { YYYY-MM: { order:[], done:{} } }
 
@@ -1007,9 +1008,11 @@ function startSync() {
   initLeaveOrder();
   if (syncUnsub) { dbRef.off('value', syncUnsub); }
   syncUnsub = dbRef.on('value', snap => {
-    if (_pauseSync) return;
     const data = snap.val();
     if (data) {
+      // Reject stale Firebase data (from partial writes during import)
+      const dataSeq = data._seq || 0;
+      if (dataSeq < _importSeq) return; // ignore old/intermediate data
       // Sanitize employee ids (remove dots from old data)
       S.employees = (data.employees || []).map(e => ({
         ...e, id: Math.floor(Number(e.id)) || e.id
@@ -1053,9 +1056,6 @@ function stopSync() {
 function pushToFirebase() {
   if (!currentUser) { console.warn('no user'); showToast('請先登入'); return; }
   if (!dbRef) { console.warn('no dbRef'); return; }
-  _pauseSync = true;
-  setTimeout(() => { _pauseSync = false; }, 5000);
-
   let payload;
   try {
     // Sanitize schedule keys - remove keys with dots (invalid Firebase keys)
@@ -1077,6 +1077,7 @@ function pushToFirebase() {
       overtimeOrder: S.overtimeOrder || [],
       leaveOrder: S.leaveOrder || [],
       monthEmpOrder: S.monthEmpOrder || {},
+      _seq: _importSeq,
     }));
   } catch(e) {
     console.error('Payload serialization error:', e);
@@ -1989,6 +1990,7 @@ let pendingImport = null;
 
 function handleFile(file) {
   if (!file) return;
+  stopSync(); // pause Firebase sync during import to prevent overwrites
   const reader = new FileReader();
   reader.onload = e => {
     try {
@@ -2346,6 +2348,7 @@ function setAllEmpSel(checked, count) {
 function cancelImport() {
   pendingImport = null;
   closeModal();
+  startSync(); // restart sync after cancel
   document.getElementById('xp-result').innerHTML = '<div class="imp-err" style="background:var(--s2);color:var(--tx2);border-color:var(--bd)">已取消匯入</div>';
 }
 
@@ -2440,11 +2443,12 @@ function confirmEmpSelect(count) {
   pendingImport = null;
 
   if (currentUser && dbRef) {
-    stopSync();
+    // Sync already stopped at start of handleFile
     pushToFirebase();
-    setTimeout(() => startSync(), 4000);
+    setTimeout(() => startSync(), 2000); // restart sync after push settles
   } else {
     saveLocal();
+    startSync();
   }
 
   const resultEl = document.getElementById('xp-result');
