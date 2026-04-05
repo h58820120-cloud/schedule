@@ -333,7 +333,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
         <div class="app-sub" id="app-sub">
           <span class="sync-dot sync-off" id="sync-dot"></span>
           <span id="sync-label">本機模式</span>
-          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.2.4</span>
+          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.2.5</span>
         </div>
       </div>
     </div>
@@ -842,7 +842,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.2.4';
+const APP_VERSION = '1.2.5';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -2391,6 +2391,11 @@ function confirmEmpSelect(count) {
       idRemap[newEmp.id] = ex.id;
       ex.dept = newEmp.dept || ex.dept;
       ex.type = newEmp.type || ex.type;
+      // Copy per-month sort order
+      if (newEmp.monthSortOrder) {
+        if (!ex.monthSortOrder) ex.monthSortOrder = {};
+        Object.assign(ex.monthSortOrder, newEmp.monthSortOrder);
+      }
     } else {
       // New employee: use stable id = Date.now() + index to avoid collisions
       const stableId = Date.now() + Math.floor(Math.random() * 9000) + 1000;
