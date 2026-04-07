@@ -333,7 +333,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
         <div class="app-sub" id="app-sub">
           <span class="sync-dot sync-off" id="sync-dot"></span>
           <span id="sync-label">本機模式</span>
-          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.2.8</span>
+          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.2.9</span>
         </div>
       </div>
     </div>
@@ -385,8 +385,11 @@ td.ec2{padding:4px 8px;white-space:nowrap}
         <button class="btn leave-mode-btn" id="leave-mode-btn" onclick="toggleLeaveMode()" title="休假模式">
           🏖 休假
         </button>
-        <button class="btn swap-mode-btn" id="swap-mode-btn" onclick="toggleSwapMode()" title="交換班表">
-          🔄 交換
+        <button class="btn swap-mode-btn" id="swap-mode-btn" onclick="toggleSwapMode()" title="格子對格子交換">
+          🔄 交換格
+        </button>
+        <button class="btn" id="swap-month-btn" onclick="openMonthSwapModal()" title="整月互換兩人班表" style="display:none">
+          🔄 整月
         </button>
         <button class="btn" style="font-size:12px" onclick="switchTab('week')">週視圖</button>
       </div>
@@ -440,7 +443,8 @@ td.ec2{padding:4px 8px;white-space:nowrap}
       </div>
       <div class="nav-r">
         <button class="btn" style="font-size:12px" onclick="copyLastWeek()">📋 複製上週</button>
-        <button class="btn swap-mode-btn" id="swap-mode-btn-week" onclick="toggleSwapMode()" title="交換班表">🔄 交換</button>
+        <button class="btn swap-mode-btn" id="swap-mode-btn-week" onclick="toggleSwapMode()" title="格子對格子交換">🔄 交換格</button>
+        <button class="btn" id="swap-month-btn-week" onclick="openMonthSwapModal()" title="整月互換兩人班表" style="display:none">🔄 整月</button>
         <button class="btn" style="font-size:12px" onclick="switchTab('month')">切換月視圖</button>
       </div>
     </div>
@@ -842,7 +846,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.2.8';
+const APP_VERSION = '1.2.9';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -1238,6 +1242,7 @@ function updateAuthUI() {
   } else {
     if (ab) { ab.textContent = '登入'; ab.onclick = openLoginModal; ab.className = 'btn btn-teal'; }
     document.querySelectorAll('.swap-mode-btn').forEach(b => b.style.display = 'none');
+    document.querySelectorAll('#swap-month-btn,#swap-month-btn-week').forEach(b => b.style.display = 'none');
     if (ul) ul.textContent = '';
     if (setupTab) setupTab.style.display = 'none';
     if (pendingBanner) pendingBanner.style.display = 'none';
@@ -2898,6 +2903,93 @@ document.addEventListener('click', e => {
     renderAll();
   }
 });
+
+
+function openMonthSwapModal() {
+  // Show modal to pick two employees and swap their entire month
+  const emps = [...S.employees].sort((a,b) => (a.sortOrder||999)-(b.sortOrder||999));
+  if (emps.length < 2) { showToast('需要至少兩位員工才能交換'); return; }
+
+  const curMonthKey = (() => {
+    const d = new Date(); d.setMonth(d.getMonth() + S.monthOffset);
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+  })();
+  const monthLabel = curMonthKey.replace('-', ' 年 ') + ' 月';
+
+  const opts = emps.map((e,i) =>
+    `<option value="${i}">${e.name}</option>`
+  ).join('');
+
+  openModal(`<div class="mt">整月班表互換</div>
+    <div class="ms">${monthLabel}</div>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px">
+      <div>
+        <div style="font-size:12px;color:var(--tx3);margin-bottom:4px">第一位員工</div>
+        <select id="swap-emp-a" style="width:100%;padding:8px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:14px">
+          ${opts}
+        </select>
+      </div>
+      <div style="text-align:center;font-size:20px;color:var(--tx3)">⇅</div>
+      <div>
+        <div style="font-size:12px;color:var(--tx3);margin-bottom:4px">第二位員工</div>
+        <select id="swap-emp-b" style="width:100%;padding:8px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--s2);color:var(--tx);font-size:14px">
+          ${opts.replace('<option value="0">', '<option value="0" selected>')}
+        </select>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--amber-tx);background:var(--amber-bg);border:0.5px solid var(--amber-bd);border-radius:var(--r);padding:8px 12px;margin-bottom:12px">
+      ⚠️ 兩人本月所有班別互換，無法復原
+    </div>
+    <div class="ma">
+      <button class="btn" onclick="closeModal()" style="flex:1">取消</button>
+      <button class="btn btn-teal" onclick="confirmMonthSwap()" style="flex:2">確認交換</button>
+    </div>`);
+}
+
+function confirmMonthSwap() {
+  const selA = document.getElementById('swap-emp-a');
+  const selB = document.getElementById('swap-emp-b');
+  if (!selA || !selB) return;
+  const emps = [...S.employees].sort((a,b) => (a.sortOrder||999)-(b.sortOrder||999));
+  const empA = emps[+selA.value];
+  const empB = emps[+selB.value];
+  if (!empA || !empB || empA.id === empB.id) {
+    showToast('請選擇兩位不同的員工'); return;
+  }
+  closeModal();
+
+  const curMonthKey = (() => {
+    const d = new Date(); d.setMonth(d.getMonth() + S.monthOffset);
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+  })();
+
+  // Get all days in current month
+  const days = getMonthDates(S.monthOffset);
+  days.forEach(d => {
+    const dk = fmtKey(d);
+    const keyA = String(empA.id) + '_' + dk;
+    const keyB = String(empB.id) + '_' + dk;
+    const valA = S.schedule[keyA] || null;
+    const valB = S.schedule[keyB] || null;
+    if (valA) S.schedule[keyB] = valA; else delete S.schedule[keyB];
+    if (valB) S.schedule[keyA] = valB; else delete S.schedule[keyA];
+  });
+
+  // Log
+  const entry = {
+    type: 'swap',
+    empA: empA.name, empIdA: empA.id,
+    empB: empB.name, empIdB: empB.id,
+    monthKey: curMonthKey,
+    by: currentUser ? currentUser.email : '未知',
+    byName: (typeof myDisplayName === 'function') ? myDisplayName() : '',
+    at: new Date().toISOString(),
+  };
+  S.leaveLog = [entry, ...(S.leaveLog || [])].slice(0, 500);
+  saveAll();
+  renderAll();
+  showToast(`✅ ${empA.name} ↔ ${empB.name} 整月班表已交換`);
+}
 
 // ══════════════════════════════════════════════
 // MONTHLY NOTES
