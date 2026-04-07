@@ -333,7 +333,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
         <div class="app-sub" id="app-sub">
           <span class="sync-dot sync-off" id="sync-dot"></span>
           <span id="sync-label">本機模式</span>
-          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.2.6</span>
+          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.2.8</span>
         </div>
       </div>
     </div>
@@ -842,7 +842,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.2.6';
+const APP_VERSION = '1.2.8';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -1378,40 +1378,13 @@ function renderMonth() {
   // Use per-month order if available, fallback to employees with data this month
   const curMonthKey = (() => { const d = new Date(); d.setMonth(d.getMonth() + S.monthOffset); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); })();
   const monthOrderNames = S.monthEmpOrder && S.monthEmpOrder[curMonthKey];
-  // Determine which employees to show this month
-  const monthPrefix = curMonthKey + '-';
-  const empsWithData = new Set();
-  Object.keys(S.schedule).forEach(k => {
-    const us = k.indexOf('_');
-    if (us > 0 && k.slice(us+1).startsWith(monthPrefix)) empsWithData.add(k.slice(0, us));
-  });
-  // If we have monthSortOrder data for this month, use it to filter
-  // Otherwise show all employees (old data or fresh import)
-  const hasMonthOrder = S.employees.some(e => e.monthSortOrder && e.monthSortOrder[curMonthKey] !== undefined);
-  // Match schedule keys to employee ids
-  const empIdToEmp = {};
-  S.employees.forEach(e => {
-    empIdToEmp[String(e.id)] = e;
-    empIdToEmp[String(Math.floor(Number(e.id)))] = e;
-  });
-  let renderEmps;
-  if (hasMonthOrder) {
-    // Filter to only employees with data this month
-    const renderEmpsSet = new Set();
-    empsWithData.forEach(idStr => {
-      const e = empIdToEmp[idStr] || empIdToEmp[String(Math.floor(Number(idStr)))];
-      if (e) renderEmpsSet.add(e);
-    });
-    renderEmps = [...renderEmpsSet];
-  } else {
-    // No month-specific data: show all employees
-    renderEmps = [...S.employees];
-  }
-  // Sort: use monthSortOrder for this month if available, else global sortOrder
+  // Always show all employees, sort by per-month order
+  const renderEmps = [...S.employees];
+  // Sort by per-month order if available, else global sortOrder
   renderEmps.sort((a, b) => {
-    const ao = (a.monthSortOrder && a.monthSortOrder[curMonthKey]) !== undefined
+    const ao = (a.monthSortOrder && a.monthSortOrder[curMonthKey] !== undefined)
       ? a.monthSortOrder[curMonthKey] : (a.sortOrder || 999);
-    const bo = (b.monthSortOrder && b.monthSortOrder[curMonthKey]) !== undefined
+    const bo = (b.monthSortOrder && b.monthSortOrder[curMonthKey] !== undefined)
       ? b.monthSortOrder[curMonthKey] : (b.sortOrder || 999);
     return ao - bo;
   });
