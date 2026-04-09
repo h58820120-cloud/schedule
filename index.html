@@ -333,7 +333,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
         <div class="app-sub" id="app-sub">
           <span class="sync-dot sync-off" id="sync-dot"></span>
           <span id="sync-label">本機模式</span>
-          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.3.0</span>
+          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.3.1</span>
         </div>
       </div>
     </div>
@@ -846,7 +846,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.3.1';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -2398,18 +2398,30 @@ function confirmEmpSelect(count) {
 
   const mergedSchedule = {};
   // Keep schedule for months NOT being imported
+  let keptKeys = 0, removedKeys = 0;
   Object.entries(S.schedule).forEach(([k, v]) => {
-    const d = k.split('_')[1];
-    if (d && !importedMonths.has(d.slice(0, 7))) mergedSchedule[k] = v;
+    const dateStr = k.slice(k.indexOf('_') + 1);
+    const monthStr = dateStr ? dateStr.slice(0, 7) : '';
+    if (monthStr && importedMonths.has(monthStr)) {
+      removedKeys++;
+    } else {
+      mergedSchedule[k] = v;
+      keptKeys++;
+    }
   });
   // Add newly imported schedule with remapped ids
+  let addedKeys = 0;
   Object.entries(data.schedule).forEach(([k, v]) => {
     const us = k.indexOf('_');
     const rawId = +k.slice(0, us);
     const dateK = k.slice(us + 1);
     const finalId = idRemap[rawId];
-    if (finalId !== undefined) mergedSchedule[String(finalId) + '_' + dateK] = v;
+    if (finalId !== undefined) {
+      mergedSchedule[String(finalId) + '_' + dateK] = v;
+      addedKeys++;
+    }
   });
+  console.log('Schedule merge:', {importedMonths: [...importedMonths], kept: keptKeys, removed: removedKeys, added: addedKeys, total: Object.keys(mergedSchedule).length});
   S.schedule = mergedSchedule;
 
   // Merge holidays
