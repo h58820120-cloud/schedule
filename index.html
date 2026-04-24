@@ -333,7 +333,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
         <div class="app-sub" id="app-sub">
           <span class="sync-dot sync-off" id="sync-dot"></span>
           <span id="sync-label">本機模式</span>
-          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.3.3</span>
+          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.2.9</span>
         </div>
       </div>
     </div>
@@ -837,9 +837,8 @@ let S = {
   holidays: {},    // { "YYYY-MM-DD": true }
   excluded: {},   // { "empName": true } — previously unchecked
   leaveLog: [],   // [{empId, empName, dateKey, shift, action, by, at}]
-  overtimeOrder: [],  // [empName, ...] 緊急加班順序 (global fallback)
-  leaveOrder: [],     // [empName, ...] 填假順序 (global fallback)
-  monthOrders: {},    // { "YYYY-MM": { overtime:[...], leave:[...] } }
+  overtimeOrder: [],  // [empName, ...] 緊急加班順序
+  leaveOrder: [],     // [empName, ...] 填假順序
   monthEmpOrder: {},  // { "YYYY-MM": [empName, ...] } per-month sort order
   myPrefs: {},    // per-user prefs { empName, events:{} }
   excludedEmps: new Set(), // names of employees user has excluded
@@ -847,7 +846,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.3.3';
+const APP_VERSION = '1.2.9';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -963,11 +962,11 @@ function loadLocal() {
     const params = new URLSearchParams(location.search);
     if (params.get('view')==='share') {
       const d = params.get('d');
-      if (d) { const x=JSON.parse(atob(d)); S.employees=x.employees||[]; S.schedule=x.schedule||{}; S.holidays=x.holidays||{}; S.excluded=x.excluded||{}; S.leaveLog=x.leaveLog||[]; S.overtimeOrder=x.overtimeOrder||[]; S.leaveOrder=x.leaveOrder||[]; S.monthOrders=x.monthOrders||{}; S.monthEmpOrder=x.monthEmpOrder||{}; S.myPrefs=x.myPrefs||{}; S.excludedEmps=new Set(); S.isReadOnly=true; }
+      if (d) { const x=JSON.parse(atob(d)); S.employees=x.employees||[]; S.schedule=x.schedule||{}; S.holidays=x.holidays||{}; S.excluded=x.excluded||{}; S.leaveLog=x.leaveLog||[]; S.overtimeOrder=x.overtimeOrder||[]; S.leaveOrder=x.leaveOrder||[]; S.monthEmpOrder=x.monthEmpOrder||{}; S.myPrefs=x.myPrefs||{}; S.excludedEmps=new Set(); S.isReadOnly=true; }
       return;
     }
     const raw = localStorage.getItem(LS_DATA);
-    if (raw) { const x=JSON.parse(raw); S.employees=x.employees||[]; S.schedule=x.schedule||{}; S.holidays=x.holidays||{}; S.excluded=x.excluded||{}; S.leaveLog=x.leaveLog||[]; S.overtimeOrder=x.overtimeOrder||[]; S.leaveOrder=x.leaveOrder||[]; S.monthOrders=x.monthOrders||{}; S.monthEmpOrder=x.monthEmpOrder||{}; S.myPrefs=x.myPrefs||{}; S.excludedEmps=new Set(x.excludedEmps||[]); }
+    if (raw) { const x=JSON.parse(raw); S.employees=x.employees||[]; S.schedule=x.schedule||{}; S.holidays=x.holidays||{}; S.excluded=x.excluded||{}; S.leaveLog=x.leaveLog||[]; S.overtimeOrder=x.overtimeOrder||[]; S.leaveOrder=x.leaveOrder||[]; S.monthEmpOrder=x.monthEmpOrder||{}; S.myPrefs=x.myPrefs||{}; S.excludedEmps=new Set(x.excludedEmps||[]); }
   } catch(e) {}
 }
 
@@ -1047,7 +1046,6 @@ function startSync() {
       S.leaveLog = data.leaveLog || [];
       S.overtimeOrder = data.overtimeOrder || [];
       S.leaveOrder = data.leaveOrder || [];
-      S.monthOrders = data.monthOrders || {};
       S.monthEmpOrder = data.monthEmpOrder || {};
       saveLocal();
       // myPrefs is per-user, loaded separately
@@ -1082,7 +1080,6 @@ function pushToFirebase() {
       leaveLog: (S.leaveLog || []).slice(0, 100),
       overtimeOrder: S.overtimeOrder || [],
       leaveOrder: S.leaveOrder || [],
-      monthOrders: S.monthOrders || {},
       monthEmpOrder: S.monthEmpOrder || {},
       _seq: _importSeq,
     }));
@@ -1402,13 +1399,12 @@ function renderMonth() {
   }
   renderEmps.forEach(emp => {
     const c = EMP_COLORS[emp.colorIdx % EMP_COLORS.length];
-        // In swap mode, clicking the name selects employee for whole-month swap
-    const isSwapMonthSel = swapMode && swapSelected && swapSelected.type==='month' && swapSelected.empId == emp.id;
-    const swapNameClick = swapMode ? `data-swap="1" onclick="selectSwapMonth(${emp.id},'${emp.name}')" style="cursor:pointer"` : '';
+        const isSwapSelected = swapMode && swapSelected && swapSelected.empId == emp.id;
     h += `<div class="mgrid-row">
-      <div class="mg-cell mg-emp${isSwapMonthSel?' swap-select-1':swapMode?' swap-highlight':''}" ${swapNameClick}
+      <div class="mg-cell mg-emp${isSwapSelected?' swap-select-1':swapMode?' swap-highlight':''}"
+        ${swapMode ? '' : ''}
       ><div class="emp-dot" style="background:${c}"></div>
-      <span class="emp-nm" style="${isSwapMonthSel?'color:var(--blue-tx);font-weight:700':''}">
+      <span class="emp-nm" style="${isSwapSelected?'color:var(--blue-tx);font-weight:700':''}">
         ${swapMode?'🔄 ':''}${emp.name}</span>`;
     if (!S.isReadOnly && !swapMode) h += `<button class="del-e" onclick="removeEmp(${emp.id})">✕</button>`;
     h += `</div><div class="mg-cell mg-type"><span style="font-size:11px;color:var(--tx3)">${emp.type||''}</span></div>`;
@@ -1416,8 +1412,7 @@ function renderMonth() {
     days.forEach(d => {
       const dk = fmtKey(d);
       const key = `${emp.id}_${dk}`;
-      const keyAlt = `${Math.floor(Number(emp.id))}_${dk}`;
-      const sv = S.schedule[key] || S.schedule[keyAlt] || null;
+      const sv = S.schedule[key] || null;
       const sh = sv ? SHIFTS[sv] : null;
       const isT = dk === tk; const isHol = !!S.holidays[dk]; const isSun = d.getDay()===0; const isSat = d.getDay()===6; const isSatC = d.getDay()===6; const isSunC = d.getDay()===0;
       const isWPink = isHol || isSun; const isWSat = isSat;
@@ -1486,9 +1481,8 @@ function renderMonth() {
   // Overtime / Leave order bar
   const orderEl = document.getElementById('month-order-display');
   if (orderEl) {
-    const monthData = S.monthOrders && S.monthOrders[curMonthKey];
-    const ot = (monthData && monthData.overtime) || S.overtimeOrder || [];
-    const lv = (monthData && monthData.leave) || S.leaveOrder || [];
+    const ot = S.overtimeOrder || [];
+    const lv = S.leaveOrder || [];
     if (ot.length || lv.length) {
       orderEl.innerHTML = `<div style="display:flex;gap:16px;flex-wrap:wrap;padding:7px 16px;background:var(--s2);border-bottom:0.5px solid var(--bd);font-size:11px;color:var(--tx3)">
         ${ot.length ? `<span><b style="color:var(--amber-tx)">🚨 緊急加班：</b>${ot.map((n,i)=>'<b>'+(i+1)+'.</b>'+n).join(' ')}</span>` : ''}
@@ -1949,39 +1943,6 @@ function removeEmp(id) {
 // ══════════════════════════════════════════════
 let editingShift = null;
 function openShiftModal(empId, dateKey, empName, dateLabel) {
-  // Permission check
-  if (currentUser) {
-    const role = myRole();
-    const free = canEditFree(dateKey);
-    if (!free && role !== 'admin' && role !== 'chief') {
-      // Staff beyond limit: show request modal
-      const cur = S.schedule[empId + '_' + dateKey] || null;
-      const curLabel = cur ? (SHIFTS[cur]?.label || cur) : '（空白）';
-      const choices = SHIFT_KEYS.map(sv => {
-        const s = SHIFTS[sv];
-        return `<button class="sc2" style="background:${s.bg};color:${s.tx};border-color:${s.bd}" onclick="selectRequestShift('${sv}')">${s.label}</button>`;
-      }).join('');
-      openModal(`
-        <div class="mt">申請修改班別</div>
-        <div class="ms">${empName} · ${dateLabel} · 目前：${curLabel}</div>
-        <div style="font-size:12px;color:var(--amber-tx);background:var(--amber-bg);border:0.5px solid var(--amber-bd);border-radius:var(--r);padding:8px 12px;margin-bottom:12px">
-          此日期已超過可自由修改期限，修改需提出申請由主任→管理員核可
-        </div>
-        <div style="font-size:12px;color:var(--tx2);margin-bottom:8px">申請改為：</div>
-        <div class="sg" style="margin-bottom:10px">${choices}
-          <button class="sc2" style="background:var(--s2);color:var(--tx2);border-color:var(--bd);grid-column:span 2" onclick="selectRequestShift('')">清除班別</button>
-        </div>
-        <div id="req-to-display" style="font-size:13px;color:var(--teal-tx);font-weight:600;margin-bottom:8px;display:none"></div>
-        <input class="mi" id="req-reason" placeholder="修改原因（必填）" />
-        <div class="ma">
-          <button class="btn" onclick="closeModal()" style="flex:1">取消</button>
-          <button class="btn btn-teal" onclick="submitRequest(${empId},'${dateKey}','${cur||''}','${curLabel}')" style="flex:2">送出申請</button>
-        </div>`);
-      document.getElementById('req-reason')?.focus?.();
-      return;
-    }
-  }
-  // Normal shift picker
   editingShift = { empId, dateKey };
   const cur = S.schedule[`${empId}_${dateKey}`] || null;
   let choices = SHIFT_KEYS.map(sv => {
@@ -2436,44 +2397,22 @@ function confirmEmpSelect(count) {
 
   const mergedSchedule = {};
   // Keep schedule for months NOT being imported
-  let keptKeys = 0, removedKeys = 0;
   Object.entries(S.schedule).forEach(([k, v]) => {
-    const dateStr = k.slice(k.indexOf('_') + 1);
-    const monthStr = dateStr ? dateStr.slice(0, 7) : '';
-    if (monthStr && importedMonths.has(monthStr)) {
-      removedKeys++;
-    } else {
-      mergedSchedule[k] = v;
-      keptKeys++;
-    }
+    const d = k.split('_')[1];
+    if (d && !importedMonths.has(d.slice(0, 7))) mergedSchedule[k] = v;
   });
   // Add newly imported schedule with remapped ids
-  let addedKeys = 0;
   Object.entries(data.schedule).forEach(([k, v]) => {
     const us = k.indexOf('_');
     const rawId = +k.slice(0, us);
     const dateK = k.slice(us + 1);
     const finalId = idRemap[rawId];
-    if (finalId !== undefined) {
-      mergedSchedule[String(finalId) + '_' + dateK] = v;
-      addedKeys++;
-    }
+    if (finalId !== undefined) mergedSchedule[String(finalId) + '_' + dateK] = v;
   });
-  console.log('Schedule merge:', {importedMonths: [...importedMonths], kept: keptKeys, removed: removedKeys, added: addedKeys, total: Object.keys(mergedSchedule).length});
   S.schedule = mergedSchedule;
 
   // Merge holidays
   Object.assign(S.holidays, data.holidays || {});
-  // Save overtime/leave order per month
-  if (importMonthKey) {
-    if (!S.monthOrders) S.monthOrders = {};
-    if (!S.monthOrders[importMonthKey]) S.monthOrders[importMonthKey] = {};
-    if (data.overtimeOrder && data.overtimeOrder.length)
-      S.monthOrders[importMonthKey].overtime = data.overtimeOrder;
-    if (data.leaveOrder && data.leaveOrder.length)
-      S.monthOrders[importMonthKey].leave = data.leaveOrder;
-  }
-  // Also keep global as fallback
   if (data.overtimeOrder && data.overtimeOrder.length) S.overtimeOrder = data.overtimeOrder;
   if (data.leaveOrder && data.leaveOrder.length) S.leaveOrder = data.leaveOrder;
 
@@ -2864,7 +2803,7 @@ function pickShiftInLeaveMode(empId, dateKey, sv) {
 
 function toggleSwapMode() {
   swapMode = !swapMode;
-  swapSelected = null; // { type:'cell'|'month', empId, empName, dateKey?, ... }
+  swapSelected = null;
   document.querySelectorAll('.swap-mode-btn').forEach(b => b.classList.toggle('active', swapMode));
   if (swapMode && leaveMode) {
     leaveMode = false;
@@ -2877,10 +2816,6 @@ function toggleSwapMode() {
 
 function selectSwapCell(empId, empName, dateKey, dateLabel) {
   if (!swapMode) return;
-  // If month-type was selected first, switch to cell mode
-  if (swapSelected && swapSelected.type === 'month') {
-    swapSelected = null; // reset, let cell selection start fresh
-  }
   const shift = S.schedule[empId + '_' + dateKey] || null;
   const shiftLabel = shift ? (SHIFTS[shift]?.label || shift) : '（空白）';
 
@@ -2917,67 +2852,6 @@ function selectSwapCell(empId, empName, dateKey, dateLabel) {
         <button class="btn btn-teal" onclick="doSwapCells('${a.empId}','${a.dateKey}','${a.shiftLabel}','${b.empId}','${b.dateKey}','${b.shiftLabel}','${a.empName}','${b.empName}')" style="flex:2">確認交換</button>
       </div>`);
   }
-}
-
-function selectSwapMonth(empId, empName) {
-  if (!swapMode) return;
-  // If first selection is a cell, switch to month mode
-  if (!swapSelected || swapSelected.type === 'month') {
-    if (!swapSelected) {
-      swapSelected = { type: 'month', empId, empName };
-      renderAll();
-      showToast(`已選 ${empName}，再點另一位員工名字進行整月互換`);
-    } else {
-      if (swapSelected.empId == empId) {
-        swapSelected = null;
-        renderAll();
-        showToast('已取消選擇');
-        return;
-      }
-      // Both selected → confirm whole month swap
-      const a = swapSelected;
-      openModal(`<div class="mt">整月班表互換</div>
-        <div class="ms"><b>${a.empName}</b> ↔ <b>${empName}</b><br>本月所有班別互換</div>
-        <div style="font-size:12px;color:var(--amber-tx);background:var(--amber-bg);border:0.5px solid var(--amber-bd);border-radius:var(--r);padding:8px 12px;margin-bottom:12px">
-          ⚠️ 兩人本月所有班別互換，無法復原
-        </div>
-        <div class="ma">
-          <button class="btn" onclick="closeModal()" style="flex:1">取消</button>
-          <button class="btn btn-teal" onclick="doMonthSwapFromMode(${a.empId},'${a.empName}',${empId},'${empName}')" style="flex:2">確認交換</button>
-        </div>`);
-    }
-  }
-}
-
-function doMonthSwapFromMode(aId, aName, bId, bName) {
-  closeModal();
-  const days = getMonthDates(S.monthOffset);
-  days.forEach(d => {
-    const dk = fmtKey(d);
-    const keyA = String(aId) + '_' + dk;
-    const keyB = String(bId) + '_' + dk;
-    const valA = S.schedule[keyA] || null;
-    const valB = S.schedule[keyB] || null;
-    if (valA) S.schedule[keyB] = valA; else delete S.schedule[keyB];
-    if (valB) S.schedule[keyA] = valB; else delete S.schedule[keyA];
-  });
-  const curMonthKey = (() => {
-    const d = new Date(); d.setMonth(d.getMonth() + S.monthOffset);
-    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
-  })();
-  const entry = {
-    type: 'swap', empA: aName, empIdA: aId, empB: bName, empIdB: bId,
-    monthKey: curMonthKey,
-    by: currentUser ? currentUser.email : '未知',
-    at: new Date().toISOString(),
-  };
-  S.leaveLog = [entry, ...(S.leaveLog || [])].slice(0, 500);
-  saveAll();
-  swapMode = false;
-  swapSelected = null;
-  document.querySelectorAll('.swap-mode-btn').forEach(b => b.classList.remove('active'));
-  renderAll();
-  showToast(`✅ ${aName} ↔ ${bName} 整月班表已交換`);
 }
 
 function doSwapCells(aEmpId, aDate, aShiftLabel, bEmpId, bDate, bShiftLabel, aName, bName) {
@@ -3862,6 +3736,44 @@ function doReviewAction(reqId, actionKey) {
   const note = document.getElementById('review-note')?.value?.trim() || '';
   reviewRequest(reqId, actionKey, note);
   closeModal();
+}
+
+// ── Override openShiftModal to check permissions ──────────────────────────
+const _origOpenShiftModal = openShiftModal;
+function openShiftModal(empId, dateKey, empName, dateLabel) {
+  if (!currentUser) { _origOpenShiftModal(empId, dateKey, empName, dateLabel); return; }
+  const role = myRole();
+  const free = canEditFree(dateKey);
+
+  if (free || role === 'admin' || role === 'chief') {
+    _origOpenShiftModal(empId, dateKey, empName, dateLabel);
+    return;
+  }
+
+  // Staff beyond limit: show request modal
+  const cur = S.schedule[empId + '_' + dateKey] || null;
+  const curLabel = cur ? (SHIFTS[cur]?.label || cur) : '（空白）';
+  const choices = SHIFT_KEYS.map(sv => {
+    const s = SHIFTS[sv];
+    return `<button class="sc2" style="background:${s.bg};color:${s.tx};border-color:${s.bd}" onclick="selectRequestShift('${sv}')">${s.label}</button>`;
+  }).join('');
+  openModal(`
+    <div class="mt">申請修改班別</div>
+    <div class="ms">${empName} · ${dateLabel} · 目前：${curLabel}</div>
+    <div style="font-size:12px;color:var(--amber-tx);background:var(--amber-bg);border:0.5px solid var(--amber-bd);border-radius:var(--r);padding:8px 12px;margin-bottom:12px">
+      此日期已超過可自由修改期限，修改需提出申請由主任→管理員核可
+    </div>
+    <div style="font-size:12px;color:var(--tx2);margin-bottom:8px">申請改為：</div>
+    <div class="sg" style="margin-bottom:10px">${choices}
+      <button class="sc2" style="background:var(--s2);color:var(--tx2);border-color:var(--bd);grid-column:span 2" onclick="selectRequestShift('')">清除班別</button>
+    </div>
+    <div id="req-to-display" style="font-size:13px;color:var(--teal-tx);font-weight:600;margin-bottom:8px;display:none"></div>
+    <input class="mi" id="req-reason" placeholder="修改原因（必填）" />
+    <div class="ma">
+      <button class="btn" onclick="closeModal()" style="flex:1">取消</button>
+      <button class="btn btn-teal" onclick="submitRequest(${empId},'${dateKey}','${cur||''}','${curLabel}')" style="flex:2">送出申請</button>
+    </div>`);
+  document.getElementById('req-reason')?.focus?.();
 }
 
 let _pendingToShift = null;
