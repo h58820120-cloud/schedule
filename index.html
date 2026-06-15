@@ -49,10 +49,10 @@ header h1 span{font-size:.7rem;color:var(--text-muted);font-weight:400;margin-le
 
 nav{background:var(--navy-mid);border-bottom:1px solid var(--border);display:flex;overflow-x:auto;scrollbar-width:none}
 nav::-webkit-scrollbar{display:none}
-.nav-tab{flex:1 0 auto;min-width:60px;display:flex;flex-direction:column;align-items:center;padding:8px 4px 6px;cursor:pointer;color:var(--text-muted);border:none;background:none;transition:color .15s;border-bottom:2px solid transparent;font-size:inherit}
-.nav-tab .tab-icon{font-size:1.1rem;margin-bottom:2px}
-.nav-tab .tab-label{font-size:.6rem;white-space:nowrap}
-.nav-tab.active{color:var(--teal-light);border-bottom-color:var(--teal)}
+.nav-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 2px 5px;cursor:pointer;color:var(--text-muted);border:none;background:none;transition:color .15s;border-top:2px solid transparent;font-size:inherit;min-width:0}
+.nav-tab .tab-icon{font-size:1.2rem;margin-bottom:1px;line-height:1}
+.nav-tab .tab-label{font-size:.58rem;white-space:nowrap}
+.nav-tab.active{color:var(--teal-light);border-top-color:var(--teal);background:rgba(0,180,216,.06)}
 
 main{flex:1;overflow:hidden;position:relative}
 .view{display:none;height:100%;overflow-y:auto;padding-bottom:20px}
@@ -284,27 +284,48 @@ main{flex:1;overflow:hidden;position:relative}
 #swap-banner button{background:var(--red-dim);border:none;color:#fff;border-radius:4px;padding:3px 8px;font-size:.72rem;cursor:pointer}
 
 /* Responsive Desktop */
+/* ── 桌機版側邊欄 ── */
 @media(min-width:900px){
-  body{display:grid;grid-template-columns:220px 1fr}
-  header{display:none}
-  #desktop-sidebar{display:flex;flex-direction:column;background:var(--navy);border-right:1px solid var(--border);height:100vh;position:sticky;top:0;padding:20px 0}
-  #desktop-sidebar .sb-logo{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:12px}
-  #desktop-sidebar .sb-logo h2{font-size:1rem;font-weight:700;color:var(--teal-light)}
-  #desktop-sidebar .sb-logo p{font-size:.68rem;color:var(--text-muted);margin-top:2px}
-  #desktop-sidebar .sb-nav-btn{display:flex;align-items:center;gap:10px;padding:9px 20px;cursor:pointer;color:var(--text-muted);border:none;background:none;width:100%;font-size:.82rem;transition:all .15s;border-left:2px solid transparent;font-family:inherit}
-  #desktop-sidebar .sb-nav-btn .sb-icon{font-size:.95rem}
+  body{display:flex;flex-direction:row}
+  #desktop-sidebar{
+    display:flex;flex-direction:column;
+    width:200px;flex-shrink:0;
+    background:var(--navy);border-right:1px solid var(--border);
+    height:100vh;position:sticky;top:0;padding:20px 0;overflow-y:auto
+  }
+  #desktop-sidebar .sb-logo{padding:0 16px 16px;border-bottom:1px solid var(--border);margin-bottom:8px}
+  #desktop-sidebar .sb-logo h2{font-size:.95rem;font-weight:700;color:var(--teal-light)}
+  #desktop-sidebar .sb-logo p{font-size:.65rem;color:var(--text-muted);margin-top:2px}
+  #desktop-sidebar .sb-nav-btn{
+    display:flex;align-items:center;gap:10px;padding:9px 16px;
+    cursor:pointer;color:var(--text-muted);border:none;background:none;
+    width:100%;font-size:.8rem;transition:all .15s;
+    border-left:2px solid transparent;font-family:inherit;text-align:left
+  }
+  #desktop-sidebar .sb-nav-btn .sb-icon{font-size:.9rem;flex-shrink:0}
   #desktop-sidebar .sb-nav-btn.active{color:var(--teal-light);background:rgba(0,180,216,.08);border-left-color:var(--teal)}
   #desktop-sidebar .sb-nav-btn:hover{color:var(--text);background:rgba(255,255,255,.05)}
-  #desktop-sidebar .sb-month-ctrl{padding:12px 16px;border-top:1px solid var(--border);margin-top:auto}
-  #desktop-sidebar .sb-month-ctrl .sb-month-lbl{font-size:.68rem;color:var(--text-muted);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
-  #desktop-sidebar .sb-month-ctrl .sb-month-nav{display:flex;align-items:center;gap:6px}
-  #desktop-sidebar .sb-month-ctrl .sb-month-nav button{background:none;border:1px solid var(--border);color:var(--text-dim);border-radius:4px;padding:3px 7px;cursor:pointer;font-size:.75rem;transition:all .15s}
+  #desktop-sidebar .sb-month-ctrl{padding:12px 14px;border-top:1px solid var(--border);margin-top:auto}
+  #desktop-sidebar .sb-month-ctrl .sb-month-lbl{font-size:.65rem;color:var(--text-muted);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+  #desktop-sidebar .sb-month-ctrl .sb-month-nav{display:flex;align-items:center;gap:4px}
+  #desktop-sidebar .sb-month-ctrl .sb-month-nav button{background:none;border:1px solid var(--border);color:var(--text-dim);border-radius:4px;padding:3px 6px;cursor:pointer;font-size:.72rem;transition:all .15s}
   #desktop-sidebar .sb-month-ctrl .sb-month-nav button:hover{border-color:var(--teal);color:var(--teal)}
-  #desktop-sidebar .sb-month-ctrl .sb-month-val{flex:1;text-align:center;font-size:.8rem;color:var(--gold);font-weight:600}
-  #app{grid-column:2;display:flex;flex-direction:column;min-height:100vh}
+  #desktop-sidebar .sb-month-ctrl .sb-month-val{flex:1;text-align:center;font-size:.78rem;color:var(--gold);font-weight:600}
+  #app{flex:1;min-width:0;display:flex;flex-direction:column;min-height:100vh}
+  header{display:none}
   nav{display:none}
 }
 #desktop-sidebar{display:none}
+
+/* ── 手機版底部 Nav ── */
+@media(max-width:899px){
+  nav{
+    position:fixed;bottom:0;left:0;right:0;z-index:90;
+    background:var(--navy);border-top:1px solid var(--border);
+    box-shadow:0 -2px 10px rgba(0,0,0,.4)
+  }
+  main{padding-bottom:52px}
+}
 
 /* Import select emp list scroll */
 ::-webkit-scrollbar{width:5px;height:5px}
