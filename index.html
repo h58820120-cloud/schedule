@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#1e3a5f">
+<meta name="theme-color" content="#2c1810">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="花醫班表">
@@ -14,27 +14,28 @@
 /* ── Reset & Base ── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:15px;-webkit-tap-highlight-color:transparent}
-body{font-family:'Noto Sans TC',system-ui,-apple-system,sans-serif;background:#0f2240;color:#e8edf4;min-height:100vh;overflow-x:hidden}
+body{font-family:'Noto Sans TC',system-ui,-apple-system,sans-serif;background:#1a0e07;color:#e8edf4;min-height:100vh;overflow-x:hidden}
 
 /* ── CSS Variables ── */
 :root{
-  --navy:#1e3a5f;--navy-light:#2a4f7c;--navy-mid:#163255;--navy-deep:#0f2240;
-  --teal:#00b4d8;--teal-light:#48cae4;--teal-dim:#007ea0;
-  --gold:#f4a261;--gold-light:#f9c784;
-  --red:#e63946;--red-dim:#c1121f;
-  --green:#2ec4b6;--green-dim:#1a9489;
-  --purple:#7b5ea7;--purple-light:#9d7ec4;
-  --text:#e8edf4;--text-dim:#8fa3bb;--text-muted:#5a7190;
-  --card:#1a3357;--card-hover:#1f3d69;
-  --border:#2a4a6e;--border-light:#3a5e85;
-  --shift-day:#ffd166;--shift-day-text:#1a1200;
-  --shift-eve:#06d6a0;--shift-eve-text:#001a12;
-  --shift-night:#118ab2;--shift-night-text:#e8f8ff;
-  --shift-off:#374354;--shift-off-text:#8fa3bb;
-  --shift-am:#f4a261;--shift-am-text:#2d1500;
-  --shift-pm:#c77dff;--shift-pm-text:#1a0033;
+  /* ── 暖色系主色調 ── */
+  --navy:#2c1810;--navy-light:#3d2418;--navy-mid:#231309;--navy-deep:#1a0e07;
+  --teal:#e07b39;--teal-light:#f0954d;--teal-dim:#b85e20;
+  --gold:#f4c662;--gold-light:#f9d98a;
+  --red:#d63031;--red-dim:#b71c1c;
+  --green:#27ae60;--green-dim:#1e8449;
+  --purple:#8e44ad;--purple-light:#a85bc4;
+  --text:#f5ede6;--text-dim:#c9a98a;--text-muted:#8a6a55;
+  --card:#3a1f10;--card-hover:#4a2a18;
+  --border:#5a3322;--border-light:#7a4a35;
+  --shift-day:#f9c74f;--shift-day-text:#2d1b00;
+  --shift-eve:#43aa8b;--shift-eve-text:#001a12;
+  --shift-night:#4a7fb5;--shift-night-text:#e8f4ff;
+  --shift-off:#5a4030;--shift-off-text:#c9a98a;
+  --shift-am:#e07b39;--shift-am-text:#2d1000;
+  --shift-pm:#9b59b6;--shift-pm-text:#f5e6ff;
   --radius:10px;--radius-sm:6px;--radius-lg:16px;
-  --shadow:0 4px 16px rgba(0,0,0,.4);--shadow-sm:0 2px 8px rgba(0,0,0,.3);
+  --shadow:0 4px 16px rgba(0,0,0,.5);--shadow-sm:0 2px 8px rgba(0,0,0,.4);
   --hdr-h:56px;--nav-h:52px;
 }
 
@@ -286,39 +287,54 @@ main{flex:1;overflow:hidden;position:relative}
 /* Responsive Desktop */
 /* ── 桌機版側邊欄 ── */
 @media(min-width:900px){
-  body{display:flex;flex-direction:row}
+  body{display:flex !important;flex-direction:row !important;min-height:100vh}
   #desktop-sidebar{
-    display:flex;flex-direction:column;
+    display:flex !important;flex-direction:column;
     width:200px;flex-shrink:0;
     background:var(--navy);border-right:1px solid var(--border);
-    height:100vh;position:sticky;top:0;padding:20px 0;overflow-y:auto
+    height:100vh;position:sticky;top:0;overflow-y:auto;
+    padding-bottom:20px
   }
-  #desktop-sidebar .sb-logo{padding:0 16px 16px;border-bottom:1px solid var(--border);margin-bottom:8px}
+  #desktop-sidebar .sb-logo{
+    padding:16px 16px 14px;border-bottom:1px solid var(--border);margin-bottom:8px
+  }
   #desktop-sidebar .sb-logo h2{font-size:.95rem;font-weight:700;color:var(--teal-light)}
-  #desktop-sidebar .sb-logo p{font-size:.65rem;color:var(--text-muted);margin-top:2px}
+  #desktop-sidebar .sb-logo p{font-size:.65rem;color:var(--text-muted);margin-top:3px}
   #desktop-sidebar .sb-nav-btn{
-    display:flex;align-items:center;gap:10px;padding:9px 16px;
+    display:flex;align-items:center;gap:10px;padding:10px 16px;
     cursor:pointer;color:var(--text-muted);border:none;background:none;
-    width:100%;font-size:.8rem;transition:all .15s;
-    border-left:2px solid transparent;font-family:inherit;text-align:left
+    width:100%;font-size:.82rem;transition:all .15s;
+    border-left:3px solid transparent;font-family:inherit;text-align:left
   }
-  #desktop-sidebar .sb-nav-btn .sb-icon{font-size:.9rem;flex-shrink:0}
-  #desktop-sidebar .sb-nav-btn.active{color:var(--teal-light);background:rgba(0,180,216,.08);border-left-color:var(--teal)}
-  #desktop-sidebar .sb-nav-btn:hover{color:var(--text);background:rgba(255,255,255,.05)}
-  #desktop-sidebar .sb-month-ctrl{padding:12px 14px;border-top:1px solid var(--border);margin-top:auto}
-  #desktop-sidebar .sb-month-ctrl .sb-month-lbl{font-size:.65rem;color:var(--text-muted);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+  #desktop-sidebar .sb-nav-btn .sb-icon{font-size:.95rem;flex-shrink:0;width:20px;text-align:center}
+  #desktop-sidebar .sb-nav-btn.active{
+    color:var(--teal-light);background:rgba(224,123,57,.12);border-left-color:var(--teal)
+  }
+  #desktop-sidebar .sb-nav-btn:hover{color:var(--text);background:rgba(255,255,255,.06)}
+  #desktop-sidebar .sb-month-ctrl{
+    padding:12px 14px;border-top:1px solid var(--border);margin-top:auto
+  }
+  #desktop-sidebar .sb-month-ctrl .sb-month-lbl{
+    font-size:.63rem;color:var(--text-muted);margin-bottom:7px;font-weight:700;
+    text-transform:uppercase;letter-spacing:.06em
+  }
   #desktop-sidebar .sb-month-ctrl .sb-month-nav{display:flex;align-items:center;gap:4px}
-  #desktop-sidebar .sb-month-ctrl .sb-month-nav button{background:none;border:1px solid var(--border);color:var(--text-dim);border-radius:4px;padding:3px 6px;cursor:pointer;font-size:.72rem;transition:all .15s}
+  #desktop-sidebar .sb-month-ctrl .sb-month-nav button{
+    background:none;border:1px solid var(--border);color:var(--text-dim);
+    border-radius:4px;padding:4px 8px;cursor:pointer;font-size:.72rem;transition:all .15s
+  }
   #desktop-sidebar .sb-month-ctrl .sb-month-nav button:hover{border-color:var(--teal);color:var(--teal)}
-  #desktop-sidebar .sb-month-ctrl .sb-month-val{flex:1;text-align:center;font-size:.78rem;color:var(--gold);font-weight:600}
-  #app{flex:1;min-width:0;display:flex;flex-direction:column;min-height:100vh}
-  header{display:none}
-  nav{display:none}
+  #desktop-sidebar .sb-month-ctrl .sb-month-val{
+    flex:1;text-align:center;font-size:.8rem;color:var(--gold);font-weight:700
+  }
+  #app{flex:1;min-width:0;display:flex;flex-direction:column}
+  header{display:none !important}
+  nav{display:none !important}
 }
-#desktop-sidebar{display:none}
 
 /* ── 手機版底部 Nav ── */
 @media(max-width:899px){
+  #desktop-sidebar{display:none}
   nav{
     position:fixed;bottom:0;left:0;right:0;z-index:90;
     background:var(--navy);border-top:1px solid var(--border);
@@ -334,10 +350,10 @@ main{flex:1;overflow:hidden;position:relative}
 ::-webkit-scrollbar-thumb:hover{background:var(--teal-dim)}
 
 /* Color palette for employees */
-.emp-color-0{background:#48cae4}.emp-color-1{background:#f4a261}.emp-color-2{background:#06d6a0}
-.emp-color-3{background:#7b5ea7}.emp-color-4{background:#e63946}.emp-color-5{background:#118ab2}
-.emp-color-6{background:#ffd166}.emp-color-7{background:#ff6b6b}.emp-color-8{background:#a8dadc}
-.emp-color-9{background:#457b9d}.emp-color-10{background:#e9c46a}.emp-color-11{background:#f3722c}
+.emp-color-0{background:#e07b39}.emp-color-1{background:#f4c662}.emp-color-2{background:#27ae60}
+.emp-color-3{background:#8e44ad}.emp-color-4{background:#d63031}.emp-color-5{background:#2980b9}
+.emp-color-6{background:#f39c12}.emp-color-7{background:#e74c3c}.emp-color-8{background:#16a085}
+.emp-color-9{background:#c0392b}.emp-color-10{background:#d35400}.emp-color-11{background:#7f8c8d}
 
 /* Admin badge in header */
 .hdr-role-badge{font-size:.58rem;background:var(--gold);color:#1a0800;border-radius:20px;padding:1px 6px;font-weight:700}
