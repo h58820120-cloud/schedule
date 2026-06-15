@@ -631,10 +631,7 @@ const FB_CFG = {
   apiKey:"AIzaSyCCJ_CQWryrLrs3iVhaOkO1SH4I6m7uHog",
   authDomain:"schedule-516bd.firebaseapp.com",
   databaseURL:"https://schedule-516bd-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId:"schedule-516bd",
-  storageBucket:"schedule-516bd.appspot.com",
-  messagingSenderId:"schedule-516bd",
-  appId:"schedule-516bd"
+  projectId:"schedule-516bd"
 };
 firebase.initializeApp(FB_CFG);
 const auth = firebase.auth();
@@ -668,7 +665,18 @@ let notesSaveTimer = null;
 // ── Init ──────────────────────────────────────────
 document.getElementById('app-version').textContent = APP_VERSION;
 
+// Timeout fallback: if Firebase auth takes >8s, show auth screen anyway
+const _authTimeout = setTimeout(() => {
+  const loading = document.getElementById('loading');
+  if (loading && !loading.classList.contains('hidden')) {
+    console.warn('Firebase auth timeout - showing auth screen');
+    showAuthScreen(true);
+    hideLoading();
+  }
+}, 8000);
+
 auth.onAuthStateChanged(user => {
+  clearTimeout(_authTimeout);
   if (user) {
     curUser = user;
     initAfterLogin();
@@ -683,21 +691,31 @@ function initAfterLogin() {
   showAuthScreen(false);
   showLoading('載入資料中…');
   // Determine role
-  db.ref('userRoles/' + curUser.uid).once('value').then(snap => {
-    const data = snap.val() || {};
-    if (curUser.email === PERMANENT_ADMIN) curRole = 'admin';
-    else curRole = data.role || 'staff';
+  const now = new Date();
+  curYear = now.getFullYear();
+  curMonth = now.getMonth();
+  curWeekStart = getWeekStart(now);
+  if (curUser.email === PERMANENT_ADMIN) {
+    curRole = 'admin';
     updateRoleBadge();
-    // Set display name
     const sbName = document.getElementById('sb-user-name');
     if (sbName) sbName.textContent = curUser.displayName || curUser.email;
-    // Load today
-    const now = new Date();
-    curYear = now.getFullYear();
-    curMonth = now.getMonth();
-    curWeekStart = getWeekStart(now);
     startSync();
-  });
+  } else {
+    db.ref('userRoles/' + curUser.uid).once('value').then(snap => {
+      const data = snap.val() || {};
+      curRole = data.role || 'staff';
+      updateRoleBadge();
+      const sbName = document.getElementById('sb-user-name');
+      if (sbName) sbName.textContent = curUser.displayName || curUser.email;
+      startSync();
+    }).catch(err => {
+      console.error('Role fetch error:', err);
+      curRole = 'staff';
+      updateRoleBadge();
+      startSync();
+    });
+  }
 }
 
 function updateRoleBadge() {
@@ -1854,7 +1872,7 @@ self.addEventListener('fetch',e=>{
 }
 
 // ── Init render on load ───────────────────────────
-hideLoading();
+// Loading stays visible until auth.onAuthStateChanged resolves
 </script>
 </body>
 </html>
