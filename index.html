@@ -1652,9 +1652,28 @@ function processImportFile(file) {
   reader.onload = function(e) {
     try {
       const wb = XLSX.read(e.target.result, {type:'binary', cellDates:true});
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
-      parseImportData(rows);
+      // 花醫班表格式：優先選「班表」工作表，其次選有最多資料的工作表
+      let sheetName = wb.SheetNames[0];
+      const preferred = ['班表','六月2','sheet1','Sheet1'];
+      for (const p of preferred) {
+        if (wb.SheetNames.includes(p)) { sheetName = p; break; }
+      }
+      // 若有多張表，選有最多 cell 的（排除「資料」、「工作表1」）
+      let bestName = sheetName;
+      let bestCount = 0;
+      wb.SheetNames.forEach(name => {
+        if (name === '資料' || name === '工作表1') return;
+        const s = wb.Sheets[name];
+        const ref = s['!ref'];
+        if (!ref) return;
+        const range = XLSX.utils.decode_range(ref);
+        const count = (range.e.r - range.s.r) * (range.e.c - range.s.c);
+        if (count > bestCount) { bestCount = count; bestName = name; }
+      });
+      const ws = wb.Sheets[bestName];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:false, dateNF:'yyyy-mm-dd'});
+      // raw:false 讓 SheetJS 把日期格式化為字串，dateNF 指定格式
+      parseImportData(rows, bestName);
     } catch(err) {
       toast('讀取失敗：' + err.message, 'error');
       startSync();
@@ -1663,52 +1682,90 @@ function processImportFile(file) {
   reader.readAsBinaryString(file);
 }
 
-function parseImportData(rows) {
-  if (!rows || rows.length < 2) { toast('格式錯誤：資料不足','error'); startSync(); return; }
-  // Row 0: headers. Col 0=name, Col 1=sort, Col 2+=dates
-  const headerRow = rows[0];
+function parseImportData(rows, sheetUsed) {
+  if (!rows || rows.length < 8) { toast('格式錯誤：資料不足','error'); startSync(); return; }
+
+  // ── 針對花醫班表格式 ──────────────────────────────────────────
+  // 格式：
+  //   R7 (index 6)：C1=院區, C2=工作, C3=姓名, C4=日期, C5起=各天日期(Date物件)
+  //   R8 (index 7)：C2=順序, C4=星期, C5起=星期名
+  //   R9,R11,R13…(每隔一列)：C1=院區, C2=順序, C3=姓名, C4=類型, C5起=班別
+  //   遇到 C3 含「順序」「加班」「填假」等關鍵字則停止
+  // ──────────────────────────────────────────────────────────────
+
+  const STOP_KEYWORDS = ['順序','加班','填假','實際','緊急'];
+  const VALID_SHIFTS = new Set(SHIFTS);
+
+  // 找日期列（R7, index=6）：C5起有 Date 物件或日期字串
+  let dateRow = null;
+  let dateRowIdx = -1;
+  for (let r = 0; r < Math.min(rows.length, 15); r++) {
+    const row = rows[r];
+    // C5(index4)起找 Date 物件
+    let dateCount = 0;
+    for (let c = 4; c < row.length; c++) {
+      const v = row[c];
+      if (v instanceof Date && !isNaN(v)) dateCount++;
+      else if (typeof v === 'string' && /\d{4}[-\/]\d{1,2}[-\/]\d{1,2}/.test(v)) dateCount++;
+      else if (typeof v === 'number' && v > 40000 && v < 60000) dateCount++; // Excel serial date
+    }
+    if (dateCount >= 20) { dateRow = row; dateRowIdx = r; break; }
+  }
+  if (!dateRow) { toast('找不到日期列（需20天以上）','error'); startSync(); return; }
+
+  // 解析日期欄位
   const dateCols = [];
-  for (let c=2; c<headerRow.length; c++) {
-    const v = headerRow[c];
+  for (let c = 4; c < dateRow.length; c++) {
+    const v = dateRow[c];
     if (!v) continue;
     let d = null;
-    if (v instanceof Date) {
-      d = v;
-    } else {
-      // Try parsing string date
-      const s = String(v).replace(/[年月]/g,'/').replace(/[日]/g,'').trim();
-      const parsed = new Date(s);
-      if (!isNaN(parsed)) d = parsed;
+    if (v instanceof Date && !isNaN(v)) d = v;
+    else if (typeof v === 'string' && v.length >= 8) {
+      // raw:false 時已是 "2026-04-01" 或 "2026-4-1" 格式
+      const parsed = new Date(v.replace(/\//g,'-') + 'T00:00:00');
+      if (!isNaN(parsed) && parsed.getFullYear() > 2000) d = parsed;
+    } else if (typeof v === 'number' && v > 40000) {
+      // Excel serial（若 raw:true）
+      d = new Date(Math.round((v - 25569) * 86400 * 1000));
     }
-    if (d) {
+    if (d && d.getFullYear() > 2000) {
       dateCols.push({ col: c, date: fmtDate(d) });
     }
   }
-  if (dateCols.length === 0) { toast('找不到日期欄位，請確認第一列格式','error'); startSync(); return; }
+  if (dateCols.length === 0) { toast('日期欄位解析失敗','error'); startSync(); return; }
 
-  // Find months
   const importedMonths = new Set(dateCols.map(dc => dc.date.slice(0,7)));
 
-  // Parse employees
+  // 員工資料從 dateRowIdx+2 開始（跳過星期列）
   const employees = [];
   const schedule = {};
-  const parseMonthKeys = [...importedMonths];
-  const parseMonthKey = parseMonthKeys[0]; // primary month
 
-  for (let r=1; r<rows.length; r++) {
+  for (let r = dateRowIdx + 2; r < rows.length; r++) {
     const row = rows[r];
-    const rawName = String(row[0]||'').trim();
-    const rawSort = row[1];
+    const rawName = String(row[2] || '').trim();   // C3=姓名
+    const rawOrder = row[1];                        // C2=順序
+    const rawType = String(row[3] || '').trim();   // C4=類型
+
+    // 停止條件
     if (!rawName) continue;
-    const sortNum = parseInt(rawSort) || (r);
-    const tempId = Date.now() + Math.floor(Math.random()*1000) + r;
+    if (STOP_KEYWORDS.some(kw => rawName.includes(kw))) break;
+    if (!rawOrder && !dateCols.some(dc => VALID_SHIFTS.has(String(row[dc.col]||'').trim()))) continue;
+
+    const sortNum = parseInt(rawOrder) || (employees.length + 1);
+    const tempId = Date.now() + Math.floor(Math.random() * 1000) + employees.length * 7;
     const monthSortOrder = {};
     importedMonths.forEach(mk => { monthSortOrder[mk] = sortNum; });
-    const emp = { id: tempId, name: rawName, type:'夜班', colorIdx: (employees.length) % EMP_COLORS, sortOrder: sortNum, monthSortOrder };
+    const empType = rawType || '夜班';
+    const emp = {
+      id: tempId, name: rawName, type: empType,
+      colorIdx: employees.length % EMP_COLORS,
+      sortOrder: sortNum, monthSortOrder
+    };
     employees.push(emp);
+
     dateCols.forEach(dc => {
-      const cellVal = String(row[dc.col]||'').trim();
-      if (SHIFTS.includes(cellVal)) {
+      const cellVal = String(row[dc.col] || '').trim();
+      if (VALID_SHIFTS.has(cellVal)) {
         schedule[tempId + '_' + dc.date] = cellVal;
       }
     });
@@ -1718,18 +1775,20 @@ function parseImportData(rows) {
 
   pendingImport = { employees, schedule, importedMonths: [...importedMonths] };
 
-  // Step 2: show employee selection
+  // Step 2：員工選擇畫面
   document.getElementById('import-step-1').style.display = 'none';
   document.getElementById('import-step-2').style.display = 'block';
   document.getElementById('import-confirm-btn').style.display = 'inline-block';
   document.getElementById('import-preview-info').textContent =
-    `找到 ${employees.length} 位員工，共 ${dateCols.length} 天資料（${[...importedMonths].join('、')}）`;
+    `工作表「${sheetUsed||''}」：找到 ${employees.length} 位員工，共 ${dateCols.length} 天（${[...importedMonths].join('、')}）`;
 
   const listEl = document.getElementById('emp-select-list');
   listEl.innerHTML = employees.map((emp, idx) => `
     <div class="emp-select-item">
       <input type="checkbox" id="imp-emp-${idx}" checked>
-      <label for="imp-emp-${idx}">${escHtml(emp.name)}</label>
+      <label for="imp-emp-${idx}">${escHtml(emp.name)}
+        <span style="color:var(--text-muted);font-size:.68rem;margin-left:4px">${escHtml(emp.type)}</span>
+      </label>
     </div>
   `).join('');
 }
