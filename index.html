@@ -102,15 +102,17 @@ main{flex:1;overflow:hidden;position:relative}
 
 .grid-emp-row{display:contents}
 .grid-emp-row:hover .grid-cell{background:rgba(255,255,255,.03)}
-.name-cell{min-width:52px;width:52px;position:sticky;left:0;z-index:4;background:var(--card);border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:3px 4px;cursor:pointer;transition:background .15s}
+.name-cell{min-width:52px;width:52px;position:sticky;left:0;z-index:4;background:var(--card);border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:3px 4px;cursor:pointer;transition:background .15s;display:flex;flex-direction:column;justify-content:center}
 .name-cell:hover{background:var(--card-hover)}
 .name-cell .emp-name{font-size:.72rem;font-weight:600;color:var(--text);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .name-cell .emp-type{font-size:.58rem;color:var(--text-muted);display:block}
 .name-cell .emp-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:3px}
 
-.grid-cell{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:2px;text-align:center;cursor:pointer;transition:background .15s;min-width:28px}
-.grid-cell:hover{background:rgba(255,255,255,.08)}
-.shift-badge{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:4px;font-size:.7rem;font-weight:700}
+.grid-cell{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:0;text-align:center;cursor:pointer;transition:background .15s;min-width:28px;display:flex;flex-direction:column}
+.grid-cell-half{flex:1;display:flex;align-items:center;justify-content:center;padding:1px 0;cursor:pointer;transition:background .15s;min-height:13px}
+.grid-cell-half:first-child{border-bottom:1px solid rgba(255,255,255,.06)}
+.grid-cell-half:hover{background:rgba(255,255,255,.1)}
+.shift-badge{display:inline-flex;align-items:center;justify-content:center;width:20px;height:13px;border-radius:3px;font-size:.6rem;font-weight:700;line-height:1}
 .shift-日{background:var(--shift-day);color:var(--shift-day-text)}
 .shift-小{background:var(--shift-eve);color:var(--shift-eve-text)}
 .shift-大{background:var(--shift-night);color:var(--shift-night-text)}
@@ -125,8 +127,13 @@ main{flex:1;overflow:hidden;position:relative}
 
 /* Leave overlay */
 .leave-overlay-row{display:contents}
-.leave-cell{border-right:1px solid var(--border);border-bottom:1px solid var(--border);font-size:.6rem;text-align:center;padding:1px;color:var(--text-muted);cursor:default;user-select:none}
-.leave-cell.leave-name-cell{background:#1a1a2e;font-size:.62rem;color:var(--text-muted);padding:2px 4px;position:sticky;left:0;z-index:4}
+.leave-cell{border-right:1px solid var(--border);border-bottom:1px solid var(--border);font-size:.55rem;text-align:center;padding:0;color:var(--text-muted);cursor:default;user-select:none;display:flex;flex-direction:column}
+.leave-cell-half{flex:1;display:flex;align-items:center;justify-content:center;min-height:10px}
+.leave-cell-half:first-child{border-bottom:1px solid rgba(255,255,255,.05)}
+.leave-cell.leave-name-cell{background:#1a1a2e;font-size:.58rem;color:var(--text-muted);padding:0;position:sticky;left:0;z-index:4;flex-direction:column;display:flex}
+.leave-cell.leave-name-cell .leave-name-half{flex:1;display:flex;align-items:center;justify-content:center;padding:0 4px;font-size:.55rem}
+.leave-cell.leave-name-cell .leave-name-half:first-child{border-bottom:1px solid rgba(255,255,255,.05);color:var(--shift-am-text);background:rgba(247,127,0,.15)}
+.leave-cell.leave-name-cell .leave-name-half:last-child{color:var(--shift-pm-text);background:rgba(123,82,196,.15)}
 .leave-count{display:inline-block;padding:0 4px;border-radius:3px;font-weight:600}
 .leave-count.over{background:var(--red);color:#fff}
 .leave-count.near{background:var(--gold);color:#1a1000}
@@ -688,7 +695,7 @@ let S = {
   holidays:{},
   excluded:{},
   leaveLog:[],
-  policy:{ leave_limit:{0:2,1:2,2:2,3:2,4:2,5:2,6:2}, modify_deadline:5 }
+  policy:{ leave_limit:{0:2,1:2,2:2,3:2,4:2,5:2,6:2}, leave_limit_am:{0:2,1:2,2:2,3:2,4:2,5:2,6:2}, leave_limit_pm:{0:2,1:2,2:2,3:2,4:2,5:2,6:2}, modify_deadline:5 }
 };
 let curUser = null;
 let curRole = 'staff'; // 'admin'|'supervisor'|'staff'
@@ -795,7 +802,12 @@ function startSync() {
   // Policy
   policyRef.on('value', snap => {
     const d = snap.val();
-    if (d) S.policy = {...S.policy, ...d};
+    if (d) {
+      S.policy = {...S.policy, ...d};
+      // 確保 am/pm limit 有預設值
+      if (!S.policy.leave_limit_am) S.policy.leave_limit_am = {...(S.policy.leave_limit||{})};
+      if (!S.policy.leave_limit_pm) S.policy.leave_limit_pm = {...(S.policy.leave_limit||{})};
+    }
   });
 
   // LeaveLog
@@ -970,7 +982,7 @@ function renderMonthView() {
     html += `<div class="${cls}"><div>${d.getDate()}</div><div style="font-size:.58rem">${WEEKDAYS[wd]}</div></div>`;
   });
 
-  // Employee rows
+  // Employee rows — 每格拆成上午/下午兩個半格
   emps.forEach(emp => {
     const eid = String(Math.floor(Number(emp.id)));
     const dotCls = `emp-color-${emp.colorIdx||0}`;
@@ -981,50 +993,84 @@ function renderMonthView() {
     </div>`;
     dates.forEach(d => {
       const dk = fmtDate(d);
-      const schedKey = eid + '_' + dk;
-      const shift = S.schedule[schedKey] || S.schedule[emp.id + '_' + dk] || '';
       const wd = d.getDay();
       const isTod = d.getTime() === today.getTime();
+      // 上午班別：key = empId_YYYY-MM-DD_AM；下午：_PM
+      // 相容舊格式：empId_YYYY-MM-DD（整天班別）
+      const keyAM = eid + '_' + dk + '_AM';
+      const keyPM = eid + '_' + dk + '_PM';
+      const keyFull = eid + '_' + dk;
+      const keyFullOld = emp.id + '_' + dk;
+      const shiftAM = S.schedule[keyAM] || '';
+      const shiftPM = S.schedule[keyPM] || '';
+      const shiftFull = S.schedule[keyFull] || S.schedule[keyFullOld] || '';
+      // 若是整天班別（日/小/大/休），兩格都顯示同一個
+      let dispAM = shiftAM || (shiftFull && shiftFull !== '上' && shiftFull !== '下' ? shiftFull : '');
+      let dispPM = shiftPM || (shiftFull && shiftFull !== '上' && shiftFull !== '下' ? shiftFull : '');
+      // 舊格式：上=上午休，下=下午休
+      if (shiftFull === '上') dispAM = '上';
+      if (shiftFull === '下') dispPM = '下';
+
       let cls = 'grid-cell';
       if (wd===6) cls += ' sat-col';
       if (wd===0 || S.holidays?.[dk]) cls += ' sun-col holiday-col';
       if (isTod) cls += ' today-col';
-      // swap highlights
       if (swapMode?.src?.empId === eid && swapMode?.src?.date === dk) cls += ' swap-src';
       if (swapMode?.tgt?.empId === eid && swapMode?.tgt?.date === dk) cls += ' swap-tgt';
-      const badge = shift ? `<span class="shift-badge shift-${shift}">${shift}</span>` : '';
-      html += `<div class="${cls}" onclick="handleCellClick('${eid}','${dk}')">${badge}</div>`;
+
+      const badgeAM = dispAM ? `<span class="shift-badge shift-${dispAM}">${dispAM}</span>` : '';
+      const badgePM = dispPM ? `<span class="shift-badge shift-${dispPM}">${dispPM}</span>` : '';
+
+      html += `<div class="${cls}">
+        <div class="grid-cell-half" onclick="event.stopPropagation();handleCellClick('${eid}','${dk}','AM')">${badgeAM}</div>
+        <div class="grid-cell-half" onclick="event.stopPropagation();handleCellClick('${eid}','${dk}','PM')">${badgePM}</div>
+      </div>`;
     });
   });
 
-  // Leave count row
-  html += `<div class="leave-cell leave-name-cell">休假</div>`;
+  // 休假計數列：拆成上午休 / 下午休兩列
+  html += `<div class="leave-cell leave-name-cell">
+    <div class="leave-name-half">上午</div>
+    <div class="leave-name-half">下午</div>
+  </div>`;
   dates.forEach(d => {
     const dk = fmtDate(d);
     const wd = d.getDay();
-    const limit = S.policy?.leave_limit?.[wd] ?? 2;
-    const count = emps.filter(e => {
+    const limitAM = S.policy?.leave_limit_am?.[wd] ?? S.policy?.leave_limit?.[wd] ?? 2;
+    const limitPM = S.policy?.leave_limit_pm?.[wd] ?? S.policy?.leave_limit?.[wd] ?? 2;
+
+    const countAM = emps.filter(e => {
       const eid = String(Math.floor(Number(e.id)));
-      const s = S.schedule[eid+'_'+dk] || S.schedule[e.id+'_'+dk] || '';
-      return s === '休' || s === '上' || s === '下';
+      const am = S.schedule[eid+'_'+dk+'_AM'] || '';
+      const full = S.schedule[eid+'_'+dk] || S.schedule[e.id+'_'+dk] || '';
+      return am === '休' || am === '上' || full === '休' || full === '上';
     }).length;
-    let lvCls = 'leave-count';
-    if (count >= limit) lvCls += ' over';
-    else if (count >= limit - 1) lvCls += ' near';
-    else lvCls += ' ok';
-    html += `<div class="leave-cell"><span class="${lvCls}">${count}</span></div>`;
+    const countPM = emps.filter(e => {
+      const eid = String(Math.floor(Number(e.id)));
+      const pm = S.schedule[eid+'_'+dk+'_PM'] || '';
+      const full = S.schedule[eid+'_'+dk] || S.schedule[e.id+'_'+dk] || '';
+      return pm === '休' || pm === '下' || full === '休' || full === '下';
+    }).length;
+
+    const amCls = 'leave-count' + (countAM >= limitAM ? ' over' : countAM >= limitAM-1 ? ' near' : ' ok');
+    const pmCls = 'leave-count' + (countPM >= limitPM ? ' over' : countPM >= limitPM-1 ? ' near' : ' ok');
+    html += `<div class="leave-cell">
+      <div class="leave-cell-half"><span class="${amCls}">${countAM}</span></div>
+      <div class="leave-cell-half"><span class="${pmCls}">${countPM}</span></div>
+    </div>`;
   });
 
   grid.innerHTML = html;
 }
 
 // ── Cell / Name Click ─────────────────────────────
-function handleCellClick(empId, date) {
+function handleCellClick(empId, date, period) {
+  // period: 'AM' | 'PM' | undefined（舊版相容）
   if (swapMode) {
     handleSwapCellClick(empId, date);
     return;
   }
-  openShiftModal(empId, date);
+  openShiftModal(empId, date, period);
 }
 function handleNameClick(empId) {
   if (swapMode && swapMode.type === 'name') {
@@ -1039,35 +1085,61 @@ function handleNameClick(empId) {
 }
 
 // ── Shift Modal ───────────────────────────────────
-function openShiftModal(empId, date) {
+function openShiftModal(empId, date, period) {
   if (!canEditCell(empId, date)) return;
   const emp = S.employees.find(e => String(Math.floor(Number(e.id))) === String(empId));
   if (!emp) return;
 
   const d = new Date(date + 'T00:00:00');
   const dk = fmtDate(d);
-  const existingShift = S.schedule[String(empId)+'_'+dk] || S.schedule[emp.id+'_'+dk] || '';
-  pendingShiftEdit = { empId: String(empId), date: dk, oldShift: existingShift };
+  const eid = String(empId);
 
-  const title = document.getElementById('shift-modal-title');
-  title.textContent = `${emp.name} — ${date}`;
+  // 根據 period 決定 key 和可用班別
+  const isAM = period === 'AM';
+  const isPM = period === 'PM';
+  const schedKey = period ? eid + '_' + dk + '_' + period : eid + '_' + dk;
+  const existingShift = S.schedule[schedKey] || '';
 
-  // Leave count info
+  pendingShiftEdit = { empId: eid, date: dk, period: period || null, schedKey, oldShift: existingShift };
+
+  // 標題
+  const periodLabel = isAM ? ' 【上午】' : isPM ? ' 【下午】' : '';
+  document.getElementById('shift-modal-title').textContent = `${emp.name} — ${date}${periodLabel}`;
+
+  // 休假計數
   const wd = d.getDay();
-  const limit = S.policy?.leave_limit?.[wd] ?? 2;
-  const countOff = S.employees.filter(e => {
-    const eid = String(Math.floor(Number(e.id)));
-    const s = S.schedule[eid+'_'+dk] || '';
-    return (s==='休'||s==='上'||s==='下') && eid !== String(empId);
+  const limitAM = S.policy?.leave_limit_am?.[wd] ?? S.policy?.leave_limit?.[wd] ?? 2;
+  const limitPM = S.policy?.leave_limit_pm?.[wd] ?? S.policy?.leave_limit?.[wd] ?? 2;
+  const countAM = S.employees.filter(e => {
+    const ei = String(Math.floor(Number(e.id)));
+    return (S.schedule[ei+'_'+dk+'_AM']||'') === '休' || (S.schedule[ei+'_'+dk]||'') === '休' || (S.schedule[ei+'_'+dk]||'') === '上';
+  }).length;
+  const countPM = S.employees.filter(e => {
+    const ei = String(Math.floor(Number(e.id)));
+    return (S.schedule[ei+'_'+dk+'_PM']||'') === '休' || (S.schedule[ei+'_'+dk]||'') === '休' || (S.schedule[ei+'_'+dk]||'') === '下';
   }).length;
   const infoEl = document.getElementById('shift-modal-leave-info');
-  infoEl.textContent = `今日已休假 ${countOff}/${limit} 人`;
+  infoEl.innerHTML = isAM
+    ? `上午休假 ${countAM}/${limitAM} 人`
+    : isPM
+    ? `下午休假 ${countPM}/${limitPM} 人`
+    : `上午休 ${countAM}/${limitAM}　下午休 ${countPM}/${limitPM}`;
 
-  // Shift buttons
+  // 班別按鈕：上午格只顯示上班相關+上午休，下午格只顯示+下午休
+  // 完整班別（日/小/大/休）任何格都可選
   const gridEl = document.getElementById('shift-modal-grid');
-  gridEl.innerHTML = SHIFTS.map(s =>
+  // 上午格：顯示 日/小/大/休/上（不顯示下）
+  // 下午格：顯示 日/小/大/休/下（不顯示上）
+  // 無 period：顯示全部
+  const availShifts = isAM
+    ? ['日','小','大','休','上']
+    : isPM
+    ? ['日','小','大','休','下']
+    : SHIFTS;
+
+  gridEl.innerHTML = availShifts.map(s =>
     `<button class="shift-btn shift-btn-${s}${existingShift===s?' selected':''}" onclick="selectShift('${s}')">${s}<br><span style="font-size:.6rem;font-weight:400">${SHIFT_LABELS[s]}</span></button>`
-  ).join('');
+  ).join('') + `<button class="shift-btn" style="background:var(--border);color:var(--text-muted)" onclick="clearShift()">✕<br><span style="font-size:.6rem;font-weight:400">清除</span></button>`;
 
   openModal('shift-modal');
 }
@@ -1079,23 +1151,57 @@ function selectShift(s) {
   pendingShiftEdit.newShift = s;
 }
 
+function clearShift() {
+  if (!pendingShiftEdit) return;
+  const { schedKey } = pendingShiftEdit;
+  if (!canEditByDeadline(pendingShiftEdit.date) && curRole === 'staff') {
+    toast('已超過修改截止日','error'); return;
+  }
+  db.ref('schedule/' + schedKey).remove().then(() => {
+    delete S.schedule[schedKey];
+    toast('已清除','success');
+    renderMonthView();
+    closeModal('shift-modal');
+  });
+}
+
 function confirmShiftEdit() {
   if (!pendingShiftEdit) return;
-  const { empId, date, oldShift, newShift } = pendingShiftEdit;
+  const { empId, date, period, schedKey, oldShift, newShift } = pendingShiftEdit;
   if (!newShift) { toast('請選擇班別','error'); return; }
 
   // Check deadline
   if (!canEditByDeadline(date) && curRole === 'staff') {
-    pendingRequestData = { empId, date, oldShift, newShift };
+    pendingRequestData = { empId, date, period, schedKey, oldShift, newShift };
     closeModal('shift-modal');
     openModal('request-modal');
     return;
   }
 
-  // Write
-  const key = empId + '_' + date;
-  db.ref('schedule/' + key).set(newShift).then(() => {
-    S.schedule[key] = newShift;
+  // 若是整天班別（日/小/大/休）寫入無 period 的 key，並清除 AM/PM key
+  const isHalfShift = newShift === '上' || newShift === '下';
+  const writeKey = schedKey; // 已由 openShiftModal 設好（含 _AM/_PM 或無）
+
+  const updates = {};
+  updates[writeKey] = newShift;
+
+  // 若整天班別（日小大休），清除對應的 AM/PM 分割 key 避免衝突
+  if (!isHalfShift && !period) {
+    updates[empId + '_' + date + '_AM'] = null;
+    updates[empId + '_' + date + '_PM'] = null;
+  }
+  // 若在半格填了整天班，也清除另一半和整天 key
+  if (!isHalfShift && period) {
+    const other = period === 'AM' ? 'PM' : 'AM';
+    updates[empId + '_' + date + '_' + other] = null;
+    updates[empId + '_' + date] = null;
+  }
+
+  db.ref('schedule').update(updates).then(() => {
+    Object.entries(updates).forEach(([k,v]) => {
+      if (v === null) delete S.schedule[k];
+      else S.schedule[k] = v;
+    });
     toast('已儲存','success');
     renderMonthView();
     closeModal('shift-modal');
@@ -1135,10 +1241,10 @@ function submitChangeRequest() {
   const reason = document.getElementById('req-reason').value.trim();
   if (!reason) { toast('請填寫原因','error'); return; }
   if (!pendingRequestData) return;
-  const {empId, date, oldShift, newShift} = pendingRequestData;
+  const {empId, date, period, schedKey, oldShift, newShift} = pendingRequestData;
   const emp = S.employees.find(e => String(Math.floor(Number(e.id))) === String(empId));
   db.ref('changeRequests').push({
-    empId, date, oldShift, newShift,
+    empId, date, period: period||null, schedKey: schedKey||(empId+'_'+date), oldShift, newShift,
     empName: emp?.name || empId,
     requesterId: curUser.uid,
     requesterEmail: curUser.email,
@@ -1281,10 +1387,14 @@ function renderWeekView() {
     html += `<tr><td class="name-td">${escHtml(emp.name)}</td>`;
     dates.forEach(d => {
       const dk = fmtDate(d);
-      const shift = S.schedule[eid+'_'+dk] || S.schedule[emp.id+'_'+dk] || '';
+      const shiftFull = S.schedule[eid+'_'+dk] || S.schedule[emp.id+'_'+dk] || '';
+      const shiftAM = S.schedule[eid+'_'+dk+'_AM'] || (shiftFull && shiftFull!=='下' ? shiftFull : '');
+      const shiftPM = S.schedule[eid+'_'+dk+'_PM'] || (shiftFull && shiftFull!=='上' ? shiftFull : '');
       const isTod = d.getTime() === today.getTime();
       const cls = isTod ? 'today-col' : '';
-      html += `<td class="${cls}">${shift ? `<span class="shift-badge shift-${shift}">${shift}</span>` : ''}</td>`;
+      const badgeAM = shiftAM ? `<span class="shift-badge shift-${shiftAM}" style="display:block;margin:1px auto">${shiftAM}</span>` : '';
+      const badgePM = shiftPM && shiftPM !== shiftAM ? `<span class="shift-badge shift-${shiftPM}" style="display:block;margin:1px auto">${shiftPM}</span>` : '';
+      html += `<td class="${cls}" style="padding:2px">${badgeAM}${badgePM}</td>`;
     });
     html += '</tr>';
   });
@@ -1318,7 +1428,10 @@ function renderMyView() {
     const d = new Date(curYear, curMonth, i);
     const dk = fmtDate(d);
     const wd = d.getDay();
-    const shift = S.schedule[selectedId+'_'+dk] || '';
+    const shiftFull = S.schedule[selectedId+'_'+dk] || '';
+    const shiftAM = S.schedule[selectedId+'_'+dk+'_AM'] || (shiftFull && shiftFull!=='下' ? shiftFull : '');
+    const shiftPM = S.schedule[selectedId+'_'+dk+'_PM'] || (shiftFull && shiftFull!=='上' ? shiftFull : '');
+    const shift = shiftAM || shiftPM || shiftFull;
     const isTod = d.getTime() === today.getTime();
     const isWknd = wd === 0 || wd === 6;
 
@@ -1327,8 +1440,11 @@ function renderMyView() {
         <div class="mcd-day" style="${isWknd?'color:var(--red)':''}">${i}</div>
         <div class="mcd-wd">${WEEKDAYS[wd]}</div>
       </div>
-      <div style="flex:1;font-size:.78rem;color:var(--text-muted)">${shift ? SHIFT_LABELS[shift]||shift : '—'}</div>
-      <div class="my-card-shift">${shift?`<span class="shift-badge shift-${shift}">${shift}</span>`:''}</div>
+      <div style="flex:1;font-size:.78rem;color:var(--text-muted)">${shiftAM && shiftPM && shiftAM!==shiftPM ? SHIFT_LABELS[shiftAM]+'／'+SHIFT_LABELS[shiftPM] : shift ? SHIFT_LABELS[shift]||shift : '—'}</div>
+      <div class="my-card-shift" style="display:flex;flex-direction:column;gap:2px;align-items:flex-end">
+        ${shiftAM?`<span class="shift-badge shift-${shiftAM}">${shiftAM}</span>`:''}
+        ${shiftPM && shiftPM!==shiftAM?`<span class="shift-badge shift-${shiftPM}">${shiftPM}</span>`:''}
+      </div>
     </div>`;
   }
   list.innerHTML = html;
@@ -1352,8 +1468,14 @@ function renderStatsView() {
     const counts = {日:0,小:0,大:0,休:0,上:0,下:0};
     for (let i=1;i<=days;i++) {
       const dk = fmtDate(new Date(curYear,curMonth,i));
-      const s = S.schedule[eid+'_'+dk] || S.schedule[emp.id+'_'+dk] || '';
-      if (counts[s] !== undefined) counts[s]++;
+      // 整天 key
+      const sf = S.schedule[eid+'_'+dk] || S.schedule[emp.id+'_'+dk] || '';
+      if (sf && counts[sf]!==undefined) counts[sf]++;
+      // 上午/下午 key（獨立計數）
+      const am = S.schedule[eid+'_'+dk+'_AM'] || '';
+      const pm = S.schedule[eid+'_'+dk+'_PM'] || '';
+      if (am && counts[am]!==undefined) counts[am]++;
+      if (pm && counts[pm]!==undefined) counts[pm]++;
     }
     const workDays = counts['日'] + counts['小'] + counts['大'];
     return { emp, eid, counts, workDays };
@@ -1438,13 +1560,23 @@ function renderSettingsView() {
   if (curRole === 'admin') {
     const wd = ['日','一','二','三','四','五','六'];
     let leaveLimitHtml = wd.map((d,i) => `
-      <div class="settings-row">
-        <label>星期${d} 休假上限</label>
-        <input type="number" min="0" max="20" value="${S.policy?.leave_limit?.[i] ?? 2}" style="width:60px" onchange="updateLeaveLimit(${i},this.value)">
+      <div class="settings-row" style="flex-wrap:wrap;gap:6px">
+        <label style="width:100%;font-size:.78rem;color:var(--text-muted);font-weight:600;margin-bottom:2px">星期${d}</label>
+        <div style="display:flex;gap:8px;flex:1;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:120px">
+            <span style="font-size:.72rem;color:var(--shift-am-text);background:var(--shift-am);padding:1px 6px;border-radius:3px;font-weight:700">上午休</span>
+            <input type="number" min="0" max="20" value="${S.policy?.leave_limit_am?.[i] ?? S.policy?.leave_limit?.[i] ?? 2}" style="width:52px" onchange="updateLeaveLimitAM(${i},this.value)">人
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:120px">
+            <span style="font-size:.72rem;color:var(--shift-pm-text);background:var(--shift-pm);padding:1px 6px;border-radius:3px;font-weight:700">下午休</span>
+            <input type="number" min="0" max="20" value="${S.policy?.leave_limit_pm?.[i] ?? S.policy?.leave_limit?.[i] ?? 2}" style="width:52px" onchange="updateLeaveLimitPM(${i},this.value)">人
+          </div>
+        </div>
       </div>`).join('');
     html += `
   <div class="settings-group">
     <div class="settings-group-title">政策設定（管理員）</div>
+    <div style="padding:8px 14px 4px;font-size:.72rem;color:var(--text-muted)">每日上午／下午休假人數上限：</div>
     ${leaveLimitHtml}
     <div class="settings-row">
       <label>修改截止（當月幾號前）</label>
@@ -1477,6 +1609,18 @@ function updateLeaveLimit(wd, val) {
   db.ref('policy/leave_limit').set(S.policy.leave_limit);
   renderMonthView();
 }
+function updateLeaveLimitAM(wd, val) {
+  if (!S.policy.leave_limit_am) S.policy.leave_limit_am = {};
+  S.policy.leave_limit_am[wd] = parseInt(val);
+  db.ref('policy/leave_limit_am').set(S.policy.leave_limit_am);
+  renderMonthView();
+}
+function updateLeaveLimitPM(wd, val) {
+  if (!S.policy.leave_limit_pm) S.policy.leave_limit_pm = {};
+  S.policy.leave_limit_pm[wd] = parseInt(val);
+  db.ref('policy/leave_limit_pm').set(S.policy.leave_limit_pm);
+  renderMonthView();
+}
 function updateDeadline(val) {
   S.policy.modify_deadline = parseInt(val);
   db.ref('policy/modify_deadline').set(parseInt(val));
@@ -1489,8 +1633,9 @@ function clearMonthSchedule() {
     const dk = fmtDate(new Date(curYear,curMonth,i));
     S.employees.forEach(e => {
       const eid = String(Math.floor(Number(e.id)));
-      const key = eid+'_'+dk;
-      if (S.schedule[key] !== undefined) toRemove[key] = null;
+      [eid+'_'+dk, eid+'_'+dk+'_AM', eid+'_'+dk+'_PM'].forEach(key => {
+        if (S.schedule[key] !== undefined) toRemove[key] = null;
+      });
     });
   }
   db.ref('schedule').update(toRemove).then(() => {
@@ -1531,7 +1676,7 @@ function approveRequest(id, approve) {
     const status = approve ? 'approved' : 'denied';
     const updates = { status, reviewerId: curUser.uid, reviewedAt: Date.now() };
     if (approve) {
-      const key = r.empId + '_' + r.date;
+      const key = r.schedKey || (r.empId + '_' + r.date);
       db.ref('schedule/' + key).set(r.newShift);
       S.schedule[key] = r.newShift;
     }
