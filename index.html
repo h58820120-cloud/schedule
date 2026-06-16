@@ -1777,121 +1777,109 @@ function saveEmployee() {
 
 // ── Import Excel ──────────────────────────────────
 function downloadTemplate() {
-  // 動態產生樣板 Excel（使用 SheetJS）
   const wb = XLSX.utils.book_new();
-
-  // ── 計算當前月份日期 ──
   const y = curYear || new Date().getFullYear();
   const m = curMonth !== undefined ? curMonth : new Date().getMonth();
   const daysInMo = new Date(y, m+1, 0).getDate();
-  const WD = ['日','一','二','三','四','五','六'];
-  const SHIFT_COLORS_HEX = {
-    '日':'FFF9C74F','小':'FF06D6A0','大':'FF4361EE','休':'FF2A3A60','上':'FFF77F00','下':'FF7B52C4'
-  };
+  const WD = ['一','二','三','四','五','六','日'];
 
-  // ── 員工示範資料 ──
+  // ── 示範員工（每人兩列：上午/下午）──
   const demoEmps = [
     {area:'本院',order:1,name:'員工甲',type:'夜班',
-     shifts:['小','小','休','休','大','大','大','大','大','休','休','休','小','小','小','休','休','大','大','大','大','大','休','休','休','小','小','小','休','休','']},
+     am:['小','小','休','休','大','大','大','大','大','休','休','休','小','小','小','休','休','大','大','大','大','大','休','休','休','小','小','小','休','休',''],
+     pm:['','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','']},
     {area:'本院',order:2,name:'員工乙',type:'夜班',
-     shifts:['大','大','大','休','休','休','小','小','小','小','小','休','休','大','大','大','大','大','休','休','休','小','小','休','休','大','大','大','大','大','']},
+     am:['大','大','大','休','休','休','小','小','小','小','小','休','休','大','大','大','大','大','休','休','休','小','小','休','休','大','大','大','大','大',''],
+     pm:['','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','']},
     {area:'本院',order:3,name:'員工丙',type:'正常班',
-     shifts:['','','','','日','日','日','日','日','','','日','日','日','日','日','','','日','日','日','日','日','','','日','日','日','日','日','']},
+     am:['','','','','日','日','日','日','日','','','日','日','日','日','日','','','日','日','日','日','日','','','日','日','日','日','日',''],
+     pm:['','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','']},
     {area:'本院',order:4,name:'員工丁',type:'正常班',
-     shifts:['日','日','日','日','日','','','日','日','日','日','日','','','日','日','日','日','日','','','日','日','日','日','日','','','日','日','日']},
-    {area:'本院',order:5,name:'員工戊',type:'夜班',
-     shifts:['休','大','大','大','大','大','休','休','休','小','小','小','小','休','休','休','大','大','大','大','大','休','休','休','小','小','小','小','休','休','']},
+     am:['日','日','日','日','上','','','日','日','日','日','日','','','日','日','日','日','日','','','日','日','日','日','日','','','日','日',''],
+     pm:['','','','','下','','','','','','','','','','','','','','','','','','','','','','','','','','']},
   ];
 
-  // ── 建立工作表資料 ──
+  // ── 建立工作表資料（aoa = array of arrays）──
   const wsData = [];
 
-  // R1：說明列
-  const r1 = ['花醫班表系統匯入樣板　班別代碼：日=日班  小=小夜班  大=大夜班  休=全天休  上=上午休  下=下午休'];
+  // R1 說明
+  const r1 = ['花醫班表系統匯入樣板　每位員工兩列（上午/下午）　班別：日 小 大 休 上 下'];
   for(let i=1;i<4+daysInMo;i++) r1.push('');
   wsData.push(r1);
 
-  // R2：月份標題
+  // R2 月份
   const r2 = [`${y}年${m+1}月 班表`];
   for(let i=1;i<4+daysInMo;i++) r2.push('');
   wsData.push(r2);
 
-  // R3：欄標題 + 日期
+  // R3 欄標題 + 日期
   const r3 = ['院區','順序','姓名','班別類型'];
-  for(let d=1;d<=daysInMo;d++){
-    const dt = new Date(y,m,d);
-    r3.push(dt); // Date 物件，SheetJS 會轉成日期格式
-  }
+  for(let d=1;d<=daysInMo;d++) r3.push(new Date(y,m,d));
   wsData.push(r3);
 
-  // R4：星期列
+  // R4 星期
   const r4 = ['','順序','','星期'];
-  for(let d=1;d<=daysInMo;d++){
-    r4.push(WD[new Date(y,m,d).getDay()]);
-  }
+  for(let d=1;d<=daysInMo;d++) r4.push(WD[new Date(y,m,d).getDay()]);
   wsData.push(r4);
 
-  // R5+：員工資料
+  // R5+ 員工（每人兩列）
   demoEmps.forEach(emp => {
-    const row = [emp.area, emp.order, emp.name, emp.type];
-    for(let d=0;d<daysInMo;d++) row.push(emp.shifts[d]||'');
-    wsData.push(row);
+    // 上午列
+    const amRow = [emp.area, emp.order, emp.name, emp.type];
+    for(let d=0;d<daysInMo;d++) amRow.push(emp.am[d]||'');
+    wsData.push(amRow);
+    // 下午列（固定欄空白，只有班別）
+    const pmRow = ['','','',''];
+    for(let d=0;d<daysInMo;d++) pmRow.push(emp.pm[d]||'');
+    wsData.push(pmRow);
   });
 
-  // 空白列（讓使用者填寫）
-  for(let i=6;i<=15;i++){
-    const row = ['本院', demoEmps.length+i-5, '', '夜班'];
-    for(let d=0;d<daysInMo;d++) row.push('');
-    wsData.push(row);
+  // 空白員工（10人）
+  for(let i=0;i<10;i++){
+    wsData.push(['本院', demoEmps.length+i+1, '', '夜班', ...Array(daysInMo).fill('')]);
+    wsData.push(['','','','', ...Array(daysInMo).fill('')]);
   }
 
   const ws = XLSX.utils.aoa_to_sheet(wsData, {cellDates:true, dateNF:'yyyy-mm-dd'});
-
-  // 設定欄寬
-  ws['!cols'] = [
-    {wch:6},{wch:5},{wch:8},{wch:8},
-    ...Array(daysInMo).fill({wch:3.2})
-  ];
-
-  // 凍結窗格
+  ws['!cols'] = [{wch:6},{wch:5},{wch:8},{wch:8},...Array(daysInMo).fill({wch:3.2})];
   ws['!freeze'] = {xSplit:4, ySplit:4};
 
   // ── 說明工作表 ──
-  const ws2Data = [
-    ['花醫班表系統 匯入格式說明',''],
+  const ws2 = XLSX.utils.aoa_to_sheet([
+    ['花醫班表系統 匯入格式說明（AM/PM 雙列版）',''],
     ['',''],
     ['【格式規則】',''],
     ['欄位','說明'],
-    ['A欄（院區）','填寫院區名稱，例如：本院'],
-    ['B欄（順序）','填寫排序數字，決定月視圖中員工的顯示順序'],
-    ['C欄（姓名）','填寫員工姓名（相同姓名自動對應，不重複新增）'],
+    ['A欄（院區）','本院 / 豐濱 等'],
+    ['B欄（順序）','排序數字，決定月視圖顯示順序'],
+    ['C欄（姓名）','員工姓名（同名自動對應，不重複新增）'],
     ['D欄（班別類型）','夜班 / 正常班 / 生化 / 細菌 / 豐濱 等'],
-    ['E欄起（日期）','第3列填寫日期，第5列起填寫班別代碼'],
+    ['E欄起','第3列=日期，第5列起=班別代碼'],
+    ['',''],
+    ['【每人雙列格式】',''],
+    ['第1列（上午）','填 日/小/大/休/上　→ 寫入 empId_日期_AM'],
+    ['第2列（下午）','填 日/小/大/休/下　→ 寫入 empId_日期_PM'],
+    ['整天班別','日/小/大/休 填上午列，系統上下午都顯示'],
+    ['半天班別','上午休=上午列填「上」，下午休=下午列填「下」'],
     ['',''],
     ['【班別代碼】',''],
-    ['代碼','意義'],
     ['日','日班（07:00～15:00）'],
     ['小','小夜班（15:00～23:00）'],
     ['大','大夜班（23:00～07:00）'],
     ['休','全天休假'],
-    ['上','上午休假'],
-    ['下','下午休假'],
-    ['（空白）','未排班'],
+    ['上','上午休假（上午列）'],
+    ['下','下午休假（下午列）'],
     ['',''],
     ['【注意事項】',''],
-    ['1.','日期格式：YYYY-MM-DD 或 YYYY/M/D 均可辨識'],
-    ['2.','遇到「緊急加班順序」等關鍵字，系統自動停止解析'],
-    ['3.','多月班表可放在同一張工作表，系統自動識別所有月份'],
-    ['4.','匯入時若員工姓名已存在，資料合併不重複新增員工'],
-  ];
-  const ws2 = XLSX.utils.aoa_to_sheet(ws2Data);
-  ws2['!cols'] = [{wch:20},{wch:55}];
+    ['1.','每位員工固定佔兩列，上午列含姓名，下午列固定欄空白'],
+    ['2.','遇到「緊急加班順序」等文字自動停止解析'],
+    ['3.','日期格式：YYYY-MM-DD 或 YYYY/M/D 均可'],
+  ]);
+  ws2['!cols'] = [{wch:22},{wch:55}];
 
   XLSX.utils.book_append_sheet(wb, ws, '班表');
   XLSX.utils.book_append_sheet(wb, ws2, '說明');
-
-  const fn = `花醫班表_匯入樣板_${y}年${m+1}月.xlsx`;
-  XLSX.writeFile(wb, fn);
+  XLSX.writeFile(wb, `花醫班表_匯入樣板_${y}年${m+1}月.xlsx`);
   toast('樣板已下載 📥','success');
 }
 
@@ -2003,39 +1991,80 @@ function parseImportData(rows, sheetUsed) {
 
   const importedMonths = new Set(dateCols.map(dc => dc.date.slice(0,7)));
 
-  // 員工資料從 dateRowIdx+2 開始（跳過星期列）
+  // ── 員工資料：支援「每人雙列（上午/下午）」和「每人單列（舊格式）」──
   const employees = [];
   const schedule = {};
+  let r = dateRowIdx + 2; // 跳過星期列
 
-  for (let r = dateRowIdx + 2; r < rows.length; r++) {
+  while (r < rows.length) {
     const row = rows[r];
     const rawName = String(row[2] || '').trim();   // C3=姓名
     const rawOrder = row[1];                        // C2=順序
     const rawType = String(row[3] || '').trim();   // C4=類型
 
     // 停止條件
-    if (!rawName) continue;
     if (STOP_KEYWORDS.some(kw => rawName.includes(kw))) break;
-    if (!rawOrder && !dateCols.some(dc => VALID_SHIFTS.has(String(row[dc.col]||'').trim()))) continue;
+
+    // 判斷是否為員工列（有姓名或有順序）
+    const hasName = rawName.length > 0;
+    const hasOrder = rawOrder !== '' && rawOrder !== null && rawOrder !== undefined;
+    const hasShifts = dateCols.some(dc => VALID_SHIFTS.has(String(row[dc.col]||'').trim()));
+
+    if (!hasName && !hasShifts) { r++; continue; }  // 空白列跳過
+    if (!hasName && !hasOrder) { r++; continue; }   // 無姓名無順序跳過
+
+    // 檢查下一列是否為「下午列」（姓名欄空白，有班別）
+    const nextRow = rows[r+1] || [];
+    const nextName = String(nextRow[2] || '').trim();
+    const nextHasShifts = dateCols.some(dc => VALID_SHIFTS.has(String(nextRow[dc.col]||'').trim()));
+    const isPairFormat = !nextName && nextHasShifts; // 下一列無名字但有班別 → 雙列格式
 
     const sortNum = parseInt(rawOrder) || (employees.length + 1);
     const tempId = Date.now() + Math.floor(Math.random() * 1000) + employees.length * 7;
     const monthSortOrder = {};
     importedMonths.forEach(mk => { monthSortOrder[mk] = sortNum; });
-    const empType = rawType || '夜班';
     const emp = {
-      id: tempId, name: rawName, type: empType,
+      id: tempId, name: rawName || `員工${sortNum}`, type: rawType || '夜班',
       colorIdx: employees.length % EMP_COLORS,
       sortOrder: sortNum, monthSortOrder
     };
     employees.push(emp);
 
-    dateCols.forEach(dc => {
-      const cellVal = String(row[dc.col] || '').trim();
-      if (VALID_SHIFTS.has(cellVal)) {
-        schedule[tempId + '_' + dc.date] = cellVal;
-      }
-    });
+    if (isPairFormat) {
+      // ── 雙列格式：上午列 + 下午列 ──
+      dateCols.forEach(dc => {
+        const amVal = String(row[dc.col] || '').trim();
+        const pmVal = String(nextRow[dc.col] || '').trim();
+        // 整天班別（日/小/大/休）→ 兩格都寫，key 用 _AM/_PM
+        if (VALID_SHIFTS.has(amVal)) {
+          if (amVal === '上') {
+            schedule[tempId + '_' + dc.date + '_AM'] = '上';
+          } else {
+            schedule[tempId + '_' + dc.date + '_AM'] = amVal;
+          }
+        }
+        if (VALID_SHIFTS.has(pmVal)) {
+          if (pmVal === '下') {
+            schedule[tempId + '_' + dc.date + '_PM'] = '下';
+          } else {
+            schedule[tempId + '_' + dc.date + '_PM'] = pmVal;
+          }
+        }
+      });
+      r += 2; // 跳過兩列
+    } else {
+      // ── 單列格式（舊版相容）──
+      dateCols.forEach(dc => {
+        const cellVal = String(row[dc.col] || '').trim();
+        if (VALID_SHIFTS.has(cellVal)) {
+          // 上/下 半天班別保留舊 key 格式相容
+          if (cellVal === '上') schedule[tempId + '_' + dc.date + '_AM'] = '上';
+          else if (cellVal === '下') schedule[tempId + '_' + dc.date + '_PM'] = '下';
+          else schedule[tempId + '_' + dc.date + '_AM'] = cellVal; // 整天班別放 _AM
+        }
+      });
+      r++; // 跳過一列
+    }
   }
 
   if (employees.length === 0) { toast('未找到員工資料','error'); startSync(); return; }
