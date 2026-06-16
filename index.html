@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#2c1810">
+<meta name="theme-color" content="#0f3460">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="花醫班表">
@@ -14,34 +14,34 @@
 /* ── Reset & Base ── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:15px;-webkit-tap-highlight-color:transparent}
-body{font-family:'Noto Sans TC',system-ui,-apple-system,sans-serif;background:#1a0e07;color:#e8edf4;min-height:100vh;overflow-x:hidden}
+body{font-family:'Noto Sans TC',system-ui,-apple-system,sans-serif;background:#12121f;color:#e8edf4;min-height:100vh;overflow-x:hidden}
 
 /* ── CSS Variables ── */
 :root{
-  /* ── 暖色系主色調 ── */
-  --navy:#2c1810;--navy-light:#3d2418;--navy-mid:#231309;--navy-deep:#1a0e07;
-  --teal:#e07b39;--teal-light:#f0954d;--teal-dim:#b85e20;
-  --gold:#f4c662;--gold-light:#f9d98a;
-  --red:#d63031;--red-dim:#b71c1c;
-  --green:#27ae60;--green-dim:#1e8449;
-  --purple:#8e44ad;--purple-light:#a85bc4;
-  --text:#f5ede6;--text-dim:#c9a98a;--text-muted:#8a6a55;
-  --card:#3a1f10;--card-hover:#4a2a18;
-  --border:#5a3322;--border-light:#7a4a35;
-  --shift-day:#f9c74f;--shift-day-text:#2d1b00;
-  --shift-eve:#43aa8b;--shift-eve-text:#001a12;
-  --shift-night:#4a7fb5;--shift-night-text:#e8f4ff;
-  --shift-off:#5a4030;--shift-off-text:#c9a98a;
-  --shift-am:#e07b39;--shift-am-text:#2d1000;
-  --shift-pm:#9b59b6;--shift-pm-text:#f5e6ff;
+  /* ── schedulemaker.io 配色 ── */
+  --navy:#16213e;--navy-light:#0f3460;--navy-mid:#1a1a2e;--navy-deep:#12121f;
+  --teal:#00b4d8;--teal-light:#48cae4;--teal-dim:#0096b7;
+  --gold:#e94560;--gold-light:#ff6b6b;
+  --red:#e94560;--red-dim:#c73652;
+  --green:#06d6a0;--green-dim:#04a87e;
+  --purple:#533483;--purple-light:#7b52c4;
+  --text:#e0e0e0;--text-dim:#a0a0b8;--text-muted:#6a6a88;
+  --card:#1e2a4a;--card-hover:#253256;
+  --border:#2a3a60;--border-light:#3a4e78;
+  --shift-day:#f9c74f;--shift-day-text:#1a1200;
+  --shift-eve:#06d6a0;--shift-eve-text:#001a12;
+  --shift-night:#4361ee;--shift-night-text:#e8f0ff;
+  --shift-off:#2a3a60;--shift-off-text:#a0a0b8;
+  --shift-am:#f77f00;--shift-am-text:#1a0a00;
+  --shift-pm:#7b52c4;--shift-pm-text:#f0e8ff;
   --radius:10px;--radius-sm:6px;--radius-lg:16px;
-  --shadow:0 4px 16px rgba(0,0,0,.5);--shadow-sm:0 2px 8px rgba(0,0,0,.4);
+  --shadow:0 4px 20px rgba(0,0,0,.6);--shadow-sm:0 2px 8px rgba(0,0,0,.4);
   --hdr-h:56px;--nav-h:52px;
 }
 
 /* ── Layout ── */
 #app{display:flex;flex-direction:column;min-height:100vh}
-header{position:sticky;top:0;z-index:100;height:var(--hdr-h);background:var(--navy);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 12px;gap:8px;box-shadow:var(--shadow)}
+header{position:sticky;top:0;z-index:100;height:var(--hdr-h);background:#0f3460;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 12px;gap:8px;box-shadow:var(--shadow)}
 header h1{font-size:1rem;font-weight:700;color:var(--teal-light);letter-spacing:.05em;flex:1;white-space:nowrap}
 header h1 span{font-size:.7rem;color:var(--text-muted);font-weight:400;margin-left:6px}
 #hdr-month{font-size:.85rem;color:var(--gold);font-weight:600;min-width:80px;text-align:center}
@@ -53,7 +53,7 @@ nav::-webkit-scrollbar{display:none}
 .nav-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 2px 5px;cursor:pointer;color:var(--text-muted);border:none;background:none;transition:color .15s;border-top:2px solid transparent;font-size:inherit;min-width:0}
 .nav-tab .tab-icon{font-size:1.2rem;margin-bottom:1px;line-height:1}
 .nav-tab .tab-label{font-size:.58rem;white-space:nowrap}
-.nav-tab.active{color:var(--teal-light);border-top-color:var(--teal);background:rgba(0,180,216,.06)}
+.nav-tab.active{color:#48cae4;border-top-color:#00b4d8;background:rgba(67,97,238,.12)}
 
 main{flex:1;overflow:hidden;position:relative}
 .view{display:none;height:100%;overflow-y:auto;padding-bottom:20px}
@@ -61,7 +61,7 @@ main{flex:1;overflow:hidden;position:relative}
 
 /* ── Auth Screen ── */
 #auth-screen{position:fixed;inset:0;z-index:200;background:var(--navy-deep);display:flex;align-items:center;justify-content:center;padding:20px}
-.auth-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:32px 28px;width:100%;max-width:380px;box-shadow:var(--shadow)}
+.auth-card{background:#1e2a4a;border:1px solid var(--border);border-radius:var(--radius-lg);padding:32px 28px;width:100%;max-width:380px;box-shadow:var(--shadow)}
 .auth-logo{text-align:center;margin-bottom:24px}
 .auth-logo .logo-icon{font-size:2.8rem;display:block;margin-bottom:8px}
 .auth-logo h2{font-size:1.2rem;font-weight:700;color:var(--teal-light)}
@@ -70,8 +70,8 @@ main{flex:1;overflow:hidden;position:relative}
 .auth-field label{display:block;font-size:.75rem;color:var(--text-dim);margin-bottom:5px;font-weight:500}
 .auth-field input{width:100%;background:var(--navy-deep);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;color:var(--text);font-size:.9rem;outline:none;transition:border-color .15s}
 .auth-field input:focus{border-color:var(--teal)}
-.btn-primary{width:100%;background:var(--teal);color:#001a24;font-weight:700;border:none;border-radius:var(--radius-sm);padding:11px;font-size:.9rem;cursor:pointer;transition:background .15s;margin-top:6px}
-.btn-primary:hover{background:var(--teal-light)}
+.btn-primary{width:100%;background:#4361ee;color:#fff;font-weight:700;border:none;border-radius:var(--radius-sm);padding:11px;font-size:.9rem;cursor:pointer;transition:background .15s;margin-top:6px}
+.btn-primary:hover{background:#6a84f5}
 .btn-google{width:100%;background:var(--card-hover);color:var(--text);font-weight:600;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;font-size:.85rem;cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px}
 .btn-google:hover{background:var(--border)}
 .auth-divider{text-align:center;color:var(--text-muted);font-size:.75rem;margin:12px 0;position:relative}
@@ -93,7 +93,7 @@ main{flex:1;overflow:hidden;position:relative}
 
 /* Header row: name col + date cols */
 .grid-head-row{display:contents}
-.grid-head-cell{background:var(--navy-mid);border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:4px 2px;text-align:center;font-size:.65rem;color:var(--text-muted);position:sticky;top:0;z-index:5;user-select:none}
+.grid-head-cell{background:#1a1a2e;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:4px 2px;text-align:center;font-size:.65rem;color:var(--text-muted);position:sticky;top:0;z-index:5;user-select:none}
 .grid-head-cell.name-col{min-width:52px;width:52px;position:sticky;left:0;z-index:6;background:var(--navy-mid)}
 .grid-head-cell.sat{color:#7ec8f4}
 .grid-head-cell.sun{color:#f4826e}
@@ -126,7 +126,7 @@ main{flex:1;overflow:hidden;position:relative}
 /* Leave overlay */
 .leave-overlay-row{display:contents}
 .leave-cell{border-right:1px solid var(--border);border-bottom:1px solid var(--border);font-size:.6rem;text-align:center;padding:1px;color:var(--text-muted);cursor:default;user-select:none}
-.leave-cell.leave-name-cell{background:var(--navy-mid);font-size:.62rem;color:var(--text-muted);padding:2px 4px;position:sticky;left:0;z-index:4}
+.leave-cell.leave-name-cell{background:#1a1a2e;font-size:.62rem;color:var(--text-muted);padding:2px 4px;position:sticky;left:0;z-index:4}
 .leave-count{display:inline-block;padding:0 4px;border-radius:3px;font-weight:600}
 .leave-count.over{background:var(--red);color:#fff}
 .leave-count.near{background:var(--gold);color:#1a1000}
@@ -291,7 +291,7 @@ main{flex:1;overflow:hidden;position:relative}
   #desktop-sidebar{
     display:flex !important;flex-direction:column;
     width:200px;flex-shrink:0;
-    background:var(--navy);border-right:1px solid var(--border);
+    background:#0f3460;border-right:1px solid var(--border);
     height:100vh;position:sticky;top:0;overflow-y:auto;
     padding-bottom:20px
   }
@@ -308,7 +308,7 @@ main{flex:1;overflow:hidden;position:relative}
   }
   #desktop-sidebar .sb-nav-btn .sb-icon{font-size:.95rem;flex-shrink:0;width:20px;text-align:center}
   #desktop-sidebar .sb-nav-btn.active{
-    color:var(--teal-light);background:rgba(224,123,57,.12);border-left-color:var(--teal)
+    color:#48cae4;background:rgba(67,97,238,.15);border-left-color:#4361ee
   }
   #desktop-sidebar .sb-nav-btn:hover{color:var(--text);background:rgba(255,255,255,.06)}
   #desktop-sidebar .sb-month-ctrl{
@@ -337,7 +337,7 @@ main{flex:1;overflow:hidden;position:relative}
   #desktop-sidebar{display:none}
   nav{
     position:fixed;bottom:0;left:0;right:0;z-index:90;
-    background:var(--navy);border-top:1px solid var(--border);
+    background:#0f3460;border-top:1px solid var(--border);
     box-shadow:0 -2px 10px rgba(0,0,0,.4)
   }
   main{padding-bottom:52px}
@@ -350,10 +350,10 @@ main{flex:1;overflow:hidden;position:relative}
 ::-webkit-scrollbar-thumb:hover{background:var(--teal-dim)}
 
 /* Color palette for employees */
-.emp-color-0{background:#e07b39}.emp-color-1{background:#f4c662}.emp-color-2{background:#27ae60}
-.emp-color-3{background:#8e44ad}.emp-color-4{background:#d63031}.emp-color-5{background:#2980b9}
-.emp-color-6{background:#f39c12}.emp-color-7{background:#e74c3c}.emp-color-8{background:#16a085}
-.emp-color-9{background:#c0392b}.emp-color-10{background:#d35400}.emp-color-11{background:#7f8c8d}
+.emp-color-0{background:#4361ee}.emp-color-1{background:#f9c74f}.emp-color-2{background:#06d6a0}
+.emp-color-3{background:#7b52c4}.emp-color-4{background:#e94560}.emp-color-5{background:#00b4d8}
+.emp-color-6{background:#f77f00}.emp-color-7{background:#ff6b6b}.emp-color-8{background:#43aa8b}
+.emp-color-9{background:#e76f51}.emp-color-10{background:#a8dadc}.emp-color-11{background:#9b5de5}
 
 /* Admin badge in header */
 .hdr-role-badge{font-size:.58rem;background:var(--gold);color:#1a0800;border-radius:20px;padding:1px 6px;font-weight:700}
@@ -588,12 +588,15 @@ main{flex:1;overflow:hidden;position:relative}
           <div style="font-size:.7rem;margin-top:4px;color:var(--text-muted)">.xlsx / .xls / .csv</div>
           <input type="file" id="import-file-input" accept=".xlsx,.xls,.csv" onchange="handleFileSelect(event)">
         </div>
-        <div id="import-format-hint" style="font-size:.72rem;color:var(--text-muted);margin-top:10px;line-height:1.6">
+        <div id="import-format-hint" style="font-size:.72rem;color:var(--text-muted);margin-top:10px;line-height:1.8">
           <strong style="color:var(--text-dim)">格式說明：</strong><br>
-          • A欄：員工姓名　B欄：排序號碼<br>
-          • 第1列：標題（日期，格式 2026/01/15）<br>
+          • A欄=院區　B欄=順序　C欄=姓名　D欄=班別類型<br>
+          • 第3列=日期、第4列=星期、第5列起=員工班別<br>
           • 班別代碼：日 / 小 / 大 / 休 / 上 / 下
         </div>
+        <button onclick="downloadTemplate()" style="margin-top:12px;width:100%;background:rgba(67,97,238,.15);border:1px solid #4361ee;color:#48cae4;border-radius:var(--radius-sm);padding:9px;font-size:.82rem;cursor:pointer;font-weight:600;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px" onmouseover="this.style.background='rgba(67,97,238,.3)'" onmouseout="this.style.background='rgba(67,97,238,.15)'">
+          📥 下載匯入樣板（Excel）
+        </button>
       </div>
       <div id="import-step-2" style="display:none">
         <div id="import-preview-info" style="font-size:.78rem;color:var(--text-dim);margin-bottom:10px"></div>
@@ -1628,6 +1631,125 @@ function saveEmployee() {
 }
 
 // ── Import Excel ──────────────────────────────────
+function downloadTemplate() {
+  // 動態產生樣板 Excel（使用 SheetJS）
+  const wb = XLSX.utils.book_new();
+
+  // ── 計算當前月份日期 ──
+  const y = curYear || new Date().getFullYear();
+  const m = curMonth !== undefined ? curMonth : new Date().getMonth();
+  const daysInMo = new Date(y, m+1, 0).getDate();
+  const WD = ['日','一','二','三','四','五','六'];
+  const SHIFT_COLORS_HEX = {
+    '日':'FFF9C74F','小':'FF06D6A0','大':'FF4361EE','休':'FF2A3A60','上':'FFF77F00','下':'FF7B52C4'
+  };
+
+  // ── 員工示範資料 ──
+  const demoEmps = [
+    {area:'本院',order:1,name:'員工甲',type:'夜班',
+     shifts:['小','小','休','休','大','大','大','大','大','休','休','休','小','小','小','休','休','大','大','大','大','大','休','休','休','小','小','小','休','休','']},
+    {area:'本院',order:2,name:'員工乙',type:'夜班',
+     shifts:['大','大','大','休','休','休','小','小','小','小','小','休','休','大','大','大','大','大','休','休','休','小','小','休','休','大','大','大','大','大','']},
+    {area:'本院',order:3,name:'員工丙',type:'正常班',
+     shifts:['','','','','日','日','日','日','日','','','日','日','日','日','日','','','日','日','日','日','日','','','日','日','日','日','日','']},
+    {area:'本院',order:4,name:'員工丁',type:'正常班',
+     shifts:['日','日','日','日','日','','','日','日','日','日','日','','','日','日','日','日','日','','','日','日','日','日','日','','','日','日','日']},
+    {area:'本院',order:5,name:'員工戊',type:'夜班',
+     shifts:['休','大','大','大','大','大','休','休','休','小','小','小','小','休','休','休','大','大','大','大','大','休','休','休','小','小','小','小','休','休','']},
+  ];
+
+  // ── 建立工作表資料 ──
+  const wsData = [];
+
+  // R1：說明列
+  const r1 = ['花醫班表系統匯入樣板　班別代碼：日=日班  小=小夜班  大=大夜班  休=全天休  上=上午休  下=下午休'];
+  for(let i=1;i<4+daysInMo;i++) r1.push('');
+  wsData.push(r1);
+
+  // R2：月份標題
+  const r2 = [`${y}年${m+1}月 班表`];
+  for(let i=1;i<4+daysInMo;i++) r2.push('');
+  wsData.push(r2);
+
+  // R3：欄標題 + 日期
+  const r3 = ['院區','順序','姓名','班別類型'];
+  for(let d=1;d<=daysInMo;d++){
+    const dt = new Date(y,m,d);
+    r3.push(dt); // Date 物件，SheetJS 會轉成日期格式
+  }
+  wsData.push(r3);
+
+  // R4：星期列
+  const r4 = ['','順序','','星期'];
+  for(let d=1;d<=daysInMo;d++){
+    r4.push(WD[new Date(y,m,d).getDay()]);
+  }
+  wsData.push(r4);
+
+  // R5+：員工資料
+  demoEmps.forEach(emp => {
+    const row = [emp.area, emp.order, emp.name, emp.type];
+    for(let d=0;d<daysInMo;d++) row.push(emp.shifts[d]||'');
+    wsData.push(row);
+  });
+
+  // 空白列（讓使用者填寫）
+  for(let i=6;i<=15;i++){
+    const row = ['本院', demoEmps.length+i-5, '', '夜班'];
+    for(let d=0;d<daysInMo;d++) row.push('');
+    wsData.push(row);
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(wsData, {cellDates:true, dateNF:'yyyy-mm-dd'});
+
+  // 設定欄寬
+  ws['!cols'] = [
+    {wch:6},{wch:5},{wch:8},{wch:8},
+    ...Array(daysInMo).fill({wch:3.2})
+  ];
+
+  // 凍結窗格
+  ws['!freeze'] = {xSplit:4, ySplit:4};
+
+  // ── 說明工作表 ──
+  const ws2Data = [
+    ['花醫班表系統 匯入格式說明',''],
+    ['',''],
+    ['【格式規則】',''],
+    ['欄位','說明'],
+    ['A欄（院區）','填寫院區名稱，例如：本院'],
+    ['B欄（順序）','填寫排序數字，決定月視圖中員工的顯示順序'],
+    ['C欄（姓名）','填寫員工姓名（相同姓名自動對應，不重複新增）'],
+    ['D欄（班別類型）','夜班 / 正常班 / 生化 / 細菌 / 豐濱 等'],
+    ['E欄起（日期）','第3列填寫日期，第5列起填寫班別代碼'],
+    ['',''],
+    ['【班別代碼】',''],
+    ['代碼','意義'],
+    ['日','日班（07:00～15:00）'],
+    ['小','小夜班（15:00～23:00）'],
+    ['大','大夜班（23:00～07:00）'],
+    ['休','全天休假'],
+    ['上','上午休假'],
+    ['下','下午休假'],
+    ['（空白）','未排班'],
+    ['',''],
+    ['【注意事項】',''],
+    ['1.','日期格式：YYYY-MM-DD 或 YYYY/M/D 均可辨識'],
+    ['2.','遇到「緊急加班順序」等關鍵字，系統自動停止解析'],
+    ['3.','多月班表可放在同一張工作表，系統自動識別所有月份'],
+    ['4.','匯入時若員工姓名已存在，資料合併不重複新增員工'],
+  ];
+  const ws2 = XLSX.utils.aoa_to_sheet(ws2Data);
+  ws2['!cols'] = [{wch:20},{wch:55}];
+
+  XLSX.utils.book_append_sheet(wb, ws, '班表');
+  XLSX.utils.book_append_sheet(wb, ws2, '說明');
+
+  const fn = `花醫班表_匯入樣板_${y}年${m+1}月.xlsx`;
+  XLSX.writeFile(wb, fn);
+  toast('樣板已下載 📥','success');
+}
+
 function openImportModal() {
   // Reset
   document.getElementById('import-step-1').style.display = 'block';
