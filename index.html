@@ -128,12 +128,13 @@ main{flex:1;overflow:hidden;position:relative}
 /* Leave overlay */
 .leave-overlay-row{display:contents}
 .leave-cell{border-right:1px solid var(--border);border-bottom:1px solid var(--border);font-size:.55rem;text-align:center;padding:0;color:var(--text-muted);cursor:default;user-select:none;display:flex;flex-direction:column}
-.leave-cell-half{flex:1;display:flex;align-items:center;justify-content:center;min-height:10px}
-.leave-cell-half:first-child{border-bottom:1px solid rgba(255,255,255,.05)}
+.leave-cell-half{flex:1;display:flex;align-items:center;justify-content:center;min-height:8px}
+.leave-cell-half:not(:last-child){border-bottom:1px solid rgba(255,255,255,.05)}
 .leave-cell.leave-name-cell{background:#1a1a2e;font-size:.58rem;color:var(--text-muted);padding:0;position:sticky;left:0;z-index:4;flex-direction:column;display:flex}
 .leave-cell.leave-name-cell .leave-name-half{flex:1;display:flex;align-items:center;justify-content:center;padding:0 4px;font-size:.55rem}
-.leave-cell.leave-name-cell .leave-name-half:first-child{border-bottom:1px solid rgba(255,255,255,.05);color:var(--shift-am-text);background:rgba(247,127,0,.15)}
-.leave-cell.leave-name-cell .leave-name-half:last-child{color:var(--shift-pm-text);background:rgba(123,82,196,.15)}
+.leave-cell.leave-name-cell .leave-name-half:nth-child(1){border-bottom:1px solid rgba(255,255,255,.05);color:#f9c74f;background:rgba(249,199,79,.12)}
+.leave-cell.leave-name-cell .leave-name-half:nth-child(2){border-bottom:1px solid rgba(255,255,255,.05);color:var(--shift-am-text);background:rgba(247,127,0,.15)}
+.leave-cell.leave-name-cell .leave-name-half:nth-child(3){color:var(--shift-pm-text);background:rgba(123,82,196,.15)}
 .leave-count{display:inline-block;padding:0 4px;border-radius:3px;font-weight:600}
 .leave-count.over{background:var(--red);color:#fff}
 .leave-count.near{background:var(--gold);color:#1a1000}
@@ -598,8 +599,14 @@ main{flex:1;overflow:hidden;position:relative}
         <div id="import-format-hint" style="font-size:.72rem;color:var(--text-muted);margin-top:10px;line-height:1.8">
           <strong style="color:var(--text-dim)">格式說明：</strong><br>
           • A欄=院區　B欄=順序　C欄=姓名　D欄=班別類型<br>
-          • 第3列=日期、第4列=星期、第5列起=員工班別<br>
+          • 第3列=日期、第4列=星期、第5列起=員工班別（每人兩列）<br>
           • 班別代碼：日 / 小 / 大 / 休 / 上 / 下
+        </div>
+        <div id="firebase-check-info" style="display:none;margin-top:8px;padding:8px 10px;background:rgba(230,57,70,.1);border:1px solid var(--red);border-radius:var(--radius-sm);font-size:.72rem;color:var(--gold);line-height:1.7">
+          ⚠️ <strong>若匯入後出現「儲存失敗」，請確認：</strong><br>
+          1. Firebase Realtime Database Rules 已設定 auth != null 可寫入<br>
+          2. 已在系統內登入帳號<br>
+          3. Firebase Console → schedule-516bd → Realtime Database → 規則
         </div>
         <button onclick="downloadTemplate()" style="margin-top:12px;width:100%;background:rgba(67,97,238,.15);border:1px solid #4361ee;color:#48cae4;border-radius:var(--radius-sm);padding:9px;font-size:.82rem;cursor:pointer;font-weight:600;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px" onmouseover="this.style.background='rgba(67,97,238,.3)'" onmouseout="this.style.background='rgba(67,97,238,.15)'">
           📥 下載匯入樣板（Excel）
@@ -695,7 +702,7 @@ let S = {
   holidays:{},
   excluded:{},
   leaveLog:[],
-  policy:{ leave_limit:{0:2,1:2,2:2,3:2,4:2,5:2,6:2}, leave_limit_am:{0:2,1:2,2:2,3:2,4:2,5:2,6:2}, leave_limit_pm:{0:2,1:2,2:2,3:2,4:2,5:2,6:2}, modify_deadline:5 }
+  policy:{ leave_limit:{0:2,1:2,2:2,3:2,4:2,5:2,6:2}, leave_limit_day:{0:2,1:2,2:2,3:2,4:2,5:2,6:2}, leave_limit_am:{0:2,1:2,2:2,3:2,4:2,5:2,6:2}, leave_limit_pm:{0:2,1:2,2:2,3:2,4:2,5:2,6:2}, modify_deadline:5 }
 };
 let curUser = null;
 let curRole = 'staff'; // 'admin'|'supervisor'|'staff'
@@ -805,6 +812,7 @@ function startSync() {
     if (d) {
       S.policy = {...S.policy, ...d};
       // 確保 am/pm limit 有預設值
+      if (!S.policy.leave_limit_day) S.policy.leave_limit_day = {...(S.policy.leave_limit||{})};
       if (!S.policy.leave_limit_am) S.policy.leave_limit_am = {...(S.policy.leave_limit||{})};
       if (!S.policy.leave_limit_pm) S.policy.leave_limit_pm = {...(S.policy.leave_limit||{})};
     }
@@ -847,9 +855,22 @@ function pushToFirebase(data) {
     empObj[id] = {...e, id: Math.floor(Number(e.id))};
   });
   const sched = data.schedule || S.schedule;
+
+  // 先確認 Firebase 連線正常
+  if (!db) {
+    return Promise.reject(new Error('Firebase 未初始化'));
+  }
+  if (!curUser) {
+    return Promise.reject(new Error('尚未登入，請重新整理後再試'));
+  }
+
   return Promise.all([
-    db.ref('employees').set(empObj),
-    db.ref('schedule').set(sched)
+    db.ref('employees').set(empObj).catch(e => {
+      throw new Error('員工資料寫入失敗：' + (e.code || e.message));
+    }),
+    db.ref('schedule').set(sched).catch(e => {
+      throw new Error('班表資料寫入失敗：' + (e.code || e.message));
+    })
   ]);
 }
 
@@ -1028,33 +1049,47 @@ function renderMonthView() {
     });
   });
 
-  // 休假計數列：拆成上午休 / 下午休兩列
+  // 休假計數列：三格（全天休 / 上午休 / 下午休）
   html += `<div class="leave-cell leave-name-cell">
+    <div class="leave-name-half">休</div>
     <div class="leave-name-half">上午</div>
     <div class="leave-name-half">下午</div>
   </div>`;
   dates.forEach(d => {
     const dk = fmtDate(d);
     const wd = d.getDay();
-    const limitAM = S.policy?.leave_limit_am?.[wd] ?? S.policy?.leave_limit?.[wd] ?? 2;
-    const limitPM = S.policy?.leave_limit_pm?.[wd] ?? S.policy?.leave_limit?.[wd] ?? 2;
+    const limitDay = S.policy?.leave_limit_day?.[wd] ?? S.policy?.leave_limit?.[wd] ?? 2;
+    const limitAM  = S.policy?.leave_limit_am?.[wd]  ?? S.policy?.leave_limit?.[wd] ?? 2;
+    const limitPM  = S.policy?.leave_limit_pm?.[wd]  ?? S.policy?.leave_limit?.[wd] ?? 2;
 
+    // 全天休：整天 key=休，或 _AM=休 且 _PM=休
+    const countDay = emps.filter(e => {
+      const eid = String(Math.floor(Number(e.id)));
+      const full = S.schedule[eid+'_'+dk] || S.schedule[e.id+'_'+dk] || '';
+      const am   = S.schedule[eid+'_'+dk+'_AM'] || '';
+      const pm   = S.schedule[eid+'_'+dk+'_PM'] || '';
+      return full === '休' || (am === '休' && pm === '休');
+    }).length;
+    // 上午休：_AM=休 或 _AM=上，或整天 key=上
     const countAM = emps.filter(e => {
       const eid = String(Math.floor(Number(e.id)));
-      const am = S.schedule[eid+'_'+dk+'_AM'] || '';
       const full = S.schedule[eid+'_'+dk] || S.schedule[e.id+'_'+dk] || '';
-      return am === '休' || am === '上' || full === '休' || full === '上';
+      const am   = S.schedule[eid+'_'+dk+'_AM'] || '';
+      return am === '休' || am === '上' || full === '上';
     }).length;
+    // 下午休：_PM=休 或 _PM=下，或整天 key=下
     const countPM = emps.filter(e => {
       const eid = String(Math.floor(Number(e.id)));
-      const pm = S.schedule[eid+'_'+dk+'_PM'] || '';
       const full = S.schedule[eid+'_'+dk] || S.schedule[e.id+'_'+dk] || '';
-      return pm === '休' || pm === '下' || full === '休' || full === '下';
+      const pm   = S.schedule[eid+'_'+dk+'_PM'] || '';
+      return pm === '休' || pm === '下' || full === '下';
     }).length;
 
-    const amCls = 'leave-count' + (countAM >= limitAM ? ' over' : countAM >= limitAM-1 ? ' near' : ' ok');
-    const pmCls = 'leave-count' + (countPM >= limitPM ? ' over' : countPM >= limitPM-1 ? ' near' : ' ok');
+    const dayCls = 'leave-count' + (countDay >= limitDay ? ' over' : countDay >= limitDay-1 ? ' near' : ' ok');
+    const amCls  = 'leave-count' + (countAM  >= limitAM  ? ' over' : countAM  >= limitAM-1  ? ' near' : ' ok');
+    const pmCls  = 'leave-count' + (countPM  >= limitPM  ? ' over' : countPM  >= limitPM-1  ? ' near' : ' ok');
     html += `<div class="leave-cell">
+      <div class="leave-cell-half"><span class="${dayCls}">${countDay}</span></div>
       <div class="leave-cell-half"><span class="${amCls}">${countAM}</span></div>
       <div class="leave-cell-half"><span class="${pmCls}">${countPM}</span></div>
     </div>`;
@@ -1119,11 +1154,20 @@ function openShiftModal(empId, date, period) {
     return (S.schedule[ei+'_'+dk+'_PM']||'') === '休' || (S.schedule[ei+'_'+dk]||'') === '休' || (S.schedule[ei+'_'+dk]||'') === '下';
   }).length;
   const infoEl = document.getElementById('shift-modal-leave-info');
+  const wd2 = d.getDay();
+  const limitDay2 = S.policy?.leave_limit_day?.[wd2] ?? S.policy?.leave_limit?.[wd2] ?? 2;
+  const countDay2 = S.employees.filter(e => {
+    const ei = String(Math.floor(Number(e.id)));
+    const full = S.schedule[ei+'_'+dk] || '';
+    const am2  = S.schedule[ei+'_'+dk+'_AM'] || '';
+    const pm2  = S.schedule[ei+'_'+dk+'_PM'] || '';
+    return full === '休' || (am2 === '休' && pm2 === '休');
+  }).length;
   infoEl.innerHTML = isAM
-    ? `上午休假 ${countAM}/${limitAM} 人`
+    ? `全天休 ${countDay2}/${limitDay2}　上午休 ${countAM}/${limitAM} 人`
     : isPM
-    ? `下午休假 ${countPM}/${limitPM} 人`
-    : `上午休 ${countAM}/${limitAM}　下午休 ${countPM}/${limitPM}`;
+    ? `全天休 ${countDay2}/${limitDay2}　下午休 ${countPM}/${limitPM} 人`
+    : `全天休 ${countDay2}/${limitDay2}　上午休 ${countAM}/${limitAM}　下午休 ${countPM}/${limitPM}`;
 
   // 班別按鈕：上午格只顯示上班相關+上午休，下午格只顯示+下午休
   // 完整班別（日/小/大/休）任何格都可選
@@ -1560,23 +1604,27 @@ function renderSettingsView() {
   if (curRole === 'admin') {
     const wd = ['日','一','二','三','四','五','六'];
     let leaveLimitHtml = wd.map((d,i) => `
-      <div class="settings-row" style="flex-wrap:wrap;gap:6px">
-        <label style="width:100%;font-size:.78rem;color:var(--text-muted);font-weight:600;margin-bottom:2px">星期${d}</label>
+      <div class="settings-row" style="flex-wrap:wrap;gap:6px;padding:10px 14px">
+        <label style="width:100%;font-size:.78rem;color:var(--text-dim);font-weight:700;margin-bottom:6px">星期${d}</label>
         <div style="display:flex;gap:8px;flex:1;flex-wrap:wrap">
-          <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:120px">
-            <span style="font-size:.72rem;color:var(--shift-am-text);background:var(--shift-am);padding:1px 6px;border-radius:3px;font-weight:700">上午休</span>
-            <input type="number" min="0" max="20" value="${S.policy?.leave_limit_am?.[i] ?? S.policy?.leave_limit?.[i] ?? 2}" style="width:52px" onchange="updateLeaveLimitAM(${i},this.value)">人
+          <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:100px">
+            <span style="font-size:.68rem;color:var(--shift-off-text);background:var(--shift-off);padding:1px 6px;border-radius:3px;font-weight:700">全天休</span>
+            <input type="number" min="0" max="20" value="${S.policy?.leave_limit_day?.[i] ?? S.policy?.leave_limit?.[i] ?? 2}" style="width:46px" onchange="updateLeaveLimitDay(${i},this.value)">人
           </div>
-          <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:120px">
-            <span style="font-size:.72rem;color:var(--shift-pm-text);background:var(--shift-pm);padding:1px 6px;border-radius:3px;font-weight:700">下午休</span>
-            <input type="number" min="0" max="20" value="${S.policy?.leave_limit_pm?.[i] ?? S.policy?.leave_limit?.[i] ?? 2}" style="width:52px" onchange="updateLeaveLimitPM(${i},this.value)">人
+          <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:100px">
+            <span style="font-size:.68rem;color:var(--shift-am-text);background:var(--shift-am);padding:1px 6px;border-radius:3px;font-weight:700">上午休</span>
+            <input type="number" min="0" max="20" value="${S.policy?.leave_limit_am?.[i] ?? S.policy?.leave_limit?.[i] ?? 2}" style="width:46px" onchange="updateLeaveLimitAM(${i},this.value)">人
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:100px">
+            <span style="font-size:.68rem;color:var(--shift-pm-text);background:var(--shift-pm);padding:1px 6px;border-radius:3px;font-weight:700">下午休</span>
+            <input type="number" min="0" max="20" value="${S.policy?.leave_limit_pm?.[i] ?? S.policy?.leave_limit?.[i] ?? 2}" style="width:46px" onchange="updateLeaveLimitPM(${i},this.value)">人
           </div>
         </div>
       </div>`).join('');
     html += `
   <div class="settings-group">
     <div class="settings-group-title">政策設定（管理員）</div>
-    <div style="padding:8px 14px 4px;font-size:.72rem;color:var(--text-muted)">每日上午／下午休假人數上限：</div>
+    <div style="padding:8px 14px 4px;font-size:.72rem;color:var(--text-muted)">每日全天休／上午休／下午休 人數上限：</div>
     ${leaveLimitHtml}
     <div class="settings-row">
       <label>修改截止（當月幾號前）</label>
@@ -1607,6 +1655,12 @@ function updateLeaveLimit(wd, val) {
   if (!S.policy.leave_limit) S.policy.leave_limit = {};
   S.policy.leave_limit[wd] = parseInt(val);
   db.ref('policy/leave_limit').set(S.policy.leave_limit);
+  renderMonthView();
+}
+function updateLeaveLimitDay(wd, val) {
+  if (!S.policy.leave_limit_day) S.policy.leave_limit_day = {};
+  S.policy.leave_limit_day[wd] = parseInt(val);
+  db.ref('policy/leave_limit_day').set(S.policy.leave_limit_day);
   renderMonthView();
 }
 function updateLeaveLimitAM(wd, val) {
@@ -1889,6 +1943,25 @@ function openImportModal() {
   document.getElementById('import-step-2').style.display = 'none';
   document.getElementById('import-confirm-btn').style.display = 'none';
   pendingImport = null;
+
+  // 檢查 Firebase 連線與登入狀態
+  const hint = document.getElementById('firebase-check-info');
+  if (hint) {
+    if (!curUser) {
+      hint.style.display = 'block';
+      hint.innerHTML = '❌ <strong>尚未登入！</strong>請先登入後再匯入。';
+    } else {
+      // 測試寫入權限
+      db.ref('.info/connected').once('value').then(snap => {
+        if (!snap.val()) {
+          hint.style.display = 'block';
+          hint.innerHTML = '⚠️ <strong>Firebase 未連線</strong>，請檢查網路後重試。';
+        } else {
+          hint.style.display = 'none';
+        }
+      });
+    }
+  }
   openModal('import-modal');
 }
 function handleFileDrop(e) {
@@ -2151,7 +2224,13 @@ function confirmEmpSelect() {
     renderAll();
   }).catch(err => {
     hideLoading();
-    toast('儲存失敗：' + err.message, 'error');
+    const msg = err.message || String(err);
+    console.error('Import save error:', err);
+    // 顯示詳細錯誤
+    toast('儲存失敗：' + msg, 'error');
+    // 同時在頁面上顯示（toast 可能太短）
+    const info = document.getElementById('import-preview-info');
+    if (info) info.innerHTML = `<span style="color:var(--red)">❌ 儲存失敗：${msg}<br>請確認 Firebase 規則已允許寫入，並確認已登入。</span>`;
     startSync();
   });
 }
