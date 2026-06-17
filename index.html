@@ -13,7 +13,7 @@
 <style>
 /* ── Reset & Base ── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{font-size:15px;-webkit-tap-highlight-color:transparent}
+html{font-size:14px;-webkit-tap-highlight-color:transparent}
 body{font-family:'Noto Sans TC',system-ui,-apple-system,sans-serif;background:#12121f;color:#e8edf4;min-height:100vh;overflow-x:hidden}
 
 /* ── CSS Variables ── */
@@ -42,17 +42,17 @@ body{font-family:'Noto Sans TC',system-ui,-apple-system,sans-serif;background:#1
 /* ── Layout ── */
 #app{display:flex;flex-direction:column;min-height:100vh}
 header{position:sticky;top:0;z-index:100;height:var(--hdr-h);background:#0f3460;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 12px;gap:8px;box-shadow:var(--shadow)}
-header h1{font-size:1rem;font-weight:700;color:var(--teal-light);letter-spacing:.05em;flex:1;white-space:nowrap}
+header h1{font-size:14px;font-weight:700;color:var(--teal-light);letter-spacing:.05em;flex:1;white-space:nowrap}
 header h1 span{font-size:.7rem;color:var(--text-muted);font-weight:400;margin-left:6px}
-#hdr-month{font-size:.85rem;color:var(--gold);font-weight:600;min-width:80px;text-align:center}
+#hdr-month{font-size:14px;color:var(--gold);font-weight:600;min-width:80px;text-align:center}
 .hdr-btn{background:none;border:none;color:var(--text-dim);cursor:pointer;padding:6px;border-radius:var(--radius-sm);transition:color .15s,background .15s;line-height:1;font-size:1rem}
 .hdr-btn:hover{color:var(--teal-light);background:rgba(255,255,255,.08)}
 
 nav{background:var(--navy-mid);border-bottom:1px solid var(--border);display:flex;overflow-x:auto;scrollbar-width:none}
 nav::-webkit-scrollbar{display:none}
 .nav-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 2px 5px;cursor:pointer;color:var(--text-muted);border:none;background:none;transition:color .15s;border-top:2px solid transparent;font-size:inherit;min-width:0}
-.nav-tab .tab-icon{font-size:1.2rem;margin-bottom:1px;line-height:1}
-.nav-tab .tab-label{font-size:.58rem;white-space:nowrap}
+.nav-tab .tab-icon{font-size:1.1rem;margin-bottom:1px;line-height:1}
+.nav-tab .tab-label{font-size:13px;white-space:nowrap}
 .nav-tab.active{color:#48cae4;border-top-color:#00b4d8;background:rgba(67,97,238,.12)}
 
 main{flex:1;overflow:hidden;position:relative}
@@ -67,12 +67,12 @@ main{flex:1;overflow:hidden;position:relative}
 .auth-logo h2{font-size:1.2rem;font-weight:700;color:var(--teal-light)}
 .auth-logo p{font-size:.78rem;color:var(--text-muted);margin-top:4px}
 .auth-field{margin-bottom:14px}
-.auth-field label{display:block;font-size:.75rem;color:var(--text-dim);margin-bottom:5px;font-weight:500}
-.auth-field input{width:100%;background:var(--navy-deep);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;color:var(--text);font-size:.9rem;outline:none;transition:border-color .15s}
+.auth-field label{display:block;font-size:14px;color:var(--text-dim);margin-bottom:5px;font-weight:500}
+.auth-field input{width:100%;background:var(--navy-deep);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;color:var(--text);font-size:14px;outline:none;transition:border-color .15s}
 .auth-field input:focus{border-color:var(--teal)}
-.btn-primary{width:100%;background:#4361ee;color:#fff;font-weight:700;border:none;border-radius:var(--radius-sm);padding:11px;font-size:.9rem;cursor:pointer;transition:background .15s;margin-top:6px}
+.btn-primary{width:100%;background:#4361ee;color:#fff;font-weight:700;border:none;border-radius:var(--radius-sm);padding:11px;font-size:14px;cursor:pointer;transition:background .15s;margin-top:6px}
 .btn-primary:hover{background:#6a84f5}
-.btn-google{width:100%;background:var(--card-hover);color:var(--text);font-weight:600;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;font-size:.85rem;cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px}
+.btn-google{width:100%;background:var(--card-hover);color:var(--text);font-weight:600;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;font-size:14px;cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px}
 .btn-google:hover{background:var(--border)}
 .auth-divider{text-align:center;color:var(--text-muted);font-size:.75rem;margin:12px 0;position:relative}
 .auth-divider::before,.auth-divider::after{content:'';position:absolute;top:50%;width:40%;height:1px;background:var(--border)}
@@ -84,65 +84,49 @@ main{flex:1;overflow:hidden;position:relative}
 /* ── Month View ── */
 #month-view{padding:0}
 .month-header{padding:10px 12px 8px;display:flex;align-items:center;justify-content:space-between;background:var(--navy)}
-.month-nav-btn{background:none;border:1px solid var(--border);color:var(--text-dim);border-radius:var(--radius-sm);padding:5px 12px;cursor:pointer;font-size:.82rem;transition:all .15s}
+.month-nav-btn{background:none;border:1px solid var(--border);color:var(--text-dim);border-radius:var(--radius-sm);padding:5px 12px;cursor:pointer;font-size:14px;transition:all .15s}
 .month-nav-btn:hover{border-color:var(--teal);color:var(--teal)}
-.month-title{font-size:1rem;font-weight:700;color:var(--teal-light)}
-
-/* 月曆容器 */
-.cal-wrap{padding:0 6px 8px;overflow-x:auto}
-.cal-table{width:100%;border-collapse:collapse;min-width:480px;table-layout:fixed}
-
-/* 星期標題列 */
-.cal-table .cal-wk-hdr{background:#0f3460;font-size:.72rem;font-weight:700;color:var(--text-muted);text-align:center;padding:6px 0;border:1px solid var(--border)}
-.cal-table .cal-wk-hdr.sat{color:#7eb8f4}
-.cal-table .cal-wk-hdr.sun{color:#ff6b6b}
-
-/* 日期格子 */
-.cal-cell{border:1px solid var(--border);vertical-align:top;padding:0;height:auto;cursor:default;background:var(--card);position:relative;min-height:56px}
-.cal-cell.other-month{background:#12121f;opacity:.45}
-.cal-cell.is-today{border-color:var(--teal) !important;box-shadow:inset 0 0 0 1px var(--teal)}
-.cal-cell.is-sat{background:#1a2240}
-.cal-cell.is-sun{background:#1e1428}
-.cal-cell.is-holiday{background:#1e1428}
-
-/* 日期數字 */
-.cal-date-num{font-size:.72rem;font-weight:600;color:var(--text-muted);padding:3px 5px;line-height:1;display:flex;align-items:center;gap:3px}
-.cal-date-num.today-num{color:var(--teal-light);font-weight:700}
-.cal-date-num.sat-num{color:#7eb8f4}
-.cal-date-num.sun-num{color:#ff6b6b}
-.cal-lunar{font-size:.6rem;color:var(--text-muted);margin-left:2px}
-
-/* 員工班別清單（在格子裡） */
-.cal-emp-list{padding:1px 3px 3px;display:flex;flex-direction:column;gap:1px}
-.cal-emp-row{display:flex;align-items:center;gap:3px;cursor:pointer;border-radius:3px;padding:1px 3px;transition:background .12s}
-.cal-emp-row:hover{background:rgba(255,255,255,.1)}
-.cal-emp-name{font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:50px;flex-shrink:0}
-.cal-shift-badge{font-size:11px;font-weight:700;padding:1px 5px;border-radius:3px;white-space:nowrap;flex-shrink:0}
-.cal-shift-badge.shift-日{background:var(--shift-day);color:var(--shift-day-text)}
-.cal-shift-badge.shift-小{background:var(--shift-eve);color:var(--shift-eve-text)}
-.cal-shift-badge.shift-大{background:var(--shift-night);color:var(--shift-night-text)}
-.cal-shift-badge.shift-休{background:var(--shift-off);color:var(--shift-off-text)}
-.cal-shift-badge.shift-上{background:var(--shift-am);color:var(--shift-am-text)}
-.cal-shift-badge.shift-下{background:var(--shift-pm);color:var(--shift-pm-text)}
-.cal-shift-badge.shift-empty{background:rgba(255,255,255,.06);color:var(--text-muted)}
-
-/* 休假人數統計 */
-.cal-leave-bar{display:flex;gap:3px;padding:1px 3px 2px;flex-wrap:wrap}
-.cal-leave-tag{font-size:.58rem;padding:1px 4px;border-radius:2px;font-weight:600}
-.cal-leave-tag.lv-day{background:rgba(42,58,96,.8);color:var(--shift-off-text)}
-.cal-leave-tag.lv-am{background:rgba(247,127,0,.25);color:#f77f00}
-.cal-leave-tag.lv-pm{background:rgba(123,82,196,.25);color:#9b7fdc}
-.cal-leave-tag.over{background:var(--red-dim);color:#fff}
-
-/* 月備註 */
+.month-title{font-size:14px;font-weight:700;color:var(--teal-light)}
+.month-grid-wrap{overflow-x:auto;padding:0 8px 8px}
+.month-grid{display:grid;border-left:1px solid var(--border);border-top:1px solid var(--border);min-width:600px}
+.grid-head-cell{background:#1a1a2e;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:4px 2px;text-align:center;font-size:14px;color:var(--text-muted);position:sticky;top:0;z-index:5;user-select:none}
+.grid-head-cell.name-col{min-width:52px;width:52px;position:sticky;left:0;z-index:6;background:#1a1a2e}
+.grid-head-cell.sat{color:#7ec8f4}
+.grid-head-cell.sun{color:#f4826e}
+.grid-head-cell.holiday{color:#f4a261}
+.grid-head-cell.today{background:rgba(0,180,216,.15);color:var(--teal-light)}
+.name-cell{min-width:52px;width:52px;position:sticky;left:0;z-index:4;background:var(--card);border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:3px 4px;cursor:pointer;transition:background .15s;display:flex;flex-direction:column;justify-content:center}
+.name-cell:hover{background:var(--card-hover)}
+.name-cell .emp-name{font-size:14px;font-weight:600;color:var(--text);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.name-cell .emp-type{font-size:14px;color:var(--text-muted);display:block}
+.name-cell .emp-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:3px}
+.grid-cell{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:0;text-align:center;cursor:pointer;transition:background .15s;min-width:28px;display:flex;flex-direction:column}
+.grid-cell-half{flex:1;display:flex;align-items:center;justify-content:center;padding:1px 0;cursor:pointer;transition:background .15s;min-height:13px}
+.grid-cell-half:first-child{border-bottom:1px solid rgba(255,255,255,.06)}
+.grid-cell-half:hover{background:rgba(255,255,255,.1)}
+.shift-badge{display:inline-flex;align-items:center;justify-content:center;width:20px;height:13px;border-radius:3px;font-size:14px;font-weight:700;line-height:1}
+.grid-cell.sat-col{background:rgba(126,200,244,.04)}
+.grid-cell.sun-col,.grid-cell.holiday-col{background:rgba(244,130,110,.04)}
+.grid-cell.today-col{background:rgba(0,180,216,.06)}
+.grid-cell.swap-src{outline:2px solid var(--gold);outline-offset:-2px}
+.grid-cell.swap-tgt{outline:2px solid var(--green);outline-offset:-2px}
+.leave-overlay-row{display:contents}
+.leave-cell{border-right:1px solid var(--border);border-bottom:1px solid var(--border);font-size:14px;text-align:center;padding:0;color:var(--text-muted);cursor:default;user-select:none;display:flex;flex-direction:column}
+.leave-cell-half{flex:1;display:flex;align-items:center;justify-content:center;min-height:8px}
+.leave-cell-half:not(:last-child){border-bottom:1px solid rgba(255,255,255,.05)}
+.leave-cell.leave-name-cell{background:#1a1a2e;font-size:14px;color:var(--text-muted);padding:0;position:sticky;left:0;z-index:4;flex-direction:column;display:flex}
+.leave-cell.leave-name-cell .leave-name-half{flex:1;display:flex;align-items:center;justify-content:center;padding:0 4px;font-size:14px}
+.leave-cell.leave-name-cell .leave-name-half:nth-child(1){border-bottom:1px solid rgba(255,255,255,.05);color:#f9c74f;background:rgba(249,199,79,.12)}
+.leave-cell.leave-name-cell .leave-name-half:nth-child(2){border-bottom:1px solid rgba(255,255,255,.05);color:var(--shift-am-text);background:rgba(247,127,0,.15)}
+.leave-cell.leave-name-cell .leave-name-half:nth-child(3){color:var(--shift-pm-text);background:rgba(123,82,196,.15)}
+.leave-count{display:inline-block;padding:0 4px;border-radius:3px;font-weight:600}
+.leave-count.over{background:var(--red);color:#fff}
+.leave-count.near{background:var(--gold);color:#1a1000}
+.leave-count.ok{color:var(--text-muted)}
 .month-notes-wrap{padding:8px 12px}
-.month-notes-wrap label{font-size:.72rem;color:var(--text-muted);display:block;margin-bottom:4px}
-.month-notes-wrap textarea{width:100%;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font-size:.78rem;resize:vertical;min-height:60px;outline:none;font-family:inherit;transition:border-color .15s}
+.month-notes-wrap label{font-size:14px;color:var(--text-muted);display:block;margin-bottom:4px}
+.month-notes-wrap textarea{width:100%;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font-size:14px;resize:vertical;min-height:60px;outline:none;font-family:inherit;transition:border-color .15s}
 .month-notes-wrap textarea:focus{border-color:var(--teal)}
-
-/* 換人模式高亮 */
-.cal-emp-row.swap-src{outline:2px solid var(--gold);outline-offset:1px;border-radius:3px}
-.cal-emp-row.swap-tgt{outline:2px solid var(--green);outline-offset:1px;border-radius:3px}
 
 /* ── Week View ── */
 #week-view{padding:8px}
@@ -150,43 +134,60 @@ main{flex:1;overflow:hidden;position:relative}
 .week-title{font-size:.9rem;font-weight:600;color:var(--teal-light)}
 .week-table-wrap{overflow-x:auto}
 .week-table{width:100%;border-collapse:collapse;min-width:360px}
-.week-table th,.week-table td{border:1px solid var(--border);padding:5px 4px;text-align:center;font-size:.75rem}
-.week-table th{background:var(--navy-mid);color:var(--text-muted);font-weight:600;font-size:.68rem}
-.week-table td.name-td{background:var(--card);text-align:left;padding-left:8px;font-weight:600;font-size:.72rem;white-space:nowrap;position:sticky;left:0}
+.week-table th,.week-table td{border:1px solid var(--border);padding:5px 4px;text-align:center;font-size:14px}
+.week-table th{background:var(--navy-mid);color:var(--text-muted);font-weight:600;font-size:14px}
+.week-table td.name-td{background:var(--card);text-align:left;padding-left:8px;font-weight:600;font-size:14px;white-space:nowrap;position:sticky;left:0}
 .week-table tr:hover td{background:rgba(255,255,255,.04)}
 .week-table td.today-col{background:rgba(0,180,216,.1)}
 
 /* ── My Schedule ── */
 #my-view{padding:8px 12px}
-.my-emp-select{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font-size:.85rem;width:100%;margin-bottom:12px;outline:none}
-.my-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:background .15s}
-.my-card:hover{background:var(--card-hover)}
-.my-card-date{min-width:52px;text-align:center}
-.my-card-date .mcd-day{font-size:1.6rem;font-weight:700;line-height:1;color:var(--text)}
-.my-card-date .mcd-wd{font-size:.65rem;color:var(--text-muted);margin-top:2px}
-.my-card-shift{margin-left:auto}
-.today-mark .mcd-day{color:var(--teal-light)}
-.my-emp-heading{font-size:.78rem;color:var(--text-muted);margin-bottom:8px;font-weight:500}
+.my-emp-select{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font-size:14px;width:100%;margin-bottom:12px;outline:none}
+.my-emp-heading{font-size:14px;color:var(--text-muted);margin-bottom:8px;font-weight:500}
+/* 我的班表月曆 */
+.my-cal-wrap{overflow-x:auto}
+.my-cal-table{width:100%;border-collapse:collapse;min-width:300px;table-layout:fixed}
+.my-cal-table .my-wk-hdr{background:#0f3460;font-size:14px;font-weight:700;text-align:center;padding:7px 2px;border:1px solid var(--border);color:var(--text-muted)}
+.my-cal-table .my-wk-hdr.sat{color:#7eb8f4}
+.my-cal-table .my-wk-hdr.sun{color:#ff6b6b}
+.my-cal-cell{border:1px solid var(--border);vertical-align:top;background:var(--card);min-height:72px;padding:0;cursor:pointer;transition:background .12s;position:relative}
+.my-cal-cell:hover{background:var(--card-hover)}
+.my-cal-cell.other-month{background:#12121f;opacity:.4;cursor:default;pointer-events:none}
+.my-cal-cell.is-today{border-color:var(--teal) !important;box-shadow:inset 0 0 0 2px var(--teal)}
+.my-cal-cell.is-sat{background:#1a2240}
+.my-cal-cell.is-sun,.my-cal-cell.is-holiday{background:#1e1428}
+.my-cal-date{font-size:14px;font-weight:700;padding:5px 6px 2px;line-height:1;color:var(--text-muted)}
+.my-cal-cell.is-today .my-cal-date{color:var(--teal-light)}
+.my-cal-cell.is-sat .my-cal-date{color:#7eb8f4}
+.my-cal-cell.is-sun .my-cal-date,.my-cal-cell.is-holiday .my-cal-date{color:#ff6b6b}
+.my-cal-shift{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px 2px 6px;gap:3px}
+.my-cal-badge{font-size:14px;font-weight:700;padding:4px 8px;border-radius:5px;text-align:center;width:90%;max-width:56px}
+.my-cal-badge.shift-日{background:var(--shift-day);color:var(--shift-day-text)}
+.my-cal-badge.shift-小{background:var(--shift-eve);color:var(--shift-eve-text)}
+.my-cal-badge.shift-大{background:var(--shift-night);color:var(--shift-night-text)}
+.my-cal-badge.shift-休{background:var(--shift-off);color:var(--shift-off-text)}
+.my-cal-badge.shift-上{background:var(--shift-am);color:var(--shift-am-text)}
+.my-cal-badge.shift-下{background:var(--shift-pm);color:var(--shift-pm-text)}
 
 /* ── Stats View ── */
 #stats-view{padding:8px 12px}
 .stats-section{margin-bottom:20px}
-.stats-section h3{font-size:.78rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.stats-section h3{font-size:14px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
 .stat-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04)}
 .stat-row:last-child{border-bottom:none}
 .stat-name{flex:1;font-size:.8rem;font-weight:500}
 .stat-bar-wrap{flex:2;height:8px;background:var(--navy-deep);border-radius:4px;overflow:hidden}
 .stat-bar{height:100%;border-radius:4px;transition:width .4s}
-.stat-val{min-width:28px;text-align:right;font-size:.78rem;color:var(--text-dim);font-weight:600}
+.stat-val{min-width:28px;text-align:right;font-size:14px;color:var(--text-dim);font-weight:600}
 .stat-shift-pill{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:18px;border-radius:3px;font-size:.65rem;font-weight:700;padding:0 4px;margin-right:4px}
 
 /* ── Settings View ── */
 #settings-view{padding:8px 12px}
 .settings-group{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px}
-.settings-group-title{padding:10px 14px;font-size:.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);background:var(--navy-mid)}
+.settings-group-title{padding:10px 14px;font-size:14px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);background:var(--navy-mid)}
 .settings-row{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border-light)}
 .settings-row:last-child{border-bottom:none}
-.settings-row label{flex:1;font-size:.82rem;font-weight:500}
+.settings-row label{flex:1;font-size:14px;font-weight:500}
 .settings-row .s-val{font-size:.78rem;color:var(--text-muted)}
 .settings-row input[type=text],.settings-row input[type=number],.settings-row select{background:var(--navy-deep);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 8px;color:var(--text);font-size:.82rem;outline:none;min-width:80px}
 .settings-row input:focus,.settings-row select:focus{border-color:var(--teal)}
@@ -203,8 +204,8 @@ main{flex:1;overflow:hidden;position:relative}
 .btn-sm{padding:6px 10px;font-size:.75rem}
 .user-info{display:flex;align-items:center;gap:10px}
 .user-avatar{width:36px;height:36px;border-radius:50%;background:var(--teal-dim);display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:700;color:#001a24}
-.user-details .u-name{font-size:.85rem;font-weight:600}
-.user-details .u-email{font-size:.68rem;color:var(--text-muted)}
+.user-details .u-name{font-size:14px;font-weight:600}
+.user-details .u-email{font-size:13px;color:var(--text-muted)}
 .u-role{display:inline-block;padding:2px 7px;border-radius:20px;font-size:.65rem;font-weight:700;margin-top:3px}
 .role-admin{background:var(--gold);color:#1a0800}.role-supervisor{background:var(--purple-light);color:#fff}.role-staff{background:var(--border);color:var(--text-muted)}
 
@@ -220,12 +221,12 @@ main{flex:1;overflow:hidden;position:relative}
 }
 .modal-handle{width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:10px auto 0}
 .modal-header{padding:14px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-.modal-header h3{font-size:.95rem;font-weight:700;color:var(--teal-light)}
+.modal-header h3{font-size:14px;font-weight:700;color:var(--teal-light)}
 .modal-close{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;padding:4px;border-radius:4px;transition:color .15s}
 .modal-close:hover{color:var(--text)}
 .modal-body{padding:14px 16px}
 .shift-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
-.shift-btn{border:none;border-radius:var(--radius-sm);padding:10px 6px;font-size:.85rem;font-weight:700;cursor:pointer;transition:transform .1s,opacity .15s}
+.shift-btn{border:none;border-radius:var(--radius-sm);padding:10px 6px;font-size:14px;font-weight:700;cursor:pointer;transition:transform .1s,opacity .15s}
 .shift-btn:hover{transform:scale(1.05)}
 .shift-btn.selected{outline:3px solid #fff;outline-offset:1px}
 .shift-btn-日{background:var(--shift-day);color:var(--shift-day-text)}
@@ -242,12 +243,12 @@ main{flex:1;overflow:hidden;position:relative}
 .emp-list-item:last-child{border-bottom:none}
 .emp-list-item:hover{opacity:.8}
 .emp-list-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-.emp-list-name{flex:1;font-size:.85rem;font-weight:600}
-.emp-list-type{font-size:.7rem;color:var(--text-muted)}
+.emp-list-name{flex:1;font-size:14px;font-weight:600}
+.emp-list-type{font-size:13px;color:var(--text-muted)}
 .emp-list-actions{display:flex;gap:6px}
 
 /* Import modal */
-.import-area{border:2px dashed var(--border);border-radius:var(--radius);padding:20px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;color:var(--text-muted);font-size:.85rem}
+.import-area{border:2px dashed var(--border);border-radius:var(--radius);padding:20px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;color:var(--text-muted);font-size:14px}
 .import-area:hover,.import-area.drag{border-color:var(--teal);background:rgba(0,180,216,.06);color:var(--text)}
 .import-area input{display:none}
 .import-preview{margin-top:12px;font-size:.78rem;color:var(--text-dim)}
@@ -258,21 +259,21 @@ main{flex:1;overflow:hidden;position:relative}
 .emp-select-item{display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,.04)}
 .emp-select-item:last-child{border-bottom:none}
 .emp-select-item input[type=checkbox]{accent-color:var(--teal);width:15px;height:15px}
-.emp-select-item label{font-size:.82rem;flex:1;cursor:pointer}
+.emp-select-item label{font-size:14px;flex:1;cursor:pointer}
 
 /* Admin request list */
 .req-card{background:var(--navy-mid);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px}
 .req-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-.req-card-top .req-name{font-size:.82rem;font-weight:600}
+.req-card-top .req-name{font-size:14px;font-weight:600}
 .req-badge{display:inline-block;padding:2px 7px;border-radius:20px;font-size:.62rem;font-weight:700}
 .badge-pending{background:var(--gold);color:#1a0800}
 .badge-approved{background:var(--green);color:#001a12}
 .badge-denied{background:var(--red);color:#fff}
-.req-detail{font-size:.72rem;color:var(--text-muted)}
+.req-detail{font-size:14px;color:var(--text-muted)}
 .req-actions{margin-top:8px;display:flex;gap:6px}
 
 /* Notification toast */
-#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--navy-light);border:1px solid var(--border-light);color:var(--text);font-size:.8rem;padding:9px 16px;border-radius:var(--radius);box-shadow:var(--shadow);transition:transform .3s cubic-bezier(.4,0,.2,1);z-index:500;text-align:center;max-width:280px;pointer-events:none}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--navy-light);border:1px solid var(--border-light);color:var(--text);font-size:14px;padding:9px 16px;border-radius:var(--radius);box-shadow:var(--shadow);transition:transform .3s cubic-bezier(.4,0,.2,1);z-index:500;text-align:center;max-width:280px;pointer-events:none}
 #toast.show{transform:translateX(-50%) translateY(0)}
 #toast.success{border-color:var(--green);color:var(--green)}
 #toast.error{border-color:var(--red);color:var(--red)}
@@ -309,7 +310,7 @@ main{flex:1;overflow:hidden;position:relative}
   #desktop-sidebar .sb-nav-btn{
     display:flex;align-items:center;gap:10px;padding:10px 16px;
     cursor:pointer;color:var(--text-muted);border:none;background:none;
-    width:100%;font-size:.82rem;transition:all .15s;
+    width:100%;font-size:14px;transition:all .15s;
     border-left:3px solid transparent;font-family:inherit;text-align:left
   }
   #desktop-sidebar .sb-nav-btn .sb-icon{font-size:.95rem;flex-shrink:0;width:20px;text-align:center}
@@ -970,147 +971,116 @@ function renderMonthView() {
   if (!grid) return;
 
   const days = daysInMonth(curYear, curMonth);
+  const dates = Array.from({length:days}, (_,i) => new Date(curYear, curMonth, i+1));
   const mk = monthKey(curYear, curMonth);
   const today = new Date(); today.setHours(0,0,0,0);
 
-  // 員工排序
   const emps = [...S.employees].sort((a,b) => {
     const ao = a.monthSortOrder?.[mk] ?? a.sortOrder ?? 999;
     const bo = b.monthSortOrder?.[mk] ?? b.sortOrder ?? 999;
     return ao - bo;
   });
 
-  const WD_HDR = ['一','二','三','四','五','六','日'];
-  // 月曆第一格從週一開始
-  const firstDay = new Date(curYear, curMonth, 1);
-  // 0=日 1=一 ... 6=六 → 轉成週一=0
-  const startWd = (firstDay.getDay() + 6) % 7; // 0=Mon,6=Sun
-  const totalCells = Math.ceil((startWd + days) / 7) * 7;
+  grid.style.gridTemplateColumns = `52px repeat(${days}, minmax(26px,1fr))`;
 
-  let html = `<table class="cal-table">
-  <thead><tr>`;
-  WD_HDR.forEach((w,i) => {
-    const cls = i===5 ? 'sat' : i===6 ? 'sun' : '';
-    html += `<th class="cal-wk-hdr ${cls}">${w}</th>`;
+  let html = '';
+
+  // ── 標題列 ──
+  html += `<div class="grid-head-cell name-col">姓名</div>`;
+  dates.forEach(d => {
+    const wd = d.getDay();
+    const isTod = d.getTime() === today.getTime();
+    const cls = ['grid-head-cell',
+      wd===0?'sun':(wd===6?'sat':''),
+      S.holidays?.[fmtDate(d)]?'holiday':'',
+      isTod?'today':''
+    ].filter(Boolean).join(' ');
+    html += `<div class="${cls}"><div>${d.getDate()}</div><div style="font-size:14px">${WEEKDAYS[wd]}</div></div>`;
   });
-  html += `</tr></thead><tbody>`;
 
-  for (let cell=0; cell<totalCells; cell++) {
-    if (cell % 7 === 0) html += '<tr>';
+  // ── 員工列（每格拆上下兩半） ──
+  emps.forEach(emp => {
+    const eid = String(Math.floor(Number(emp.id)));
+    const dotCls = `emp-color-${emp.colorIdx||0}`;
+    html += `<div class="name-cell" onclick="handleNameClick('${eid}')">
+      <span class="emp-dot ${dotCls}"></span>
+      <span class="emp-name">${escHtml(emp.name)}</span>
+      <span class="emp-type">${escHtml(emp.type||'')}</span>
+    </div>`;
+    dates.forEach(d => {
+      const dk = fmtDate(d);
+      const wd = d.getDay();
+      const isTod = d.getTime() === today.getTime();
+      const eid2 = eid;
+      const keyAM   = eid2+'_'+dk+'_AM';
+      const keyPM   = eid2+'_'+dk+'_PM';
+      const keyFull = eid2+'_'+dk;
+      const keyOld  = String(emp.id)+'_'+dk;
+      const shiftAM   = S.schedule[keyAM]   || '';
+      const shiftPM   = S.schedule[keyPM]   || '';
+      const shiftFull = S.schedule[keyFull] || S.schedule[keyOld] || '';
+      let dispAM = shiftAM || (shiftFull && shiftFull!=='下' ? shiftFull : '');
+      let dispPM = shiftPM || (shiftFull && shiftFull!=='上' ? shiftFull : '');
+      if (shiftFull==='上') { dispAM='上'; dispPM=''; }
+      if (shiftFull==='下') { dispAM=''; dispPM='下'; }
 
-    const dayNum = cell - startWd + 1;
-    const isValid = dayNum >= 1 && dayNum <= days;
-    const d = isValid ? new Date(curYear, curMonth, dayNum) : null;
-    const dk = d ? fmtDate(d) : '';
-    const wd = d ? d.getDay() : -1; // 0=Sun
-    // 月曆裡 col index: cell%7 → 0=Mon,6=Sun
-    const colIdx = cell % 7; // 0=Mon ... 5=Sat 6=Sun
-    const isSat = colIdx === 5;
-    const isSun = colIdx === 6;
-    const isHoliday = dk && S.holidays?.[dk];
-    const isToday = d && d.getTime() === today.getTime();
+      let cls = 'grid-cell';
+      if (wd===6) cls += ' sat-col';
+      if (wd===0||S.holidays?.[dk]) cls += ' sun-col holiday-col';
+      if (isTod) cls += ' today-col';
+      if (swapMode?.src?.empId===eid2&&swapMode?.src?.date===dk) cls += ' swap-src';
+      if (swapMode?.tgt?.empId===eid2&&swapMode?.tgt?.date===dk) cls += ' swap-tgt';
 
-    if (!isValid) {
-      html += `<td class="cal-cell other-month"></td>`;
-    } else {
-      let cellCls = 'cal-cell';
-      if (isToday) cellCls += ' is-today';
-      if (isSat) cellCls += ' is-sat';
-      if (isSun || isHoliday) cellCls += ' is-sun';
-
-      // 日期數字
-      let numCls = 'cal-date-num';
-      if (isToday) numCls += ' today-num';
-      else if (isSat) numCls += ' sat-num';
-      else if (isSun || isHoliday) numCls += ' sun-num';
-
-      html += `<td class="${cellCls}">
-        <div class="${numCls}">${dayNum}</div>
-        <div class="cal-emp-list">`;
-
-      // 員工班別
-      emps.forEach(emp => {
-        const eid = String(Math.floor(Number(emp.id)));
-        // 取班別：優先 _AM key（整天班），再看整天 key
-        const keyAM   = eid+'_'+dk+'_AM';
-        const keyPM   = eid+'_'+dk+'_PM';
-        const keyFull = eid+'_'+dk;
-        const keyOld  = String(emp.id)+'_'+dk;
-        const shiftAM   = S.schedule[keyAM]   || '';
-        const shiftPM   = S.schedule[keyPM]   || '';
-        const shiftFull = S.schedule[keyFull] || S.schedule[keyOld] || '';
-
-        // 決定顯示班別（_AM 優先，若為「上」下也顯示 PM）
-        let dispShift = shiftAM || shiftFull;
-        // 若 AM=上 且 PM=下，顯示「上+下」
-        const hasAMOff = shiftAM === '上' || shiftFull === '上';
-        const hasPMOff = shiftPM === '下' || shiftFull === '下';
-
-        // swap 高亮
-        let rowCls = 'cal-emp-row';
-        if (swapMode?.src?.empId === eid && swapMode?.src?.date === dk) rowCls += ' swap-src';
-        if (swapMode?.tgt?.empId === eid && swapMode?.tgt?.date === dk) rowCls += ' swap-tgt';
-
-        const dotCls = `emp-color-${emp.colorIdx||0}`;
-
-        if (hasAMOff && hasPMOff && shiftAM !== shiftPM) {
-          // 上午休 + 下午休 各顯示
-          html += `<div class="${rowCls}" onclick="handleCellClick('${eid}','${dk}')">
-            <span class="emp-dot ${dotCls}" style="width:6px;height:6px;border-radius:50%;flex-shrink:0"></span>
-            <span class="cal-emp-name">${escHtml(emp.name)}</span>
-            <span class="cal-shift-badge shift-上">上</span>
-            <span class="cal-shift-badge shift-下">下</span>
-          </div>`;
-        } else {
-          const badge = dispShift
-            ? `<span class="cal-shift-badge shift-${dispShift}">${dispShift}</span>`
-            : `<span class="cal-shift-badge shift-empty">—</span>`;
-          html += `<div class="${rowCls}" onclick="handleCellClick('${eid}','${dk}')">
-            <span class="emp-dot ${dotCls}" style="width:6px;height:6px;border-radius:50%;flex-shrink:0"></span>
-            <span class="cal-emp-name">${escHtml(emp.name)}</span>
-            ${badge}
-          </div>`;
-        }
-      });
-
-      // 休假統計小標籤
-      const limitDay = S.policy?.leave_limit_day?.[wd] ?? 2;
-      const limitAM2  = S.policy?.leave_limit_am?.[wd]  ?? 2;
-      const limitPM2  = S.policy?.leave_limit_pm?.[wd]  ?? 2;
-      const countDay2 = emps.filter(e => {
-        const eid = String(Math.floor(Number(e.id)));
-        const full = S.schedule[eid+'_'+dk] || '';
-        const am2  = S.schedule[eid+'_'+dk+'_AM'] || '';
-        const pm2  = S.schedule[eid+'_'+dk+'_PM'] || '';
-        return full === '休' || (am2 === '休' && pm2 === '休');
-      }).length;
-      const countAM2 = emps.filter(e => {
-        const eid = String(Math.floor(Number(e.id)));
-        const am2 = S.schedule[eid+'_'+dk+'_AM'] || '';
-        const full = S.schedule[eid+'_'+dk] || '';
-        return am2 === '上' || full === '上';
-      }).length;
-      const countPM2 = emps.filter(e => {
-        const eid = String(Math.floor(Number(e.id)));
-        const pm2 = S.schedule[eid+'_'+dk+'_PM'] || '';
-        const full = S.schedule[eid+'_'+dk] || '';
-        return pm2 === '下' || full === '下';
-      }).length;
-
-      const dayOver = countDay2 >= limitDay ? ' over' : '';
-      const amOver  = countAM2  >= limitAM2  ? ' over' : '';
-      const pmOver  = countPM2  >= limitPM2  ? ' over' : '';
-      html += `<div class="cal-leave-bar">
-        <span class="cal-leave-tag lv-day${dayOver}">休${countDay2}/${limitDay}</span>
-        <span class="cal-leave-tag lv-am${amOver}">上${countAM2}/${limitAM2}</span>
-        <span class="cal-leave-tag lv-pm${pmOver}">下${countPM2}/${limitPM2}</span>
+      const badgeAM = dispAM ? `<span class="shift-badge shift-${dispAM}">${dispAM}</span>` : '';
+      const badgePM = dispPM ? `<span class="shift-badge shift-${dispPM}">${dispPM}</span>` : '';
+      html += `<div class="${cls}">
+        <div class="grid-cell-half" onclick="event.stopPropagation();handleCellClick('${eid2}','${dk}','AM')">${badgeAM}</div>
+        <div class="grid-cell-half" onclick="event.stopPropagation();handleCellClick('${eid2}','${dk}','PM')">${badgePM}</div>
       </div>`;
+    });
+  });
 
-      html += `</div></td>`;
-    }
-    if (cell % 7 === 6) html += '</tr>';
-  }
-  html += '</tbody></table>';
+  // ── 休假計數列（三格：全天休/上午/下午） ──
+  html += `<div class="leave-cell leave-name-cell">
+    <div class="leave-name-half">休</div>
+    <div class="leave-name-half">上午</div>
+    <div class="leave-name-half">下午</div>
+  </div>`;
+  dates.forEach(d => {
+    const dk = fmtDate(d);
+    const wd = d.getDay();
+    const limitDay = S.policy?.leave_limit_day?.[wd] ?? S.policy?.leave_limit?.[wd] ?? 2;
+    const limitAM  = S.policy?.leave_limit_am?.[wd]  ?? S.policy?.leave_limit?.[wd] ?? 2;
+    const limitPM  = S.policy?.leave_limit_pm?.[wd]  ?? S.policy?.leave_limit?.[wd] ?? 2;
+    const countDay = emps.filter(e => {
+      const eid = String(Math.floor(Number(e.id)));
+      const full = S.schedule[eid+'_'+dk]||S.schedule[e.id+'_'+dk]||'';
+      const am   = S.schedule[eid+'_'+dk+'_AM']||'';
+      const pm   = S.schedule[eid+'_'+dk+'_PM']||'';
+      return full==='休'||(am==='休'&&pm==='休');
+    }).length;
+    const countAM = emps.filter(e => {
+      const eid = String(Math.floor(Number(e.id)));
+      const full = S.schedule[eid+'_'+dk]||S.schedule[e.id+'_'+dk]||'';
+      const am   = S.schedule[eid+'_'+dk+'_AM']||'';
+      return am==='休'||am==='上'||full==='上';
+    }).length;
+    const countPM = emps.filter(e => {
+      const eid = String(Math.floor(Number(e.id)));
+      const full = S.schedule[eid+'_'+dk]||S.schedule[e.id+'_'+dk]||'';
+      const pm   = S.schedule[eid+'_'+dk+'_PM']||'';
+      return pm==='休'||pm==='下'||full==='下';
+    }).length;
+    const dc = 'leave-count'+(countDay>=limitDay?' over':countDay>=limitDay-1?' near':' ok');
+    const ac = 'leave-count'+(countAM>=limitAM?' over':countAM>=limitAM-1?' near':' ok');
+    const pc = 'leave-count'+(countPM>=limitPM?' over':countPM>=limitPM-1?' near':' ok');
+    html += `<div class="leave-cell">
+      <div class="leave-cell-half"><span class="${dc}">${countDay}</span></div>
+      <div class="leave-cell-half"><span class="${ac}">${countAM}</span></div>
+      <div class="leave-cell-half"><span class="${pc}">${countPM}</span></div>
+    </div>`;
+  });
+
   grid.innerHTML = html;
 }
 
@@ -1459,49 +1429,75 @@ function renderWeekView() {
 
 // ── My Schedule View ──────────────────────────────
 function renderMyView() {
-  const sel = document.getElementById('my-emp-select');
+  const sel  = document.getElementById('my-emp-select');
   const list = document.getElementById('my-schedule-list');
   if (!sel || !list) return;
 
-  // Build employee options
+  // 建立員工選項
   const myIds = getMyEmpIds();
   const sortedEmps = [...S.employees].sort((a,b) => (a.sortOrder||999)-(b.sortOrder||999));
   sel.innerHTML = sortedEmps.map(e => {
     const eid = String(Math.floor(Number(e.id)));
-    const isMine = myIds.includes(eid);
-    return `<option value="${eid}"${isMine?' selected':''}>${escHtml(e.name)} (${escHtml(e.type||'')})</option>`;
+    return `<option value="${eid}"${myIds.includes(eid)?' selected':''}>${escHtml(e.name)} (${escHtml(e.type||'')})</option>`;
   }).join('');
 
   const selectedId = sel.value;
-  if (!selectedId) { list.innerHTML = '<p style="color:var(--text-muted);font-size:.82rem">尚無員工</p>'; return; }
+  if (!selectedId) { list.innerHTML = '<p style="color:var(--text-muted);font-size:14px">尚無員工</p>'; return; }
 
-  const days = daysInMonth(curYear, curMonth);
   const today = new Date(); today.setHours(0,0,0,0);
-  let html = `<div style="font-size:.72rem;color:var(--text-muted);margin-bottom:10px">${curYear} 年 ${curMonth+1} 月</div>`;
+  const WD_HDR = ['一','二','三','四','五','六','日'];
+  // 月曆週一起始
+  const firstDay = new Date(curYear, curMonth, 1);
+  const startWd  = (firstDay.getDay() + 6) % 7; // 0=Mon
+  const days     = daysInMonth(curYear, curMonth);
+  const total    = Math.ceil((startWd + days) / 7) * 7;
 
-  for (let i = 1; i <= days; i++) {
-    const d = new Date(curYear, curMonth, i);
-    const dk = fmtDate(d);
-    const wd = d.getDay();
-    const shiftFull = S.schedule[selectedId+'_'+dk] || '';
-    const shiftAM = S.schedule[selectedId+'_'+dk+'_AM'] || (shiftFull && shiftFull!=='下' ? shiftFull : '');
-    const shiftPM = S.schedule[selectedId+'_'+dk+'_PM'] || (shiftFull && shiftFull!=='上' ? shiftFull : '');
-    const shift = shiftAM || shiftPM || shiftFull;
-    const isTod = d.getTime() === today.getTime();
-    const isWknd = wd === 0 || wd === 6;
+  let html = `<div style="font-size:14px;color:var(--text-muted);margin-bottom:8px">${curYear} 年 ${curMonth+1} 月</div>`;
+  html += `<div class="my-cal-wrap"><table class="my-cal-table"><thead><tr>`;
+  WD_HDR.forEach((w,i) => {
+    const cls = i===5?'sat':i===6?'sun':'';
+    html += `<th class="my-wk-hdr ${cls}">${w}</th>`;
+  });
+  html += `</tr></thead><tbody>`;
 
-    html += `<div class="my-card${isTod?' today-mark':''}" onclick="handleCellClick('${selectedId}','${dk}')">
-      <div class="my-card-date">
-        <div class="mcd-day" style="${isWknd?'color:var(--red)':''}">${i}</div>
-        <div class="mcd-wd">${WEEKDAYS[wd]}</div>
-      </div>
-      <div style="flex:1;font-size:.78rem;color:var(--text-muted)">${shiftAM && shiftPM && shiftAM!==shiftPM ? SHIFT_LABELS[shiftAM]+'／'+SHIFT_LABELS[shiftPM] : shift ? SHIFT_LABELS[shift]||shift : '—'}</div>
-      <div class="my-card-shift" style="display:flex;flex-direction:column;gap:2px;align-items:flex-end">
-        ${shiftAM?`<span class="shift-badge shift-${shiftAM}">${shiftAM}</span>`:''}
-        ${shiftPM && shiftPM!==shiftAM?`<span class="shift-badge shift-${shiftPM}">${shiftPM}</span>`:''}
-      </div>
-    </div>`;
+  for (let cell=0; cell<total; cell++) {
+    if (cell%7===0) html += '<tr>';
+    const dayNum = cell - startWd + 1;
+    const valid  = dayNum>=1 && dayNum<=days;
+    if (!valid) {
+      html += `<td class="my-cal-cell other-month"></td>`;
+    } else {
+      const d   = new Date(curYear, curMonth, dayNum);
+      const dk  = fmtDate(d);
+      const col = cell % 7; // 0=Mon,5=Sat,6=Sun
+      const isSat     = col === 5;
+      const isSun     = col === 6;
+      const isHoliday = !!S.holidays?.[dk];
+      const isToday   = d.getTime() === today.getTime();
+
+      // 取班別
+      const shiftFull = S.schedule[selectedId+'_'+dk] || '';
+      const shiftAM   = S.schedule[selectedId+'_'+dk+'_AM'] || '';
+      const shiftPM   = S.schedule[selectedId+'_'+dk+'_PM'] || '';
+      const dispAM = shiftAM || (shiftFull && shiftFull!=='下' ? shiftFull : '');
+      const dispPM = shiftPM || (shiftFull==='下' ? '下' : '');
+
+      let cls = 'my-cal-cell';
+      if (isToday)   cls += ' is-today';
+      if (isSat)     cls += ' is-sat';
+      if (isSun||isHoliday) cls += ' is-sun';
+
+      const badgeAM = dispAM ? `<div class="my-cal-badge shift-${dispAM}">${SHIFT_LABELS[dispAM]||dispAM}</div>` : '';
+      const badgePM = dispPM && dispPM!==dispAM ? `<div class="my-cal-badge shift-${dispPM}">${SHIFT_LABELS[dispPM]||dispPM}</div>` : '';
+
+      html += `<td class="${cls}" onclick="handleCellClick('${selectedId}','${dk}')">
+        <div class="my-cal-date">${dayNum}</div>
+        <div class="my-cal-shift">${badgeAM}${badgePM}</div>
+      </td>`;
+    }
+    if (cell%7===6) html += '</tr>';
   }
+  html += '</tbody></table></div>';
   list.innerHTML = html;
 }
 
