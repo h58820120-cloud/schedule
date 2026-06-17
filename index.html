@@ -83,68 +83,66 @@ main{flex:1;overflow:hidden;position:relative}
 
 /* ── Month View ── */
 #month-view{padding:0}
-.month-header{padding:12px 12px 8px;display:flex;align-items:center;justify-content:space-between}
-.month-nav-btn{background:none;border:1px solid var(--border);color:var(--text-dim);border-radius:var(--radius-sm);padding:5px 10px;cursor:pointer;font-size:.85rem;transition:all .15s}
+.month-header{padding:10px 12px 8px;display:flex;align-items:center;justify-content:space-between;background:var(--navy)}
+.month-nav-btn{background:none;border:1px solid var(--border);color:var(--text-dim);border-radius:var(--radius-sm);padding:5px 12px;cursor:pointer;font-size:.82rem;transition:all .15s}
 .month-nav-btn:hover{border-color:var(--teal);color:var(--teal)}
 .month-title{font-size:1rem;font-weight:700;color:var(--teal-light)}
 
-.month-grid-wrap{overflow-x:auto;padding:0 8px 8px}
-.month-grid{display:grid;border-left:1px solid var(--border);border-top:1px solid var(--border);min-width:600px}
+/* 月曆容器 */
+.cal-wrap{padding:0 6px 8px;overflow-x:auto}
+.cal-table{width:100%;border-collapse:collapse;min-width:480px;table-layout:fixed}
 
-/* Header row: name col + date cols */
-.grid-head-row{display:contents}
-.grid-head-cell{background:#1a1a2e;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:4px 2px;text-align:center;font-size:.65rem;color:var(--text-muted);position:sticky;top:0;z-index:5;user-select:none}
-.grid-head-cell.name-col{min-width:52px;width:52px;position:sticky;left:0;z-index:6;background:var(--navy-mid)}
-.grid-head-cell.sat{color:#7ec8f4}
-.grid-head-cell.sun{color:#f4826e}
-.grid-head-cell.holiday{color:#f4a261}
-.grid-head-cell.today{background:rgba(0,180,216,.15);color:var(--teal-light)}
+/* 星期標題列 */
+.cal-table .cal-wk-hdr{background:#0f3460;font-size:.72rem;font-weight:700;color:var(--text-muted);text-align:center;padding:6px 0;border:1px solid var(--border)}
+.cal-table .cal-wk-hdr.sat{color:#7eb8f4}
+.cal-table .cal-wk-hdr.sun{color:#ff6b6b}
 
-.grid-emp-row{display:contents}
-.grid-emp-row:hover .grid-cell{background:rgba(255,255,255,.03)}
-.name-cell{min-width:52px;width:52px;position:sticky;left:0;z-index:4;background:var(--card);border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:3px 4px;cursor:pointer;transition:background .15s;display:flex;flex-direction:column;justify-content:center}
-.name-cell:hover{background:var(--card-hover)}
-.name-cell .emp-name{font-size:.72rem;font-weight:600;color:var(--text);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.name-cell .emp-type{font-size:.58rem;color:var(--text-muted);display:block}
-.name-cell .emp-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:3px}
+/* 日期格子 */
+.cal-cell{border:1px solid var(--border);vertical-align:top;padding:0;height:auto;cursor:default;background:var(--card);position:relative;min-height:56px}
+.cal-cell.other-month{background:#12121f;opacity:.45}
+.cal-cell.is-today{border-color:var(--teal) !important;box-shadow:inset 0 0 0 1px var(--teal)}
+.cal-cell.is-sat{background:#1a2240}
+.cal-cell.is-sun{background:#1e1428}
+.cal-cell.is-holiday{background:#1e1428}
 
-.grid-cell{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:0;text-align:center;cursor:pointer;transition:background .15s;min-width:28px;display:flex;flex-direction:column}
-.grid-cell-half{flex:1;display:flex;align-items:center;justify-content:center;padding:1px 0;cursor:pointer;transition:background .15s;min-height:13px}
-.grid-cell-half:first-child{border-bottom:1px solid rgba(255,255,255,.06)}
-.grid-cell-half:hover{background:rgba(255,255,255,.1)}
-.shift-badge{display:inline-flex;align-items:center;justify-content:center;width:20px;height:13px;border-radius:3px;font-size:.6rem;font-weight:700;line-height:1}
-.shift-日{background:var(--shift-day);color:var(--shift-day-text)}
-.shift-小{background:var(--shift-eve);color:var(--shift-eve-text)}
-.shift-大{background:var(--shift-night);color:var(--shift-night-text)}
-.shift-休{background:var(--shift-off);color:var(--shift-off-text)}
-.shift-上{background:var(--shift-am);color:var(--shift-am-text)}
-.shift-下{background:var(--shift-pm);color:var(--shift-pm-text)}
-.grid-cell.sat-col{background:rgba(126,200,244,.04)}
-.grid-cell.sun-col,.grid-cell.holiday-col{background:rgba(244,130,110,.04)}
-.grid-cell.today-col{background:rgba(0,180,216,.06)}
-.grid-cell.swap-src{outline:2px solid var(--gold);outline-offset:-2px}
-.grid-cell.swap-tgt{outline:2px solid var(--green);outline-offset:-2px}
+/* 日期數字 */
+.cal-date-num{font-size:.72rem;font-weight:600;color:var(--text-muted);padding:3px 5px;line-height:1;display:flex;align-items:center;gap:3px}
+.cal-date-num.today-num{color:var(--teal-light);font-weight:700}
+.cal-date-num.sat-num{color:#7eb8f4}
+.cal-date-num.sun-num{color:#ff6b6b}
+.cal-lunar{font-size:.6rem;color:var(--text-muted);margin-left:2px}
 
-/* Leave overlay */
-.leave-overlay-row{display:contents}
-.leave-cell{border-right:1px solid var(--border);border-bottom:1px solid var(--border);font-size:.55rem;text-align:center;padding:0;color:var(--text-muted);cursor:default;user-select:none;display:flex;flex-direction:column}
-.leave-cell-half{flex:1;display:flex;align-items:center;justify-content:center;min-height:8px}
-.leave-cell-half:not(:last-child){border-bottom:1px solid rgba(255,255,255,.05)}
-.leave-cell.leave-name-cell{background:#1a1a2e;font-size:.58rem;color:var(--text-muted);padding:0;position:sticky;left:0;z-index:4;flex-direction:column;display:flex}
-.leave-cell.leave-name-cell .leave-name-half{flex:1;display:flex;align-items:center;justify-content:center;padding:0 4px;font-size:.55rem}
-.leave-cell.leave-name-cell .leave-name-half:nth-child(1){border-bottom:1px solid rgba(255,255,255,.05);color:#f9c74f;background:rgba(249,199,79,.12)}
-.leave-cell.leave-name-cell .leave-name-half:nth-child(2){border-bottom:1px solid rgba(255,255,255,.05);color:var(--shift-am-text);background:rgba(247,127,0,.15)}
-.leave-cell.leave-name-cell .leave-name-half:nth-child(3){color:var(--shift-pm-text);background:rgba(123,82,196,.15)}
-.leave-count{display:inline-block;padding:0 4px;border-radius:3px;font-weight:600}
-.leave-count.over{background:var(--red);color:#fff}
-.leave-count.near{background:var(--gold);color:#1a1000}
-.leave-count.ok{color:var(--text-muted)}
+/* 員工班別清單（在格子裡） */
+.cal-emp-list{padding:1px 3px 3px;display:flex;flex-direction:column;gap:1px}
+.cal-emp-row{display:flex;align-items:center;gap:3px;cursor:pointer;border-radius:3px;padding:1px 3px;transition:background .12s}
+.cal-emp-row:hover{background:rgba(255,255,255,.1)}
+.cal-emp-name{font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:50px;flex-shrink:0}
+.cal-shift-badge{font-size:11px;font-weight:700;padding:1px 5px;border-radius:3px;white-space:nowrap;flex-shrink:0}
+.cal-shift-badge.shift-日{background:var(--shift-day);color:var(--shift-day-text)}
+.cal-shift-badge.shift-小{background:var(--shift-eve);color:var(--shift-eve-text)}
+.cal-shift-badge.shift-大{background:var(--shift-night);color:var(--shift-night-text)}
+.cal-shift-badge.shift-休{background:var(--shift-off);color:var(--shift-off-text)}
+.cal-shift-badge.shift-上{background:var(--shift-am);color:var(--shift-am-text)}
+.cal-shift-badge.shift-下{background:var(--shift-pm);color:var(--shift-pm-text)}
+.cal-shift-badge.shift-empty{background:rgba(255,255,255,.06);color:var(--text-muted)}
 
-/* Month notes */
+/* 休假人數統計 */
+.cal-leave-bar{display:flex;gap:3px;padding:1px 3px 2px;flex-wrap:wrap}
+.cal-leave-tag{font-size:.58rem;padding:1px 4px;border-radius:2px;font-weight:600}
+.cal-leave-tag.lv-day{background:rgba(42,58,96,.8);color:var(--shift-off-text)}
+.cal-leave-tag.lv-am{background:rgba(247,127,0,.25);color:#f77f00}
+.cal-leave-tag.lv-pm{background:rgba(123,82,196,.25);color:#9b7fdc}
+.cal-leave-tag.over{background:var(--red-dim);color:#fff}
+
+/* 月備註 */
 .month-notes-wrap{padding:8px 12px}
 .month-notes-wrap label{font-size:.72rem;color:var(--text-muted);display:block;margin-bottom:4px}
 .month-notes-wrap textarea{width:100%;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font-size:.78rem;resize:vertical;min-height:60px;outline:none;font-family:inherit;transition:border-color .15s}
 .month-notes-wrap textarea:focus{border-color:var(--teal)}
+
+/* 換人模式高亮 */
+.cal-emp-row.swap-src{outline:2px solid var(--gold);outline-offset:1px;border-radius:3px}
+.cal-emp-row.swap-tgt{outline:2px solid var(--green);outline-offset:1px;border-radius:3px}
 
 /* ── Week View ── */
 #week-view{padding:8px}
@@ -470,15 +468,15 @@ main{flex:1;overflow:hidden;position:relative}
   <!-- Month View -->
   <div id="month-view" class="view active">
     <div class="month-header">
-      <button class="month-nav-btn" onclick="changeMonth(-1)">◀ 上月</button>
+      <button class="month-nav-btn" onclick="changeMonth(-1)">◀</button>
       <span class="month-title" id="month-view-title">—</span>
-      <button class="month-nav-btn" onclick="changeMonth(1)">下月 ▶</button>
+      <button class="month-nav-btn" onclick="changeMonth(1)">▶</button>
     </div>
-    <div class="month-grid-wrap">
-      <div class="month-grid" id="month-grid"></div>
+    <div class="cal-wrap">
+      <div id="month-grid"></div>
     </div>
     <div class="month-notes-wrap">
-      <label>📝 本月備註（所有人可編輯）</label>
+      <label>📝 本月備註</label>
       <textarea id="month-notes" placeholder="輸入本月備註…" oninput="scheduleNotesSave()"></textarea>
     </div>
   </div>
@@ -972,129 +970,147 @@ function renderMonthView() {
   if (!grid) return;
 
   const days = daysInMonth(curYear, curMonth);
-  const dates = Array.from({length:days}, (_,i) => new Date(curYear, curMonth, i+1));
   const mk = monthKey(curYear, curMonth);
   const today = new Date(); today.setHours(0,0,0,0);
 
-  // Sort employees by monthSortOrder
+  // 員工排序
   const emps = [...S.employees].sort((a,b) => {
     const ao = a.monthSortOrder?.[mk] ?? a.sortOrder ?? 999;
     const bo = b.monthSortOrder?.[mk] ?? b.sortOrder ?? 999;
     return ao - bo;
   });
 
-  // Column count = 1 (name) + days
-  const cols = 1 + days;
-  grid.style.gridTemplateColumns = `52px repeat(${days}, minmax(26px,1fr))`;
+  const WD_HDR = ['一','二','三','四','五','六','日'];
+  // 月曆第一格從週一開始
+  const firstDay = new Date(curYear, curMonth, 1);
+  // 0=日 1=一 ... 6=六 → 轉成週一=0
+  const startWd = (firstDay.getDay() + 6) % 7; // 0=Mon,6=Sun
+  const totalCells = Math.ceil((startWd + days) / 7) * 7;
 
-  let html = '';
-
-  // Header row
-  html += `<div class="grid-head-cell name-col">姓名</div>`;
-  dates.forEach(d => {
-    const wd = d.getDay();
-    const isTod = d.getTime() === today.getTime();
-    const cls = [
-      'grid-head-cell',
-      wd===0?'sun':(wd===6?'sat':''),
-      S.holidays?.[fmtDate(d)]?'holiday':'',
-      isTod?'today':''
-    ].filter(Boolean).join(' ');
-    html += `<div class="${cls}"><div>${d.getDate()}</div><div style="font-size:.58rem">${WEEKDAYS[wd]}</div></div>`;
+  let html = `<table class="cal-table">
+  <thead><tr>`;
+  WD_HDR.forEach((w,i) => {
+    const cls = i===5 ? 'sat' : i===6 ? 'sun' : '';
+    html += `<th class="cal-wk-hdr ${cls}">${w}</th>`;
   });
+  html += `</tr></thead><tbody>`;
 
-  // Employee rows — 每格拆成上午/下午兩個半格
-  emps.forEach(emp => {
-    const eid = String(Math.floor(Number(emp.id)));
-    const dotCls = `emp-color-${emp.colorIdx||0}`;
-    html += `<div class="name-cell" onclick="handleNameClick('${eid}')">
-      <span class="emp-dot ${dotCls}"></span>
-      <span class="emp-name">${escHtml(emp.name)}</span>
-      <span class="emp-type">${escHtml(emp.type||'')}</span>
-    </div>`;
-    dates.forEach(d => {
-      const dk = fmtDate(d);
-      const wd = d.getDay();
-      const isTod = d.getTime() === today.getTime();
-      // 上午班別：key = empId_YYYY-MM-DD_AM；下午：_PM
-      // 相容舊格式：empId_YYYY-MM-DD（整天班別）
-      const keyAM = eid + '_' + dk + '_AM';
-      const keyPM = eid + '_' + dk + '_PM';
-      const keyFull = eid + '_' + dk;
-      const keyFullOld = emp.id + '_' + dk;
-      const shiftAM = S.schedule[keyAM] || '';
-      const shiftPM = S.schedule[keyPM] || '';
-      const shiftFull = S.schedule[keyFull] || S.schedule[keyFullOld] || '';
-      // 若是整天班別（日/小/大/休），兩格都顯示同一個
-      let dispAM = shiftAM || (shiftFull && shiftFull !== '上' && shiftFull !== '下' ? shiftFull : '');
-      let dispPM = shiftPM || (shiftFull && shiftFull !== '上' && shiftFull !== '下' ? shiftFull : '');
-      // 舊格式：上=上午休，下=下午休
-      if (shiftFull === '上') dispAM = '上';
-      if (shiftFull === '下') dispPM = '下';
+  for (let cell=0; cell<totalCells; cell++) {
+    if (cell % 7 === 0) html += '<tr>';
 
-      let cls = 'grid-cell';
-      if (wd===6) cls += ' sat-col';
-      if (wd===0 || S.holidays?.[dk]) cls += ' sun-col holiday-col';
-      if (isTod) cls += ' today-col';
-      if (swapMode?.src?.empId === eid && swapMode?.src?.date === dk) cls += ' swap-src';
-      if (swapMode?.tgt?.empId === eid && swapMode?.tgt?.date === dk) cls += ' swap-tgt';
+    const dayNum = cell - startWd + 1;
+    const isValid = dayNum >= 1 && dayNum <= days;
+    const d = isValid ? new Date(curYear, curMonth, dayNum) : null;
+    const dk = d ? fmtDate(d) : '';
+    const wd = d ? d.getDay() : -1; // 0=Sun
+    // 月曆裡 col index: cell%7 → 0=Mon,6=Sun
+    const colIdx = cell % 7; // 0=Mon ... 5=Sat 6=Sun
+    const isSat = colIdx === 5;
+    const isSun = colIdx === 6;
+    const isHoliday = dk && S.holidays?.[dk];
+    const isToday = d && d.getTime() === today.getTime();
 
-      const badgeAM = dispAM ? `<span class="shift-badge shift-${dispAM}">${dispAM}</span>` : '';
-      const badgePM = dispPM ? `<span class="shift-badge shift-${dispPM}">${dispPM}</span>` : '';
+    if (!isValid) {
+      html += `<td class="cal-cell other-month"></td>`;
+    } else {
+      let cellCls = 'cal-cell';
+      if (isToday) cellCls += ' is-today';
+      if (isSat) cellCls += ' is-sat';
+      if (isSun || isHoliday) cellCls += ' is-sun';
 
-      html += `<div class="${cls}">
-        <div class="grid-cell-half" onclick="event.stopPropagation();handleCellClick('${eid}','${dk}','AM')">${badgeAM}</div>
-        <div class="grid-cell-half" onclick="event.stopPropagation();handleCellClick('${eid}','${dk}','PM')">${badgePM}</div>
+      // 日期數字
+      let numCls = 'cal-date-num';
+      if (isToday) numCls += ' today-num';
+      else if (isSat) numCls += ' sat-num';
+      else if (isSun || isHoliday) numCls += ' sun-num';
+
+      html += `<td class="${cellCls}">
+        <div class="${numCls}">${dayNum}</div>
+        <div class="cal-emp-list">`;
+
+      // 員工班別
+      emps.forEach(emp => {
+        const eid = String(Math.floor(Number(emp.id)));
+        // 取班別：優先 _AM key（整天班），再看整天 key
+        const keyAM   = eid+'_'+dk+'_AM';
+        const keyPM   = eid+'_'+dk+'_PM';
+        const keyFull = eid+'_'+dk;
+        const keyOld  = String(emp.id)+'_'+dk;
+        const shiftAM   = S.schedule[keyAM]   || '';
+        const shiftPM   = S.schedule[keyPM]   || '';
+        const shiftFull = S.schedule[keyFull] || S.schedule[keyOld] || '';
+
+        // 決定顯示班別（_AM 優先，若為「上」下也顯示 PM）
+        let dispShift = shiftAM || shiftFull;
+        // 若 AM=上 且 PM=下，顯示「上+下」
+        const hasAMOff = shiftAM === '上' || shiftFull === '上';
+        const hasPMOff = shiftPM === '下' || shiftFull === '下';
+
+        // swap 高亮
+        let rowCls = 'cal-emp-row';
+        if (swapMode?.src?.empId === eid && swapMode?.src?.date === dk) rowCls += ' swap-src';
+        if (swapMode?.tgt?.empId === eid && swapMode?.tgt?.date === dk) rowCls += ' swap-tgt';
+
+        const dotCls = `emp-color-${emp.colorIdx||0}`;
+
+        if (hasAMOff && hasPMOff && shiftAM !== shiftPM) {
+          // 上午休 + 下午休 各顯示
+          html += `<div class="${rowCls}" onclick="handleCellClick('${eid}','${dk}')">
+            <span class="emp-dot ${dotCls}" style="width:6px;height:6px;border-radius:50%;flex-shrink:0"></span>
+            <span class="cal-emp-name">${escHtml(emp.name)}</span>
+            <span class="cal-shift-badge shift-上">上</span>
+            <span class="cal-shift-badge shift-下">下</span>
+          </div>`;
+        } else {
+          const badge = dispShift
+            ? `<span class="cal-shift-badge shift-${dispShift}">${dispShift}</span>`
+            : `<span class="cal-shift-badge shift-empty">—</span>`;
+          html += `<div class="${rowCls}" onclick="handleCellClick('${eid}','${dk}')">
+            <span class="emp-dot ${dotCls}" style="width:6px;height:6px;border-radius:50%;flex-shrink:0"></span>
+            <span class="cal-emp-name">${escHtml(emp.name)}</span>
+            ${badge}
+          </div>`;
+        }
+      });
+
+      // 休假統計小標籤
+      const limitDay = S.policy?.leave_limit_day?.[wd] ?? 2;
+      const limitAM2  = S.policy?.leave_limit_am?.[wd]  ?? 2;
+      const limitPM2  = S.policy?.leave_limit_pm?.[wd]  ?? 2;
+      const countDay2 = emps.filter(e => {
+        const eid = String(Math.floor(Number(e.id)));
+        const full = S.schedule[eid+'_'+dk] || '';
+        const am2  = S.schedule[eid+'_'+dk+'_AM'] || '';
+        const pm2  = S.schedule[eid+'_'+dk+'_PM'] || '';
+        return full === '休' || (am2 === '休' && pm2 === '休');
+      }).length;
+      const countAM2 = emps.filter(e => {
+        const eid = String(Math.floor(Number(e.id)));
+        const am2 = S.schedule[eid+'_'+dk+'_AM'] || '';
+        const full = S.schedule[eid+'_'+dk] || '';
+        return am2 === '上' || full === '上';
+      }).length;
+      const countPM2 = emps.filter(e => {
+        const eid = String(Math.floor(Number(e.id)));
+        const pm2 = S.schedule[eid+'_'+dk+'_PM'] || '';
+        const full = S.schedule[eid+'_'+dk] || '';
+        return pm2 === '下' || full === '下';
+      }).length;
+
+      const dayOver = countDay2 >= limitDay ? ' over' : '';
+      const amOver  = countAM2  >= limitAM2  ? ' over' : '';
+      const pmOver  = countPM2  >= limitPM2  ? ' over' : '';
+      html += `<div class="cal-leave-bar">
+        <span class="cal-leave-tag lv-day${dayOver}">休${countDay2}/${limitDay}</span>
+        <span class="cal-leave-tag lv-am${amOver}">上${countAM2}/${limitAM2}</span>
+        <span class="cal-leave-tag lv-pm${pmOver}">下${countPM2}/${limitPM2}</span>
       </div>`;
-    });
-  });
 
-  // 休假計數列：三格（全天休 / 上午休 / 下午休）
-  html += `<div class="leave-cell leave-name-cell">
-    <div class="leave-name-half">休</div>
-    <div class="leave-name-half">上午</div>
-    <div class="leave-name-half">下午</div>
-  </div>`;
-  dates.forEach(d => {
-    const dk = fmtDate(d);
-    const wd = d.getDay();
-    const limitDay = S.policy?.leave_limit_day?.[wd] ?? S.policy?.leave_limit?.[wd] ?? 2;
-    const limitAM  = S.policy?.leave_limit_am?.[wd]  ?? S.policy?.leave_limit?.[wd] ?? 2;
-    const limitPM  = S.policy?.leave_limit_pm?.[wd]  ?? S.policy?.leave_limit?.[wd] ?? 2;
-
-    // 全天休：整天 key=休，或 _AM=休 且 _PM=休
-    const countDay = emps.filter(e => {
-      const eid = String(Math.floor(Number(e.id)));
-      const full = S.schedule[eid+'_'+dk] || S.schedule[e.id+'_'+dk] || '';
-      const am   = S.schedule[eid+'_'+dk+'_AM'] || '';
-      const pm   = S.schedule[eid+'_'+dk+'_PM'] || '';
-      return full === '休' || (am === '休' && pm === '休');
-    }).length;
-    // 上午休：_AM=休 或 _AM=上，或整天 key=上
-    const countAM = emps.filter(e => {
-      const eid = String(Math.floor(Number(e.id)));
-      const full = S.schedule[eid+'_'+dk] || S.schedule[e.id+'_'+dk] || '';
-      const am   = S.schedule[eid+'_'+dk+'_AM'] || '';
-      return am === '休' || am === '上' || full === '上';
-    }).length;
-    // 下午休：_PM=休 或 _PM=下，或整天 key=下
-    const countPM = emps.filter(e => {
-      const eid = String(Math.floor(Number(e.id)));
-      const full = S.schedule[eid+'_'+dk] || S.schedule[e.id+'_'+dk] || '';
-      const pm   = S.schedule[eid+'_'+dk+'_PM'] || '';
-      return pm === '休' || pm === '下' || full === '下';
-    }).length;
-
-    const dayCls = 'leave-count' + (countDay >= limitDay ? ' over' : countDay >= limitDay-1 ? ' near' : ' ok');
-    const amCls  = 'leave-count' + (countAM  >= limitAM  ? ' over' : countAM  >= limitAM-1  ? ' near' : ' ok');
-    const pmCls  = 'leave-count' + (countPM  >= limitPM  ? ' over' : countPM  >= limitPM-1  ? ' near' : ' ok');
-    html += `<div class="leave-cell">
-      <div class="leave-cell-half"><span class="${dayCls}">${countDay}</span></div>
-      <div class="leave-cell-half"><span class="${amCls}">${countAM}</span></div>
-      <div class="leave-cell-half"><span class="${pmCls}">${countPM}</span></div>
-    </div>`;
-  });
-
+      html += `</div></td>`;
+    }
+    if (cell % 7 === 6) html += '</tr>';
+  }
+  html += '</tbody></table>';
   grid.innerHTML = html;
 }
 
@@ -1128,62 +1144,43 @@ function openShiftModal(empId, date, period) {
   const d = new Date(date + 'T00:00:00');
   const dk = fmtDate(d);
   const eid = String(empId);
-
-  // 根據 period 決定 key 和可用班別
-  const isAM = period === 'AM';
-  const isPM = period === 'PM';
-  const schedKey = period ? eid + '_' + dk + '_' + period : eid + '_' + dk;
-  const existingShift = S.schedule[schedKey] || '';
-
-  pendingShiftEdit = { empId: eid, date: dk, period: period || null, schedKey, oldShift: existingShift };
-
-  // 標題
-  const periodLabel = isAM ? ' 【上午】' : isPM ? ' 【下午】' : '';
-  document.getElementById('shift-modal-title').textContent = `${emp.name} — ${date}${periodLabel}`;
-
-  // 休假計數
   const wd = d.getDay();
-  const limitAM = S.policy?.leave_limit_am?.[wd] ?? S.policy?.leave_limit?.[wd] ?? 2;
-  const limitPM = S.policy?.leave_limit_pm?.[wd] ?? S.policy?.leave_limit?.[wd] ?? 2;
-  const countAM = S.employees.filter(e => {
-    const ei = String(Math.floor(Number(e.id)));
-    return (S.schedule[ei+'_'+dk+'_AM']||'') === '休' || (S.schedule[ei+'_'+dk]||'') === '休' || (S.schedule[ei+'_'+dk]||'') === '上';
-  }).length;
-  const countPM = S.employees.filter(e => {
-    const ei = String(Math.floor(Number(e.id)));
-    return (S.schedule[ei+'_'+dk+'_PM']||'') === '休' || (S.schedule[ei+'_'+dk]||'') === '休' || (S.schedule[ei+'_'+dk]||'') === '下';
-  }).length;
-  const infoEl = document.getElementById('shift-modal-leave-info');
-  const wd2 = d.getDay();
-  const limitDay2 = S.policy?.leave_limit_day?.[wd2] ?? S.policy?.leave_limit?.[wd2] ?? 2;
+
+  // 月曆格點擊不傳 period → 不分上下午，整天 key
+  // 六個選項：休假/上午休/下午休/日班/小夜/大夜
+  const schedKey = eid + '_' + dk; // 月曆統一用整天 key
+  const existingShift = S.schedule[schedKey] || S.schedule[String(emp.id)+'_'+dk] || '';
+
+  pendingShiftEdit = { empId: eid, date: dk, period: null, schedKey, oldShift: existingShift };
+
+  document.getElementById('shift-modal-title').textContent = `${emp.name}　${curYear}/${curMonth+1}/${d.getDate()}`;
+
+  // 休假計數資訊
+  const limitDay2 = S.policy?.leave_limit_day?.[wd] ?? 2;
+  const limitAM2  = S.policy?.leave_limit_am?.[wd]  ?? 2;
+  const limitPM2  = S.policy?.leave_limit_pm?.[wd]  ?? 2;
   const countDay2 = S.employees.filter(e => {
     const ei = String(Math.floor(Number(e.id)));
-    const full = S.schedule[ei+'_'+dk] || '';
-    const am2  = S.schedule[ei+'_'+dk+'_AM'] || '';
-    const pm2  = S.schedule[ei+'_'+dk+'_PM'] || '';
-    return full === '休' || (am2 === '休' && pm2 === '休');
+    return (S.schedule[ei+'_'+dk]||'') === '休';
   }).length;
-  infoEl.innerHTML = isAM
-    ? `全天休 ${countDay2}/${limitDay2}　上午休 ${countAM}/${limitAM} 人`
-    : isPM
-    ? `全天休 ${countDay2}/${limitDay2}　下午休 ${countPM}/${limitPM} 人`
-    : `全天休 ${countDay2}/${limitDay2}　上午休 ${countAM}/${limitAM}　下午休 ${countPM}/${limitPM}`;
+  const countAM2 = S.employees.filter(e => {
+    const ei = String(Math.floor(Number(e.id)));
+    return (S.schedule[ei+'_'+dk]||'') === '上' || (S.schedule[ei+'_'+dk+'_AM']||'') === '上';
+  }).length;
+  const countPM2 = S.employees.filter(e => {
+    const ei = String(Math.floor(Number(e.id)));
+    return (S.schedule[ei+'_'+dk]||'') === '下' || (S.schedule[ei+'_'+dk+'_PM']||'') === '下';
+  }).length;
 
-  // 班別按鈕：上午格只顯示上班相關+上午休，下午格只顯示+下午休
-  // 完整班別（日/小/大/休）任何格都可選
+  const infoEl = document.getElementById('shift-modal-leave-info');
+  infoEl.innerHTML = `全天休 <b style="color:${countDay2>=limitDay2?'var(--red)':'var(--teal)'}">${countDay2}/${limitDay2}</b>　上午休 <b style="color:${countAM2>=limitAM2?'var(--red)':'var(--teal)'}">${countAM2}/${limitAM2}</b>　下午休 <b style="color:${countPM2>=limitPM2?'var(--red)':'var(--teal)'}">${countPM2}/${limitPM2}</b>`;
+
+  // 班別按鈕（依需求：休假/上午休/下午休/日班/小夜/大夜）
+  const showShifts = ['休','上','下','日','小','大'];
   const gridEl = document.getElementById('shift-modal-grid');
-  // 上午格：顯示 日/小/大/休/上（不顯示下）
-  // 下午格：顯示 日/小/大/休/下（不顯示上）
-  // 無 period：顯示全部
-  const availShifts = isAM
-    ? ['日','小','大','休','上']
-    : isPM
-    ? ['日','小','大','休','下']
-    : SHIFTS;
-
-  gridEl.innerHTML = availShifts.map(s =>
+  gridEl.innerHTML = showShifts.map(s =>
     `<button class="shift-btn shift-btn-${s}${existingShift===s?' selected':''}" onclick="selectShift('${s}')">${s}<br><span style="font-size:.6rem;font-weight:400">${SHIFT_LABELS[s]}</span></button>`
-  ).join('') + `<button class="shift-btn" style="background:var(--border);color:var(--text-muted)" onclick="clearShift()">✕<br><span style="font-size:.6rem;font-weight:400">清除</span></button>`;
+  ).join('') + `<button class="shift-btn" style="background:var(--border);color:var(--text-muted);grid-column:span 2" onclick="clearShift()">✕ 清除</button>`;
 
   openModal('shift-modal');
 }
@@ -1340,14 +1337,28 @@ function confirmSwapCells() {
     cancelSwap(); return;
   }
   const updates = {};
-  updates[k1] = v2;
-  updates[k2] = v1;
+  // 互換：若值為空字串則用 null 刪除 key（Firebase 不允許存空字串）
+  updates[k1] = v2 || null;
+  updates[k2] = v1 || null;
+  // 同時互換 _AM/_PM key（若有）
+  const k1AM = src.empId+'_'+src.date+'_AM', k1PM = src.empId+'_'+src.date+'_PM';
+  const k2AM = tgt.empId+'_'+tgt.date+'_AM', k2PM = tgt.empId+'_'+tgt.date+'_PM';
+  const v1AM = S.schedule[k1AM]||null, v1PM = S.schedule[k1PM]||null;
+  const v2AM = S.schedule[k2AM]||null, v2PM = S.schedule[k2PM]||null;
+  updates[k1AM] = v2AM; updates[k1PM] = v2PM;
+  updates[k2AM] = v1AM; updates[k2PM] = v1PM;
+
   db.ref('schedule').update(updates).then(() => {
-    S.schedule[k1] = v2;
-    S.schedule[k2] = v1;
-    // Log
+    // 更新本地 S.schedule
+    Object.entries(updates).forEach(([k,v]) => {
+      if (v === null) delete S.schedule[k];
+      else S.schedule[k] = v;
+    });
     db.ref('leaveLog').push({type:'swap', empId1:src.empId, date1:src.date, empId2:tgt.empId, date2:tgt.date, at:Date.now()});
     toast('已互換','success');
+    cancelSwap();
+  }).catch(err => {
+    toast('互換失敗：' + (err.message||err), 'error');
     cancelSwap();
   });
 }
