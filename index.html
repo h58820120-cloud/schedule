@@ -1080,49 +1080,72 @@ function renderMonthView() {
     html += `<div class="${cls}"><div>${d.getDate()}</div><div style="font-size:14px">${WEEKDAYS[wd]}</div></div>`;
   });
 
-  // ── 員工列（每格拆上下兩半） ──
+  // ── 員工列（完美還原 Excel 雙列表現方式） ──
   emps.forEach(emp => {
     const eid = String(Math.floor(Number(emp.id)));
     const dotCls = `emp-color-${emp.colorIdx||0}`;
-    html += `<div class="name-cell" onclick="handleNameClick('${eid}')">
+
+    // 姓名格（設定 grid-row: span 2 讓它跨越兩列高度）
+    html += `<div class="name-cell" style="grid-row: span 2;" onclick="handleNameClick('${eid}')">
       <span class="emp-dot ${dotCls}"></span>
       <span class="emp-name">${escHtml(emp.name)}</span>
-      <span class="emp-type">${escHtml(emp.type||'')}</span>
+      <span class="emp-type" style="font-size:10px">${escHtml(emp.type||'')}</span>
     </div>`;
+
+    let amHtml = '';
+    let pmHtml = '';
+
     dates.forEach(d => {
       const dk = fmtDate(d);
       const wd = d.getDay();
       const isTod = d.getTime() === today.getTime();
-      const eid2 = eid;
-      const keyAM   = eid2+'_'+dk+'_AM';
-      const keyPM   = eid2+'_'+dk+'_PM';
-      const keyFull = eid2+'_'+dk;
+      const keyAM   = eid+'_'+dk+'_AM';
+      const keyPM   = eid+'_'+dk+'_PM';
+      const keyFull = eid+'_'+dk;
       const keyOld  = String(emp.id)+'_'+dk;
-      const shiftAM   = S.schedule[keyAM]   || '';
-      const shiftPM   = S.schedule[keyPM]   || '';
+
+      let shiftAM = S.schedule[keyAM];
+      let shiftPM = S.schedule[keyPM];
       const shiftFull = S.schedule[keyFull] || S.schedule[keyOld] || '';
-      let dispAM = shiftAM || (shiftFull && shiftFull!=='下' ? shiftFull : '');
-      let dispPM = shiftPM || (shiftFull && shiftFull!=='上' ? shiftFull : '');
-      if (shiftFull==='上') { dispAM='上'; dispPM=''; }
-      if (shiftFull==='下') { dispAM=''; dispPM='下'; }
+
+      // 處理全天班別的對應邏輯（若只有整天班，預設放入 AM 列）
+      if (shiftAM === undefined) {
+         if (shiftFull === '上') shiftAM = '上';
+         else if (shiftFull === '下') shiftAM = '';
+         else shiftAM = shiftFull;
+      }
+      if (shiftPM === undefined) {
+         if (shiftFull === '下') shiftPM = '下';
+         else shiftPM = '';
+      }
+      shiftAM = (shiftAM || '').trim();
+      shiftPM = (shiftPM || '').trim();
 
       let cls = 'grid-cell';
       if (wd===6) cls += ' sat-col';
       if (wd===0||S.holidays?.[dk]) cls += ' sun-col holiday-col';
       if (isTod) cls += ' today-col';
-      if (swapMode?.src?.empId===eid2&&swapMode?.src?.date===dk) cls += ' swap-src';
-      if (swapMode?.tgt?.empId===eid2&&swapMode?.tgt?.date===dk) cls += ' swap-tgt';
+      if (swapMode?.src?.empId===eid&&swapMode?.src?.date===dk) cls += ' swap-src';
+      if (swapMode?.tgt?.empId===eid&&swapMode?.tgt?.date===dk) cls += ' swap-tgt';
 
-      const badgeAM = dispAM ? `<span class="shift-badge shift-${dispAM}">${dispAM}</span>` : '';
-      const badgePM = dispPM ? `<span class="shift-badge shift-${dispPM}">${dispPM}</span>` : '';
-      html += `<div class="${cls}">
-        <div class="grid-cell-half" onclick="event.stopPropagation();handleCellClick('${eid2}','${dk}','AM')">${badgeAM}</div>
-        <div class="grid-cell-half" onclick="event.stopPropagation();handleCellClick('${eid2}','${dk}','PM')">${badgePM}</div>
-      </div>`;
+      // 動態產生徽章（若遇到「正常班」等非標準字串，仍會渲染出灰色小徽章，不會變空白）
+      const renderBadge = (s) => {
+        if (!s) return '';
+        if (['日','小','大','休','上','下'].includes(s)) return `<span class="shift-badge shift-${s}">${s}</span>`;
+        return `<span class="shift-badge" style="background:var(--card-hover);color:var(--text-dim);border:1px solid var(--border-light);padding:0 3px;font-size:10px;width:auto;min-width:24px">${escHtml(s)}</span>`;
+      };
+
+      // 上午列 (上半格，以虛線與下半格區分)
+      amHtml += `<div class="${cls}" style="border-bottom:1px dashed var(--border-light); display:flex; align-items:center; justify-content:center; min-height:22px" onclick="event.stopPropagation();handleCellClick('${eid}','${dk}','AM')">${renderBadge(shiftAM)}</div>`;
+      // 下午列 (下半格)
+      pmHtml += `<div class="${cls}" style="display:flex; align-items:center; justify-content:center; min-height:22px" onclick="event.stopPropagation();handleCellClick('${eid}','${dk}','PM')">${renderBadge(shiftPM)}</div>`;
     });
+
+    // 依照 Grid 自動排列特性，先推入 AM 再推入 PM
+    html += amHtml + pmHtml;
   });
 
-  // ── 休假計數列（三格：全天休/上午/下午） ──
+  // ── 休假計數列 ──
   html += `<div class="leave-cell leave-name-cell">
     <div class="leave-name-half">休</div>
     <div class="leave-name-half">上午</div>
@@ -1139,19 +1162,19 @@ function renderMonthView() {
       const full = S.schedule[eid+'_'+dk]||S.schedule[e.id+'_'+dk]||'';
       const am   = S.schedule[eid+'_'+dk+'_AM']||'';
       const pm   = S.schedule[eid+'_'+dk+'_PM']||'';
-      return full==='休'||(am==='休'&&pm==='休');
+      return full==='休'||(am==='休'&&pm==='休')||(am==='休'&&!pm);
     }).length;
     const countAM = emps.filter(e => {
       const eid = String(Math.floor(Number(e.id)));
       const full = S.schedule[eid+'_'+dk]||S.schedule[e.id+'_'+dk]||'';
       const am   = S.schedule[eid+'_'+dk+'_AM']||'';
-      return am==='休'||am==='上'||full==='上';
+      return am==='休'||am==='上'||full==='上'||full==='休';
     }).length;
     const countPM = emps.filter(e => {
       const eid = String(Math.floor(Number(e.id)));
       const full = S.schedule[eid+'_'+dk]||S.schedule[e.id+'_'+dk]||'';
       const pm   = S.schedule[eid+'_'+dk+'_PM']||'';
-      return pm==='休'||pm==='下'||full==='下';
+      return pm==='休'||pm==='下'||full==='下'||full==='休';
     }).length;
     const dc = 'leave-count'+(countDay>=limitDay?' over':countDay>=limitDay-1?' near':' ok');
     const ac = 'leave-count'+(countAM>=limitAM?' over':countAM>=limitAM-1?' near':' ok');
