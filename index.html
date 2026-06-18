@@ -3,2459 +3,903 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#0d7377">
+<meta name="theme-color" content="#1a2744">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="花醫班表">
-<link rel="manifest" href="data:application/manifest+json,{%22name%22:%22花醫班表系統%22,%22short_name%22:%22班表%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%231e3a5f%22,%22theme_color%22:%22%231e3a5f%22,%22icons%22:[{%22src%22:%22data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%231e3a5f'/%3E%3Ctext y='.9em' font-size='80' x='10'%3E📅%3C/text%3E%3C/svg%3E%22,%22sizes%22:%22any%22,%22type%22:%22image/svg+xml%22}]}">
 <title>花醫班表系統</title>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-/* ── Reset & Base ── */
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{font-size:14px;-webkit-tap-highlight-color:transparent}
-body{font-family:'Noto Sans TC',system-ui,-apple-system,sans-serif;background:#f0ede8;color:#e8edf4;min-height:100vh;overflow-x:hidden}
-
-/* ── CSS Variables ── */
-:root{
-  /* ── 淺色系（參考 index.html）── */
-  --navy:#f0ede8;--navy-light:#fff;--navy-mid:#f7f5f1;--navy-deep:#edeae4;
-  --teal:#0d7377;--teal-light:#0a5a5d;--teal-dim:#084f52;
-  --gold:#b45309;--gold-light:#d97706;
-  --red:#b91c1c;--red-dim:#991b1b;
-  --green:#065f46;--green-dim:#064e3b;
-  --purple:#6d28d9;--purple-light:#5b21b6;
-  --text:#1a1916;--text-dim:#5a5750;--text-muted:#9a9690;
-  --card:#fff;--card-hover:#f7f5f1;
-  --border:#ddd9d0;--border-light:#c5c0b4;
-  --shift-day:#fff8e8;--shift-day-text:#92610a;
-  --shift-eve:#edfafa;--shift-eve-text:#0a6e6b;
-  --shift-night:#f0eeff;--shift-night-text:#4438a0;
-  --shift-off:#edfbf4;--shift-off-text:#1a6040;
-  --shift-am:#fff7ed;--shift-am-text:#9a3412;
-  --shift-pm:#fdf4ff;--shift-pm-text:#6b21a8;
-  --radius:8px;--radius-sm:6px;--radius-lg:14px;
-  --shadow:0 1px 4px rgba(0,0,0,.08);--shadow-sm:0 1px 2px rgba(0,0,0,.06);
-  --hdr-h:56px;--nav-h:52px;
+:root {
+  --navy: #1a2744;
+  --navy-light: #243159;
+  --blue: #2d5be3;
+  --blue-light: #4a72f0;
+  --teal: #0ea5a0;
+  --teal-light: #12c4be;
+  --gold: #f5a623;
+  --red: #e84040;
+  --green: #22c55e;
+  --bg: #f0f4ff;
+  --surface: #ffffff;
+  --border: #dde4f5;
+  --text: #1a2744;
+  --text-muted: #6b7a9e;
+  --shift-day: #e8f0ff;
+  --shift-day-text: #1e40af;
+  --shift-eve: #fff3e0;
+  --shift-eve-text: #c45c00;
+  --shift-night: #1a2744;
+  --shift-night-text: #93c5fd;
+  --shift-off: #f3f4f6;
+  --shift-off-text: #6b7280;
+  --shadow: 0 2px 12px rgba(26,39,68,0.10);
+  --radius: 10px;
 }
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
 
-/* ── Layout ── */
-#app{display:flex;flex-direction:column;min-height:100vh}
-header{position:sticky;top:0;z-index:100;height:var(--hdr-h);background:var(--card);border-bottom:0.5px solid var(--border);display:flex;align-items:center;padding:0 12px;gap:8px;box-shadow:var(--shadow)}
-header h1{font-size:14px;font-weight:700;color:var(--teal);letter-spacing:.05em;flex:1;white-space:nowrap}
-header h1 span{font-size:.7rem;color:var(--text-muted);font-weight:400;margin-left:6px}
-#hdr-month{font-size:14px;color:var(--gold);font-weight:600;min-width:80px;text-align:center}
-.hdr-btn{background:none;border:none;color:var(--text-dim);cursor:pointer;padding:6px;border-radius:var(--radius-sm);transition:color .15s,background .15s;line-height:1;font-size:1rem}
-.hdr-btn:hover{color:var(--teal-light);background:rgba(255,255,255,.08)}
-
-nav{background:var(--navy-mid);border-bottom:1px solid var(--border);display:flex;overflow-x:auto;scrollbar-width:none}
-nav::-webkit-scrollbar{display:none}
-.nav-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 2px 5px;cursor:pointer;color:var(--text-muted);border:none;background:none;transition:color .15s;border-top:2px solid transparent;font-size:inherit;min-width:0;background:var(--card)}
-.nav-tab .tab-icon{font-size:1.1rem;margin-bottom:1px;line-height:1}
-.nav-tab .tab-label{font-size:13px;white-space:nowrap}
-.nav-tab.active{color:var(--teal);border-top-color:var(--teal);background:#e0f4f4}
-
-main{flex:1;overflow:hidden;position:relative}
-.view{display:none;height:100%;overflow-y:auto;padding-bottom:20px}
-.view.active{display:block}
-
-/* ── Auth Screen ── */
-#auth-screen{position:fixed;inset:0;z-index:200;background:var(--navy);display:flex;align-items:center;justify-content:center;padding:20px}
-.auth-card{background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:32px 28px;width:100%;max-width:380px;box-shadow:var(--shadow)}
-.auth-logo{text-align:center;margin-bottom:24px}
-.auth-logo .logo-icon{font-size:2.8rem;display:block;margin-bottom:8px}
-.auth-logo h2{font-size:1.2rem;font-weight:700;color:var(--teal-light)}
-.auth-logo p{font-size:.78rem;color:var(--text-muted);margin-top:4px}
-.auth-field{margin-bottom:14px}
-.auth-field label{display:block;font-size:14px;color:var(--text-dim);margin-bottom:5px;font-weight:500}
-.auth-field input{width:100%;background:var(--navy-mid);border:0.5px solid var(--border-light);border-radius:var(--radius-sm);padding:10px 12px;color:var(--text);font-size:14px;outline:none;transition:border-color .15s}
-.auth-field input:focus{border-color:var(--teal)}
-.btn-primary{width:100%;background:var(--teal);color:#fff;font-weight:700;border:none;border-radius:var(--radius-sm);padding:11px;font-size:14px;cursor:pointer;transition:background .15s;margin-top:6px}
-.btn-primary:hover{background:var(--teal-dim)}
-.btn-google{width:100%;background:var(--card-hover);color:var(--text);font-weight:600;border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;font-size:14px;cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px}
-.btn-google:hover{background:var(--border)}
-.auth-divider{text-align:center;color:var(--text-muted);font-size:.75rem;margin:12px 0;position:relative}
-.auth-divider::before,.auth-divider::after{content:'';position:absolute;top:50%;width:40%;height:1px;background:var(--border)}
-.auth-divider::before{left:0}.auth-divider::after{right:0}
-.auth-switch{text-align:center;margin-top:14px;font-size:.78rem;color:var(--text-muted)}
-.auth-switch a{color:var(--teal);cursor:pointer;text-decoration:none}
-.auth-err{color:var(--red);font-size:.75rem;text-align:center;margin-top:8px;min-height:18px}
-
-/* ── Month View ── */
-#month-view{padding:0}
-.month-header{padding:10px 22px 8px;display:flex;align-items:center;justify-content:space-between;background:var(--card);border-bottom:0.5px solid var(--border)}
-.month-nav-btn{background:none;border:0.5px solid var(--border-light);color:var(--text-dim);border-radius:var(--radius);padding:6px 14px;cursor:pointer;font-size:13px;transition:all .15s}
-.month-nav-btn:hover{background:var(--navy-deep);border-color:var(--teal)}
-.month-title{font-size:15px;font-weight:600;color:var(--text-dim)}
-
-.month-grid-wrap{overflow-x:auto;padding:0 22px 22px;-webkit-overflow-scrolling:touch}
-
-/* Grid 本體 */
-.month-grid{
-  display:grid;
-  grid-auto-flow:row;
-  border-left:0.5px solid var(--border);
-  border-top:0.5px solid var(--border);
-  min-width:700px;
+/* ── HEADER ── */
+#header{
+  background:var(--navy);
+  color:#fff;
+  padding:12px 20px;
+  display:flex;align-items:center;gap:12px;
+  position:sticky;top:0;z-index:100;
+  box-shadow:0 2px 16px rgba(26,39,68,0.25);
 }
+#header h1{font-size:1.1rem;font-weight:700;letter-spacing:0.04em;flex:1;}
+#header h1 span{color:var(--teal-light);font-size:0.7rem;margin-left:6px;font-weight:400;}
+.nav-btn{
+  background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);
+  color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:0.82rem;
+  transition:all .15s;font-family:inherit;
+}
+.nav-btn:hover{background:rgba(255,255,255,0.22);}
+.nav-btn.active{background:var(--blue);border-color:var(--blue);}
+#monthNav{display:flex;align-items:center;gap:6px;}
+#monthNav button{
+  background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);
+  color:#fff;width:30px;height:30px;border-radius:6px;cursor:pointer;
+  font-size:1rem;display:flex;align-items:center;justify-content:center;
+  transition:all .15s;
+}
+#monthNav button:hover{background:rgba(255,255,255,0.25);}
+#monthLabel{font-size:0.92rem;font-weight:600;min-width:80px;text-align:center;}
 
-/* 標題格 */
-.grid-head-cell{
-  background:var(--navy-mid);
-  border-right:0.5px solid var(--border);
-  border-bottom:0.5px solid var(--border);
-  padding:5px 2px;
-  text-align:center;
-  font-size:11px;
-  color:var(--text-muted);
-  position:sticky;top:0;z-index:5;user-select:none;
-}
-.grid-head-cell.name-col{
-  min-width:90px;width:90px;text-align:left;padding-left:10px;
-  position:sticky;left:0;z-index:6;background:var(--navy-mid);
-  font-size:12px;font-weight:500;
-}
-.grid-head-cell.sat{color:#166534;background:#f0fdf4}
-.grid-head-cell.sun{color:#be185d;background:#fdf2f8}
-.grid-head-cell.holiday{color:#be185d;background:#fdf2f8}
-.grid-head-cell.today{background:#e0f4f4;color:#084f52}
+/* ── MAIN ── */
+#main{padding:16px;max-width:1400px;margin:0 auto;}
 
-/* 姓名格 */
-.name-cell{
-  min-width:90px;width:90px;
-  position:sticky;left:0;z-index:4;
-  background:var(--card);
-  border-right:0.5px solid var(--border);
-  border-bottom:0.5px solid var(--border);
-  padding:5px 8px;
-  cursor:pointer;
-  transition:background .15s;
-  display:flex;flex-direction:row;align-items:center;gap:6px;
+/* ── EMPTY STATE ── */
+#emptyState{
+  text-align:center;padding:80px 20px;
 }
-.name-cell:hover{background:var(--navy-mid)}
-.name-cell .emp-name{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.name-cell .emp-type{font-size:11px;color:var(--text-muted);white-space:nowrap}
-.name-cell .emp-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+#emptyState .icon{font-size:4rem;margin-bottom:16px;}
+#emptyState h2{font-size:1.4rem;font-weight:700;color:var(--navy);margin-bottom:8px;}
+#emptyState p{color:var(--text-muted);font-size:0.9rem;max-width:400px;margin:0 auto 24px;}
+.upload-zone{
+  border:2px dashed var(--blue);border-radius:var(--radius);
+  padding:32px;cursor:pointer;
+  background:white;max-width:480px;margin:0 auto;
+  transition:all .2s;
+}
+.upload-zone:hover{background:var(--shift-day);border-color:var(--blue-light);}
+.upload-zone input{display:none;}
+.upload-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--blue);color:#fff;padding:10px 22px;
+  border-radius:8px;cursor:pointer;font-size:0.92rem;font-weight:600;
+  border:none;font-family:inherit;margin-top:12px;transition:all .15s;
+}
+.upload-btn:hover{background:var(--blue-light);}
 
-/* 班別格：上下兩半 */
-.grid-cell{
-  border-right:0.5px solid var(--border);
-  border-bottom:0.5px solid var(--border);
-  padding:0;cursor:pointer;
-  transition:background .15s;
-  min-width:34px;
-  display:flex;flex-direction:column;
+/* ── TOOLBAR ── */
+#toolbar{
+  display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;
 }
-.grid-cell:hover{background:var(--navy-deep)}
-.grid-cell-half{
-  flex:1;display:flex;align-items:center;justify-content:center;
-  padding:2px 1px;cursor:pointer;transition:background .12s;min-height:18px;
+.tool-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--surface);border:1px solid var(--border);
+  color:var(--text);padding:7px 14px;border-radius:8px;cursor:pointer;
+  font-size:0.83rem;font-weight:500;transition:all .15s;font-family:inherit;
 }
-.grid-cell-half:first-child{border-bottom:0.5px solid var(--border)}
-.grid-cell-half:hover{background:#e0f4f4}
+.tool-btn:hover{background:var(--shift-day);border-color:var(--blue);}
+.tool-btn.primary{background:var(--blue);color:#fff;border-color:var(--blue);}
+.tool-btn.primary:hover{background:var(--blue-light);}
+#searchBox{
+  padding:7px 12px;border:1px solid var(--border);border-radius:8px;
+  font-size:0.83rem;width:140px;font-family:inherit;outline:none;
+  transition:border-color .15s;
+}
+#searchBox:focus{border-color:var(--blue);}
+.spacer{flex:1;}
 
-/* 班別徽章 */
-.shift-badge{
+/* ── MONTH NOTE ── */
+#noteBar{
+  background:linear-gradient(135deg,var(--navy) 0%,var(--navy-light) 100%);
+  color:#dde8ff;border-radius:var(--radius);padding:10px 16px;
+  margin-bottom:14px;font-size:0.82rem;line-height:1.5;
+  display:none;
+}
+#noteBar strong{color:var(--teal-light);}
+
+/* ── LEGEND ── */
+#legend{
+  display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;
+}
+.leg{display:flex;align-items:center;gap:5px;font-size:0.78rem;color:var(--text-muted);}
+.leg-dot{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;}
+
+/* ── TABLE ── */
+#scheduleWrap{overflow-x:auto;border-radius:var(--radius);box-shadow:var(--shadow);}
+#scheduleTable{
+  border-collapse:collapse;width:100%;background:var(--surface);
+  font-size:0.78rem;min-width:900px;
+}
+#scheduleTable th{
+  background:var(--navy);color:#dde8ff;
+  padding:6px 4px;text-align:center;font-weight:600;
+  border-right:1px solid rgba(255,255,255,0.08);
+  position:sticky;top:0;z-index:10;white-space:nowrap;
+}
+#scheduleTable th.date-th{font-size:0.72rem;min-width:32px;}
+#scheduleTable th.weekend{background:#152038;color:#f59e0b;}
+#scheduleTable th.holiday-mark{background:#2a1010;color:#f87171;}
+#scheduleTable td{
+  padding:4px 2px;text-align:center;
+  border-right:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+  white-space:nowrap;
+}
+#scheduleTable tr:last-child td{border-bottom:none;}
+.emp-name-td{
+  padding:4px 10px;font-weight:700;font-size:0.82rem;
+  background:#fafbff;text-align:left;
+  border-right:2px solid var(--border)!important;
+  position:sticky;left:0;z-index:5;
+  min-width:80px;max-width:100px;
+}
+.emp-order-td{
+  color:var(--text-muted);font-size:0.72rem;padding:4px 6px;
+  background:#fafbff;position:sticky;left:0;
+  border-right:1px solid var(--border)!important;
+  width:28px;
+}
+.emp-type-td{
+  font-size:0.7rem;color:var(--text-muted);padding:4px 6px;
+  background:#fafbff;
+  border-right:2px solid var(--border)!important;
+  position:sticky;left:0;
+  max-width:60px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+tr:hover td{background:#f5f8ff!important;}
+tr:hover .emp-name-td, tr:hover .emp-order-td, tr:hover .emp-type-td{background:#eef2ff!important;}
+
+/* ── SHIFT CELLS ── */
+.shift{
   display:inline-flex;align-items:center;justify-content:center;
-  width:26px;height:20px;border-radius:5px;
-  font-size:11px;font-weight:700;line-height:1;
-  border:0.5px solid transparent;
+  width:26px;height:26px;border-radius:5px;
+  font-size:0.75rem;font-weight:700;cursor:pointer;
+  transition:transform .1s;user-select:none;
 }
-.shift-日{background:var(--shift-day);color:var(--shift-day-text);border-color:#fcd34d}
-.shift-小{background:var(--shift-eve);color:var(--shift-eve-text);border-color:#90ddd9}
-.shift-大{background:var(--shift-night);color:var(--shift-night-text);border-color:#c4bbff}
-.shift-休{background:var(--shift-off);color:var(--shift-off-text);border-color:#90e0b0}
-.shift-上{background:var(--shift-am);color:var(--shift-am-text);border-color:#fdba74}
-.shift-下{background:var(--shift-pm);color:var(--shift-pm-text);border-color:#d8b4fe}
+.shift:hover{transform:scale(1.15);}
+.shift-日{background:var(--shift-day);color:var(--shift-day-text);}
+.shift-小{background:var(--shift-eve);color:var(--shift-eve-text);}
+.shift-大{background:var(--shift-night);color:var(--shift-night-text);}
+.shift-休{background:var(--shift-off);color:var(--shift-off-text);}
+.shift-empty{background:transparent;color:var(--text-muted);font-size:0.6rem;}
+.shift-上{background:#dff0ea;color:#15803d;font-size:0.65rem;}
+.shift-下{background:#fce7e7;color:#b91c1c;font-size:0.65rem;}
+.today-col td{background:#fffbeb!important;}
+.today-col .emp-name-td,.today-col .emp-order-td,.today-col .emp-type-td{background:#fef9e7!important;}
 
-/* 欄背景色 */
-.grid-cell.sat-col{background:#f0fdf4}
-.grid-cell.sun-col,.grid-cell.holiday-col{background:#fdf2f8}
-.grid-cell.today-col{background:#e0f4f4}
-.grid-cell.swap-src{outline:2px solid #3b82f6;outline-offset:-2px;background:#eff6ff}
-.grid-cell.swap-tgt{outline:2px solid #10b981;outline-offset:-2px;background:#ecfdf5}
+/* ── WEEKEND / HOLIDAY COLS ── */
+.weekend-col td{background:#f9fafe!important;}
+.weekend-col .shift-日{opacity:0.75;}
 
-/* 休假計數列 */
-.leave-cell{
-  border-right:0.5px solid var(--border);
-  border-bottom:0.5px solid var(--border);
-  font-size:10px;text-align:center;padding:0;
-  color:var(--text-muted);cursor:default;user-select:none;
-  display:flex;flex-direction:column;
+/* ── STATS ROW ── */
+.stats-row td{
+  padding:3px 2px;font-size:0.68rem;color:var(--text-muted);
+  border-top:2px solid var(--border)!important;
+  background:#f8f9ff!important;
 }
-.leave-cell-half{
-  flex:1;display:flex;align-items:center;justify-content:center;min-height:12px;
+.stat-badge{
+  display:inline-block;padding:1px 5px;border-radius:3px;
+  font-size:0.65rem;font-weight:600;
 }
-.leave-cell-half:not(:last-child){border-bottom:0.5px solid var(--border)}
-.leave-cell.leave-name-cell{
-  background:var(--navy-mid);
-  position:sticky;left:0;z-index:4;
-  display:flex;flex-direction:column;
+.stat-日{background:var(--shift-day);color:var(--shift-day-text);}
+.stat-小{background:var(--shift-eve);color:var(--shift-eve-text);}
+.stat-大{background:var(--shift-night);color:var(--shift-night-text);}
+.stat-休{background:var(--shift-off);color:var(--shift-off-text);}
+
+/* ── EDIT MODAL ── */
+#modal{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);
+  z-index:999;align-items:center;justify-content:center;
 }
-.leave-cell.leave-name-cell .leave-name-half{
-  flex:1;display:flex;align-items:center;justify-content:center;
-  padding:0 4px;font-size:10px;font-weight:600;
+#modal.show{display:flex;}
+#modalBox{
+  background:var(--surface);border-radius:14px;padding:24px;
+  min-width:280px;box-shadow:0 8px 40px rgba(0,0,0,0.2);
 }
-.leave-cell.leave-name-cell .leave-name-half:nth-child(1){border-bottom:0.5px solid var(--border);color:#1a6040}
-.leave-cell.leave-name-cell .leave-name-half:nth-child(2){border-bottom:0.5px solid var(--border);color:#9a3412}
-.leave-cell.leave-name-cell .leave-name-half:nth-child(3){color:#6b21a8}
-.leave-count{display:inline-block;padding:0 3px;border-radius:2px;font-weight:600;font-size:10px}
-.leave-count.over{background:#fee2e2;color:#b91c1c;border:0.5px solid #fca5a5;border-radius:3px}
-.leave-count.near{background:#fef3c7;color:#92400e}
-.leave-count.ok{color:var(--text-muted)}
-
-/* 月備註 */
-.month-notes-wrap{padding:8px 22px}
-.month-notes-wrap label{font-size:13px;color:var(--text-muted);display:block;margin-bottom:4px}
-.month-notes-wrap textarea{width:100%;background:var(--navy-mid);border:0.5px solid var(--border);border-radius:var(--radius);padding:8px 10px;color:var(--text);font-size:13px;resize:vertical;min-height:60px;outline:none;font-family:inherit;transition:border-color .15s}
-.month-notes-wrap textarea:focus{border-color:var(--teal)}
-
-/* ── Week View ── */
-#week-view{padding:8px}
-.week-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.week-title{font-size:.9rem;font-weight:600;color:var(--teal-light)}
-.week-table-wrap{overflow-x:auto}
-.week-table{width:100%;border-collapse:collapse;min-width:360px}
-.week-table th,.week-table td{border:1px solid var(--border);padding:5px 4px;text-align:center;font-size:14px}
-.week-table th{background:var(--navy-mid);color:var(--text-muted);font-weight:600;font-size:12px}
-.week-table td.name-td{background:var(--card);text-align:left;padding-left:8px;font-weight:600;font-size:14px;white-space:nowrap;position:sticky;left:0}
-.week-table tr:hover td{background:rgba(255,255,255,.04)}
-.week-table td.today-col{background:rgba(0,180,216,.1)}
-
-/* ── My Schedule ── */
-#my-view{padding:8px 12px}
-.my-emp-select{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;color:var(--text);font-size:14px;width:100%;margin-bottom:12px;outline:none}
-.my-emp-heading{font-size:14px;color:var(--text-muted);margin-bottom:8px;font-weight:500}
-/* 我的班表月曆 */
-.my-cal-wrap{overflow-x:auto}
-.my-cal-table{width:100%;border-collapse:collapse;min-width:300px;table-layout:fixed}
-.my-cal-table .my-wk-hdr{background:var(--navy-mid);font-size:13px;font-weight:700;text-align:center;padding:7px 2px;border:1px solid var(--border);color:var(--text-muted)}
-.my-cal-table .my-wk-hdr.sat{color:#7eb8f4}
-.my-cal-table .my-wk-hdr.sun{color:#ff6b6b}
-.my-cal-cell{border:0.5px solid var(--border);vertical-align:top;background:var(--card);min-height:72px;padding:0;cursor:pointer;transition:background .12s;position:relative}
-.my-cal-cell:hover{background:var(--card-hover)}
-.my-cal-cell.other-month{background:#f0ede8;opacity:.4;cursor:default;pointer-events:none}
-.my-cal-cell.is-today{border-color:var(--teal) !important;box-shadow:inset 0 0 0 2px var(--teal);background:#e0f4f4}
-.my-cal-cell.is-sat{background:#f0fdf4}
-.my-cal-cell.is-sun,.my-cal-cell.is-holiday{background:#fdf2f8}
-.my-cal-date{font-size:14px;font-weight:700;padding:5px 6px 2px;line-height:1;color:var(--text-muted)}
-.my-cal-cell.is-today .my-cal-date{color:var(--teal-light)}
-.my-cal-cell.is-sat .my-cal-date{color:#7eb8f4}
-.my-cal-cell.is-sun .my-cal-date,.my-cal-cell.is-holiday .my-cal-date{color:#ff6b6b}
-.my-cal-shift{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px 2px 6px;gap:3px}
-.my-cal-badge{font-size:14px;font-weight:700;padding:4px 8px;border-radius:5px;text-align:center;width:90%;max-width:56px}
-.my-cal-badge.shift-日{background:var(--shift-day);color:var(--shift-day-text)}
-.my-cal-badge.shift-小{background:var(--shift-eve);color:var(--shift-eve-text)}
-.my-cal-badge.shift-大{background:var(--shift-night);color:var(--shift-night-text)}
-.my-cal-badge.shift-休{background:var(--shift-off);color:var(--shift-off-text)}
-.my-cal-badge.shift-上{background:var(--shift-am);color:var(--shift-am-text)}
-.my-cal-badge.shift-下{background:var(--shift-pm);color:var(--shift-pm-text)}
-
-/* ── Stats View ── */
-#stats-view{padding:8px 12px}
-.stats-section{margin-bottom:20px}
-.stats-section h3{font-size:14px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
-.stat-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04)}
-.stat-row:last-child{border-bottom:none}
-.stat-name{flex:1;font-size:.8rem;font-weight:500}
-.stat-bar-wrap{flex:2;height:8px;background:var(--navy-deep);border-radius:4px;overflow:hidden}
-.stat-bar{height:100%;border-radius:4px;transition:width .4s}
-.stat-val{min-width:28px;text-align:right;font-size:14px;color:var(--text-dim);font-weight:600}
-.stat-shift-pill{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:18px;border-radius:3px;font-size:.65rem;font-weight:700;padding:0 4px;margin-right:4px}
-
-/* ── Settings View ── */
-#settings-view{padding:8px 12px}
-.settings-group{background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:16px}
-.settings-group-title{padding:10px 14px;font-size:13px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;border-bottom:0.5px solid var(--border);background:var(--navy-mid)}
-.settings-row{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border-light)}
-.settings-row:last-child{border-bottom:none}
-.settings-row label{flex:1;font-size:14px;font-weight:500}
-.settings-row .s-val{font-size:.78rem;color:var(--text-muted)}
-.settings-row input[type=text],.settings-row input[type=number],.settings-row select{background:var(--navy-deep);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 8px;color:var(--text);font-size:.82rem;outline:none;min-width:80px}
-.settings-row input:focus,.settings-row select:focus{border-color:var(--teal)}
-.toggle{position:relative;width:40px;height:22px;flex-shrink:0}
-.toggle input{opacity:0;width:0;height:0}
-.toggle-slider{position:absolute;inset:0;background:var(--border);border-radius:11px;cursor:pointer;transition:background .2s}
-.toggle-slider::before{content:'';position:absolute;left:3px;top:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s}
-.toggle input:checked+.toggle-slider{background:var(--teal)}
-.toggle input:checked+.toggle-slider::before{transform:translateX(18px)}
-.btn-danger{background:var(--red-dim);color:#fff;border:none;border-radius:var(--radius-sm);padding:8px 14px;font-size:.8rem;cursor:pointer;font-weight:600;transition:background .15s}
-.btn-danger:hover{background:var(--red)}
-.btn-secondary{background:var(--border);color:var(--text-dim);border:none;border-radius:var(--radius-sm);padding:8px 14px;font-size:.8rem;cursor:pointer;font-weight:600;transition:background .15s}
-.btn-secondary:hover{background:var(--border-light)}
-.btn-sm{padding:6px 10px;font-size:.75rem}
-.user-info{display:flex;align-items:center;gap:10px}
-.user-avatar{width:36px;height:36px;border-radius:50%;background:var(--teal-dim);display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:700;color:#001a24}
-.user-details .u-name{font-size:14px;font-weight:600}
-.user-details .u-email{font-size:13px;color:var(--text-muted)}
-.u-role{display:inline-block;padding:2px 7px;border-radius:20px;font-size:.65rem;font-weight:700;margin-top:3px}
-.role-admin{background:var(--gold);color:#1a0800}.role-supervisor{background:var(--purple-light);color:#fff}.role-staff{background:var(--border);color:var(--text-muted)}
-
-/* ── Modals ── */
-.modal-backdrop{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.65);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
-.modal-backdrop.open{opacity:1;pointer-events:all}
-.modal-sheet{background:var(--navy-light);border-radius:var(--radius-lg) var(--radius-lg) 0 0;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;transform:translateY(100%);transition:transform .25s cubic-bezier(.4,0,.2,1)}
-.modal-backdrop.open .modal-sheet{transform:translateY(0)}
-@media(min-width:640px){
-  .modal-backdrop{align-items:center}
-  .modal-sheet{border-radius:var(--radius-lg);max-width:420px;transform:scale(.95);transform-origin:center}
-  .modal-backdrop.open .modal-sheet{transform:scale(1)}
+#modalBox h3{font-size:1rem;margin-bottom:4px;}
+#modalBox .sub{color:var(--text-muted);font-size:0.8rem;margin-bottom:16px;}
+.shift-picker{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;}
+.shift-opt{
+  width:52px;height:52px;border-radius:10px;border:2px solid transparent;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1rem;font-weight:800;cursor:pointer;transition:all .15s;
 }
-.modal-handle{width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:10px auto 0}
-.modal-header{padding:14px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-.modal-header h3{font-size:14px;font-weight:700;color:var(--teal-light)}
-.modal-close{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.1rem;padding:4px;border-radius:4px;transition:color .15s}
-.modal-close:hover{color:var(--text)}
-.modal-body{padding:14px 16px}
-.shift-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
-.shift-btn{border:none;border-radius:var(--radius-sm);padding:10px 6px;font-size:14px;font-weight:700;cursor:pointer;transition:transform .1s,opacity .15s}
-.shift-btn:hover{transform:scale(1.05)}
-.shift-btn.selected{outline:3px solid #fff;outline-offset:1px}
-.shift-btn-日{background:var(--shift-day);color:var(--shift-day-text)}
-.shift-btn-小{background:var(--shift-eve);color:var(--shift-eve-text)}
-.shift-btn-大{background:var(--shift-night);color:var(--shift-night-text)}
-.shift-btn-休{background:var(--shift-off);color:var(--shift-off-text)}
-.shift-btn-上{background:var(--shift-am);color:var(--shift-am-text)}
-.shift-btn-下{background:var(--shift-pm);color:var(--shift-pm-text)}
-.modal-footer{padding:10px 16px 16px;display:flex;gap:8px;justify-content:flex-end}
-.modal-footer .btn-primary{width:auto;padding:9px 20px}
+.shift-opt.selected{border-color:var(--gold);box-shadow:0 0 0 3px rgba(245,166,35,0.3);}
+.shift-opt:hover{transform:scale(1.08);}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;}
+.modal-btn{
+  padding:8px 18px;border-radius:8px;border:none;cursor:pointer;
+  font-size:0.85rem;font-weight:600;font-family:inherit;transition:all .15s;
+}
+.modal-btn.cancel{background:var(--border);color:var(--text);}
+.modal-btn.cancel:hover{background:#d0d9f0;}
+.modal-btn.save{background:var(--blue);color:#fff;}
+.modal-btn.save:hover{background:var(--blue-light);}
 
-/* Employee modal */
-.emp-list-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05);cursor:pointer}
-.emp-list-item:last-child{border-bottom:none}
-.emp-list-item:hover{opacity:.8}
-.emp-list-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-.emp-list-name{flex:1;font-size:14px;font-weight:600}
-.emp-list-type{font-size:13px;color:var(--text-muted)}
-.emp-list-actions{display:flex;gap:6px}
+/* ── ORDER SECTION ── */
+#orderSection{
+  margin-top:16px;background:var(--surface);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:16px 20px;display:none;
+}
+#orderSection h3{font-size:0.88rem;font-weight:700;color:var(--navy);margin-bottom:10px;}
+.order-row{display:flex;gap:24px;flex-wrap:wrap;}
+.order-group{flex:1;min-width:200px;}
+.order-group h4{font-size:0.78rem;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;}
+.order-list{display:flex;gap:6px;flex-wrap:wrap;}
+.order-badge{
+  background:var(--navy);color:#dde8ff;
+  padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;
+}
+.order-badge:first-child{background:var(--gold);color:var(--navy);}
+.order-badge:nth-child(2){background:var(--blue);color:#fff;}
 
-/* Import modal */
-.import-area{border:2px dashed var(--border);border-radius:var(--radius);padding:20px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;color:var(--text-muted);font-size:14px}
-.import-area:hover,.import-area.drag{border-color:var(--teal);background:rgba(0,180,216,.06);color:var(--text)}
-.import-area input{display:none}
-.import-preview{margin-top:12px;font-size:.78rem;color:var(--text-dim)}
-.import-preview table{width:100%;border-collapse:collapse;margin-top:8px}
-.import-preview td,.import-preview th{border:1px solid var(--border);padding:4px 6px;font-size:.72rem}
-.import-preview th{background:var(--navy-mid);color:var(--text-muted)}
-.emp-select-list{max-height:220px;overflow-y:auto;margin-top:10px}
-.emp-select-item{display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,.04)}
-.emp-select-item:last-child{border-bottom:none}
-.emp-select-item input[type=checkbox]{accent-color:var(--teal);width:15px;height:15px}
-.emp-select-item label{font-size:14px;flex:1;cursor:pointer}
+/* ── MULTI-SHEET PICKER ── */
+#sheetPicker{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);
+  z-index:999;align-items:center;justify-content:center;
+}
+#sheetPicker.show{display:flex;}
+#sheetPickerBox{
+  background:var(--surface);border-radius:14px;padding:24px;
+  min-width:320px;max-width:480px;box-shadow:0 8px 40px rgba(0,0,0,0.2);
+}
+#sheetPickerBox h3{font-size:1rem;margin-bottom:4px;}
+#sheetPickerBox .sub{color:var(--text-muted);font-size:0.8rem;margin-bottom:16px;}
+.sheet-list{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto;}
+.sheet-item{
+  padding:10px 14px;border:1px solid var(--border);border-radius:8px;
+  cursor:pointer;font-size:0.85rem;transition:all .15s;
+  display:flex;align-items:center;gap:8px;
+}
+.sheet-item:hover{background:var(--shift-day);border-color:var(--blue);}
+.sheet-item .sheet-icon{color:var(--blue);}
+#sheetPickerActions{display:flex;justify-content:flex-end;margin-top:16px;}
 
-/* Admin request list */
-.req-card{background:var(--navy-mid);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px}
-.req-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-.req-card-top .req-name{font-size:14px;font-weight:600}
-.req-badge{display:inline-block;padding:2px 7px;border-radius:20px;font-size:.62rem;font-weight:700}
-.badge-pending{background:var(--gold);color:#1a0800}
-.badge-approved{background:var(--green);color:#001a12}
-.badge-denied{background:var(--red);color:#fff}
-.req-detail{font-size:14px;color:var(--text-muted)}
-.req-actions{margin-top:8px;display:flex;gap:6px}
+/* ── TOAST ── */
+#toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  background:var(--navy);color:#fff;padding:10px 20px;border-radius:8px;
+  font-size:0.85rem;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;
+}
+#toast.show{opacity:1;}
 
-/* Notification toast */
-#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:#1a1916;color:#f5f3ef;font-size:14px;padding:9px 16px;border-radius:var(--radius);box-shadow:var(--shadow);transition:transform .3s cubic-bezier(.4,0,.2,1);z-index:500;text-align:center;max-width:280px;pointer-events:none}
-#toast.show{transform:translateX(-50%) translateY(0)}
-#toast.success{border-color:var(--green);color:var(--green)}
-#toast.error{border-color:var(--red);color:var(--red)}
-#toast.info{border-color:var(--teal);color:var(--teal)}
-
-/* Loading */
-#loading{position:fixed;inset:0;z-index:600;background:var(--navy);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
-.loading-spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--teal);border-radius:50%;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.loading-text{font-size:.85rem;color:var(--text-muted)}
-#loading.hidden{display:none}
-
-/* Swap mode banner */
-#swap-banner{display:none;position:sticky;top:var(--hdr-h);z-index:50;background:#fef3c7;border:0.5px solid #fbbf24;border-radius:0;padding:7px 14px;text-align:center;font-size:.78rem;color:var(--gold);font-weight:600;backdrop-filter:blur(4px)}
-#swap-banner.active{display:flex;align-items:center;justify-content:center;gap:10px}
-#swap-banner button{background:var(--red-dim);border:none;color:#fff;border-radius:4px;padding:3px 8px;font-size:.72rem;cursor:pointer}
-
-/* Responsive Desktop */
-/* ── 桌機版側邊欄 ── */
-@media(min-width:900px){
-  body{display:flex !important;flex-direction:row !important;min-height:100vh}
-  #desktop-sidebar{
-    display:flex !important;flex-direction:column;
-    width:200px;flex-shrink:0;
-    background:var(--card);border-right:0.5px solid var(--border);
-    height:100vh;position:sticky;top:0;overflow-y:auto;
-    padding-bottom:20px
-  }
-  #desktop-sidebar .sb-logo{
-    padding:16px 16px 14px;border-bottom:1px solid var(--border);margin-bottom:8px
-  }
-  #desktop-sidebar .sb-logo h2{font-size:.95rem;font-weight:700;color:var(--teal)}
-  #desktop-sidebar .sb-logo p{font-size:.65rem;color:var(--text-muted);margin-top:3px}
-  #desktop-sidebar .sb-nav-btn{
-    display:flex;align-items:center;gap:10px;padding:10px 16px;
-    cursor:pointer;color:var(--text-muted);border:none;background:none;
-    width:100%;font-size:14px;transition:all .15s;
-    border-left:3px solid transparent;font-family:inherit;text-align:left
-  }
-  #desktop-sidebar .sb-nav-btn .sb-icon{font-size:.95rem;flex-shrink:0;width:20px;text-align:center}
-  #desktop-sidebar .sb-nav-btn.active{
-    color:var(--teal);background:#e0f4f4;border-left-color:var(--teal)
-  }
-  #desktop-sidebar .sb-nav-btn:hover{color:var(--text);background:rgba(255,255,255,.06)}
-  #desktop-sidebar .sb-month-ctrl{
-    padding:12px 14px;border-top:1px solid var(--border);margin-top:auto
-  }
-  #desktop-sidebar .sb-month-ctrl .sb-month-lbl{
-    font-size:.63rem;color:var(--text-muted);margin-bottom:7px;font-weight:700;
-    text-transform:uppercase;letter-spacing:.06em
-  }
-  #desktop-sidebar .sb-month-ctrl .sb-month-nav{display:flex;align-items:center;gap:4px}
-  #desktop-sidebar .sb-month-ctrl .sb-month-nav button{
-    background:none;border:1px solid var(--border);color:var(--text-dim);
-    border-radius:4px;padding:4px 8px;cursor:pointer;font-size:.72rem;transition:all .15s
-  }
-  #desktop-sidebar .sb-month-ctrl .sb-month-nav button:hover{border-color:var(--teal);color:var(--teal)}
-  #desktop-sidebar .sb-month-ctrl .sb-month-val{
-    flex:1;text-align:center;font-size:.8rem;color:var(--gold);font-weight:700
-  }
-  #app{flex:1;min-width:0;display:flex;flex-direction:column}
-  header{display:none !important}
-  nav{display:none !important}
+/* ── PRINT ── */
+@media print {
+  #header, #toolbar, #orderSection, #modal, #toast{display:none!important;}
+  #scheduleWrap{box-shadow:none;overflow:visible;}
+  #scheduleTable{font-size:0.65rem;}
+  .shift{width:20px;height:20px;font-size:0.6rem;}
 }
 
-/* ── 手機版底部 Nav ── */
-@media(max-width:899px){
-  #desktop-sidebar{display:none}
-  nav{
-    position:fixed;bottom:0;left:0;right:0;z-index:90;
-    background:var(--card);border-top:0.5px solid var(--border);
-    box-shadow:0 -2px 10px rgba(0,0,0,.4)
-  }
-  main{padding-bottom:52px}
+@media (max-width: 600px) {
+  #header{padding:10px 12px;}
+  #main{padding:10px;}
+  #legend{gap:6px;}
 }
-
-/* Import select emp list scroll */
-::-webkit-scrollbar{width:5px;height:5px}
-::-webkit-scrollbar-track{background:var(--navy-deep)}
-::-webkit-scrollbar-thumb{background:var(--border-light);border-radius:3px}
-::-webkit-scrollbar-thumb:hover{background:var(--teal-dim)}
-
-/* Color palette for employees */
-.emp-color-0{background:#E24B4A}.emp-color-1{background:#EF9F27}.emp-color-2{background:#1D9E75}
-.emp-color-3{background:#378ADD}.emp-color-4{background:#7F77DD}.emp-color-5{background:#D4537E}
-.emp-color-6{background:#639922}.emp-color-7{background:#BA7517}.emp-color-8{background:#0F6E56}
-.emp-color-9{background:#534AB7}.emp-color-10{background:#0d7377}.emp-color-11{background:#be185d}
-
-/* Admin badge in header */
-.hdr-role-badge{font-size:.58rem;background:var(--teal);color:#fff;border-radius:20px;padding:1px 6px;font-weight:700}
 </style>
 </head>
 <body>
 
-<!-- Desktop Sidebar -->
-<div id="desktop-sidebar">
-  <div class="sb-logo">
-    <h2>📅 花醫班表</h2>
-    <p id="sb-user-name">載入中…</p>
+<!-- HEADER -->
+<div id="header">
+  <div style="font-size:1.5rem;">🏥</div>
+  <h1>花醫班表系統 <span>v2.0</span></h1>
+  <div id="monthNav" style="display:none;">
+    <button id="prevMonth" onclick="changeMonth(-1)">‹</button>
+    <span id="monthLabel"></span>
+    <button id="nextMonth" onclick="changeMonth(1)">›</button>
   </div>
-  <button class="sb-nav-btn active" data-view="month-view" onclick="switchTab('month-view')"><span class="sb-icon">📆</span>月視圖</button>
-  <button class="sb-nav-btn" data-view="week-view" onclick="switchTab('week-view')"><span class="sb-icon">📋</span>週視圖</button>
-  <button class="sb-nav-btn" data-view="my-view" onclick="switchTab('my-view')"><span class="sb-icon">👤</span>我的班表</button>
-  <button class="sb-nav-btn" data-view="stats-view" onclick="switchTab('stats-view')"><span class="sb-icon">📊</span>統計</button>
-  <button class="sb-nav-btn" data-view="settings-view" onclick="switchTab('settings-view')"><span class="sb-icon">⚙️</span>設定</button>
-  <div class="sb-month-ctrl">
-    <div class="sb-month-lbl">當前月份</div>
-    <div class="sb-month-nav">
-      <button onclick="changeMonth(-1)">◀</button>
-      <span class="sb-month-val" id="sb-month-val">…</span>
-      <button onclick="changeMonth(1)">▶</button>
+  <button class="nav-btn" id="importBtn" onclick="document.getElementById('fileInput').click()">📂 匯入 Excel</button>
+  <button class="nav-btn" id="printBtn" onclick="window.print()" style="display:none;">🖨️ 列印</button>
+  <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none" onchange="handleFile(this)">
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- Empty state -->
+  <div id="emptyState">
+    <div class="icon">📅</div>
+    <h2>花醫檢驗科班表系統</h2>
+    <p>請匯入 Excel 班表檔案（.xlsx）<br>系統會自動解析所有工作表</p>
+    <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+      <div style="font-size:2rem;margin-bottom:8px;">📊</div>
+      <div style="font-weight:600;color:var(--navy);margin-bottom:4px;">點擊或拖曳 Excel 檔案到這裡</div>
+      <div style="font-size:0.8rem;color:var(--text-muted);">支援花醫標準班表格式（.xlsx）</div>
+      <button class="upload-btn">選擇檔案</button>
+    </div>
+  </div>
+
+  <!-- Toolbar (hidden until data loaded) -->
+  <div id="toolbar" style="display:none;">
+    <input type="text" id="searchBox" placeholder="🔍 搜尋人員" oninput="filterTable()">
+    <button class="tool-btn" onclick="showAllEmps()">全部人員</button>
+    <button class="tool-btn" onclick="filterByType('夜班')">🌙 夜班</button>
+    <button class="tool-btn" onclick="filterByType('正常班')">☀️ 正常班</button>
+    <div class="spacer"></div>
+    <button class="tool-btn" onclick="toggleStats()">📊 統計</button>
+    <button class="tool-btn primary" onclick="document.getElementById('fileInput').click()">📂 換匯入</button>
+  </div>
+
+  <!-- Note bar -->
+  <div id="noteBar"></div>
+
+  <!-- Legend -->
+  <div id="legend" style="display:none;">
+    <div class="leg"><div class="leg-dot shift-日">日</div><span>日班 07~15</span></div>
+    <div class="leg"><div class="leg-dot shift-小">小</div><span>小夜 15~23</span></div>
+    <div class="leg"><div class="leg-dot shift-大">大</div><span>大夜 23~07</span></div>
+    <div class="leg"><div class="leg-dot shift-休">休</div><span>休假</span></div>
+    <div class="leg"><div class="leg-dot shift-上">上</div><span>上午休</span></div>
+    <div class="leg"><div class="leg-dot shift-下">下</div><span>下午休</span></div>
+  </div>
+
+  <!-- Schedule table -->
+  <div id="scheduleWrap" style="display:none;">
+    <table id="scheduleTable"></table>
+  </div>
+
+  <!-- Order section -->
+  <div id="orderSection"></div>
+
+</div>
+
+<!-- Sheet Picker Modal -->
+<div id="sheetPicker">
+  <div id="sheetPickerBox">
+    <h3>📋 選擇要顯示的工作表</h3>
+    <p class="sub">檔案中有多個班表，請選擇要載入的月份</p>
+    <div class="sheet-list" id="sheetList"></div>
+    <div id="sheetPickerActions">
+      <button class="modal-btn cancel" onclick="closeSheetPicker()">取消</button>
     </div>
   </div>
 </div>
 
-<!-- Main App -->
-<div id="app">
-
-<!-- Auth Screen -->
-<div id="auth-screen">
-  <div class="auth-card">
-    <div class="auth-logo">
-      <span class="logo-icon">📅</span>
-      <h2>花醫班表系統</h2>
-      <p>衛生福利部花蓮醫院 檢驗科</p>
-    </div>
-    <div id="auth-login-form">
-      <div class="auth-field">
-        <label>電子郵件</label>
-        <input type="email" id="auth-email" placeholder="your@email.com">
-      </div>
-      <div class="auth-field">
-        <label>密碼</label>
-        <input type="password" id="auth-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
-      </div>
-      <button class="btn-primary" onclick="doLogin()">登入</button>
-      <div class="auth-divider">或</div>
-      <button class="btn-google" onclick="doGoogleLogin()">
-        <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-        使用 Google 帳號登入
-      </button>
-      <div class="auth-err" id="auth-err"></div>
-      <div class="auth-switch">沒有帳號？<a onclick="showRegister()">立即註冊</a></div>
-    </div>
-    <div id="auth-register-form" style="display:none">
-      <div class="auth-field"><label>姓名</label><input type="text" id="reg-name" placeholder="您的名字"></div>
-      <div class="auth-field"><label>電子郵件</label><input type="email" id="reg-email" placeholder="your@email.com"></div>
-      <div class="auth-field"><label>密碼</label><input type="password" id="reg-password" placeholder="至少6個字元"></div>
-      <button class="btn-primary" onclick="doRegister()">建立帳號</button>
-      <div class="auth-err" id="reg-err"></div>
-      <div class="auth-switch"><a onclick="showLogin()">← 返回登入</a></div>
+<!-- Edit Modal -->
+<div id="modal">
+  <div id="modalBox">
+    <h3 id="modalTitle">修改班別</h3>
+    <div class="sub" id="modalSub"></div>
+    <div class="shift-picker" id="shiftPicker"></div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeModal()">取消</button>
+      <button class="modal-btn save" onclick="saveShift()">儲存</button>
     </div>
   </div>
 </div>
-
-<!-- Header (mobile) -->
-<header>
-  <h1>📅 花醫<span id="app-version">v1.3.4</span></h1>
-  <span id="hdr-month">—</span>
-  <button class="hdr-btn" onclick="openImportModal()" title="匯入Excel">📥</button>
-  <button class="hdr-btn" onclick="openEmpModal()" title="員工管理">👥</button>
-  <button class="hdr-btn" id="hdr-swap-btn" onclick="toggleSwapMode('cell')" title="交換班表">🔄</button>
-  <span id="hdr-role-badge"></span>
-</header>
-
-<!-- Tab Nav (mobile) -->
-<nav>
-  <button class="nav-tab active" data-view="month-view" onclick="switchTab('month-view')">
-    <span class="tab-icon">📆</span><span class="tab-label">月視圖</span>
-  </button>
-  <button class="nav-tab" data-view="week-view" onclick="switchTab('week-view')">
-    <span class="tab-icon">📋</span><span class="tab-label">週視圖</span>
-  </button>
-  <button class="nav-tab" data-view="my-view" onclick="switchTab('my-view')">
-    <span class="tab-icon">👤</span><span class="tab-label">我的班表</span>
-  </button>
-  <button class="nav-tab" data-view="stats-view" onclick="switchTab('stats-view')">
-    <span class="tab-icon">📊</span><span class="tab-label">統計</span>
-  </button>
-  <button class="nav-tab" data-view="settings-view" onclick="switchTab('settings-view')">
-    <span class="tab-icon">⚙️</span><span class="tab-label">設定</span>
-  </button>
-</nav>
-
-<!-- Swap Mode Banner -->
-<div id="swap-banner">
-  <span id="swap-banner-text">點選來源格子</span>
-  <button onclick="cancelSwap()">取消</button>
-</div>
-
-<!-- Views -->
-<main>
-  <!-- Month View -->
-  <div id="month-view" class="view active">
-    <div class="month-header">
-      <button class="month-nav-btn" onclick="changeMonth(-1)">◀</button>
-      <span class="month-title" id="month-view-title">—</span>
-      <button class="month-nav-btn" onclick="changeMonth(1)">▶</button>
-    </div>
-    <div class="cal-wrap">
-      <div id="month-grid"></div>
-    </div>
-    <div class="month-notes-wrap">
-      <label>📝 本月備註</label>
-      <textarea id="month-notes" placeholder="輸入本月備註…" oninput="scheduleNotesSave()"></textarea>
-    </div>
-  </div>
-
-  <!-- Week View -->
-  <div id="week-view" class="view">
-    <div class="week-nav">
-      <button class="month-nav-btn" onclick="changeWeek(-1)">◀ 上週</button>
-      <span class="week-title" id="week-title">—</span>
-      <button class="month-nav-btn" onclick="changeWeek(1)">下週 ▶</button>
-    </div>
-    <div class="week-table-wrap">
-      <table class="week-table" id="week-table"></table>
-    </div>
-  </div>
-
-  <!-- My Schedule -->
-  <div id="my-view" class="view">
-    <div class="my-emp-heading">選擇員工查看班表</div>
-    <select class="my-emp-select" id="my-emp-select" onchange="renderMyView()"></select>
-    <div id="my-schedule-list"></div>
-  </div>
-
-  <!-- Stats View -->
-  <div id="stats-view" class="view">
-    <div id="stats-content"></div>
-  </div>
-
-  <!-- Settings View -->
-  <div id="settings-view" class="view">
-    <div id="settings-content"></div>
-  </div>
-</main>
-
-</div><!-- /app -->
-
-<!-- Loading -->
-<div id="loading"><div class="loading-spinner"></div><div class="loading-text">載入中…</div></div>
 
 <!-- Toast -->
 <div id="toast"></div>
 
-<!-- Shift Edit Modal -->
-<div class="modal-backdrop" id="shift-modal">
-  <div class="modal-sheet">
-    <div class="modal-handle"></div>
-    <div class="modal-header">
-      <h3 id="shift-modal-title">編輯班別</h3>
-      <button class="modal-close" onclick="closeModal('shift-modal')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="shift-grid" id="shift-modal-grid"></div>
-      <div id="shift-modal-leave-info" style="font-size:.75rem;color:var(--text-muted);margin-bottom:10px"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-secondary btn-sm" onclick="closeModal('shift-modal')">取消</button>
-      <button class="btn-primary btn-sm" onclick="confirmShiftEdit()">確認</button>
-    </div>
-  </div>
-</div>
-
-<!-- Employee Management Modal -->
-<div class="modal-backdrop" id="emp-modal">
-  <div class="modal-sheet">
-    <div class="modal-handle"></div>
-    <div class="modal-header">
-      <h3>👥 員工管理</h3>
-      <button class="modal-close" onclick="closeModal('emp-modal')">✕</button>
-    </div>
-    <div class="modal-body" id="emp-modal-body"></div>
-  </div>
-</div>
-
-<!-- Add/Edit Employee Modal -->
-<div class="modal-backdrop" id="emp-edit-modal">
-  <div class="modal-sheet">
-    <div class="modal-handle"></div>
-    <div class="modal-header">
-      <h3 id="emp-edit-title">新增員工</h3>
-      <button class="modal-close" onclick="closeModal('emp-edit-modal')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="auth-field"><label>姓名</label><input type="text" id="ee-name" placeholder="員工姓名"></div>
-      <div class="auth-field">
-        <label>班別類型</label>
-        <select id="ee-type" style="width:100%;background:var(--navy-deep);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;color:var(--text);outline:none">
-          <option>日班</option><option>夜班</option><option>行政</option>
-        </select>
-      </div>
-      <div class="auth-field">
-        <label>顏色</label>
-        <div id="ee-color-grid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:4px"></div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-secondary btn-sm" onclick="closeModal('emp-edit-modal')">取消</button>
-      <button class="btn-primary btn-sm" onclick="saveEmployee()">儲存</button>
-    </div>
-  </div>
-</div>
-
-<!-- Import Modal -->
-<div class="modal-backdrop" id="import-modal">
-  <div class="modal-sheet">
-    <div class="modal-handle"></div>
-    <div class="modal-header">
-      <h3>📥 匯入 Excel 班表</h3>
-      <button class="modal-close" onclick="closeModal('import-modal')">✕</button>
-    </div>
-    <div class="modal-body" id="import-modal-body">
-      <div id="import-step-1">
-        <div class="import-area" id="import-drop-zone" onclick="document.getElementById('import-file-input').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleFileDrop(event)">
-          <div style="font-size:2rem;margin-bottom:8px">📊</div>
-          <div>點擊或拖曳 Excel / CSV 檔案至此</div>
-          <div style="font-size:.7rem;margin-top:4px;color:var(--text-muted)">.xlsx / .xls / .csv</div>
-          <input type="file" id="import-file-input" accept=".xlsx,.xls,.csv" onchange="handleFileSelect(event)">
-        </div>
-        <div id="import-format-hint" style="font-size:.72rem;color:var(--text-muted);margin-top:10px;line-height:1.8">
-          <strong style="color:var(--text-dim)">格式說明：</strong><br>
-          • A欄=院區　B欄=順序　C欄=姓名　D欄=班別類型<br>
-          • 第3列=日期、第4列=星期、第5列起=員工班別（每人兩列）<br>
-          • 班別代碼：日 / 小 / 大 / 休 / 上 / 下
-        </div>
-        <div id="firebase-check-info" style="display:none;margin-top:8px;padding:8px 10px;background:rgba(230,57,70,.1);border:1px solid var(--red);border-radius:var(--radius-sm);font-size:.72rem;color:var(--gold);line-height:1.7">
-          ⚠️ <strong>若匯入後出現「儲存失敗」，請確認：</strong><br>
-          1. Firebase Realtime Database Rules 已設定 auth != null 可寫入<br>
-          2. 已在系統內登入帳號<br>
-          3. Firebase Console → schedule-516bd → Realtime Database → 規則
-        </div>
-        <button onclick="downloadTemplate()" style="margin-top:12px;width:100%;background:rgba(67,97,238,.15);border:1px solid #4361ee;color:#48cae4;border-radius:var(--radius-sm);padding:9px;font-size:.82rem;cursor:pointer;font-weight:600;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px" onmouseover="this.style.background='rgba(67,97,238,.3)'" onmouseout="this.style.background='rgba(67,97,238,.15)'">
-          📥 下載匯入樣板（Excel）
-        </button>
-      </div>
-      <div id="import-step-2" style="display:none">
-        <div id="import-preview-info" style="font-size:.78rem;color:var(--text-dim);margin-bottom:10px"></div>
-        <div style="font-size:.75rem;color:var(--text-muted);margin-bottom:6px;font-weight:600">選擇要匯入的員工：</div>
-        <div class="emp-select-list" id="emp-select-list"></div>
-      </div>
-    </div>
-    <div class="modal-footer" id="import-modal-footer">
-      <button class="btn-secondary btn-sm" onclick="closeModal('import-modal');cancelImport()">取消</button>
-      <button class="btn-primary btn-sm" id="import-confirm-btn" style="display:none" onclick="confirmEmpSelect()">確認匯入</button>
-    </div>
-  </div>
-</div>
-
-<!-- Swap Name Modal (whole month swap) -->
-<div class="modal-backdrop" id="swap-month-modal">
-  <div class="modal-sheet">
-    <div class="modal-handle"></div>
-    <div class="modal-header">
-      <h3>🔄 整月互換</h3>
-      <button class="modal-close" onclick="closeModal('swap-month-modal')">✕</button>
-    </div>
-    <div class="modal-body" id="swap-month-body"></div>
-    <div class="modal-footer">
-      <button class="btn-secondary btn-sm" onclick="closeModal('swap-month-modal');cancelSwap()">取消</button>
-      <button class="btn-primary btn-sm" id="swap-month-confirm-btn" style="display:none" onclick="confirmMonthSwap()">確認整月互換</button>
-    </div>
-  </div>
-</div>
-
-<!-- Change Request Modal (over deadline) -->
-<div class="modal-backdrop" id="request-modal">
-  <div class="modal-sheet">
-    <div class="modal-handle"></div>
-    <div class="modal-header">
-      <h3>📋 申請修改</h3>
-      <button class="modal-close" onclick="closeModal('request-modal')">✕</button>
-    </div>
-    <div class="modal-body">
-      <p style="font-size:.8rem;color:var(--text-muted);margin-bottom:12px" id="req-modal-desc">已超過修改截止日，需要申請審核。</p>
-      <div class="auth-field"><label>申請原因</label><textarea id="req-reason" style="width:100%;background:var(--navy-deep);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;color:var(--text);min-height:80px;font-size:.82rem;outline:none;resize:vertical;font-family:inherit" placeholder="請說明修改原因…"></textarea></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-secondary btn-sm" onclick="closeModal('request-modal')">取消</button>
-      <button class="btn-primary btn-sm" onclick="submitChangeRequest()">送出申請</button>
-    </div>
-  </div>
-</div>
-
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<!-- SheetJS for Excel parsing -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
 <script>
-'use strict';
-// ╔══════════════════════════════════════════════════╗
-// ║  花醫班表系統  v1.3.4                           ║
-// ╚══════════════════════════════════════════════════╝
-
-const APP_VERSION = 'v1.3.4';
-const PERMANENT_ADMIN = 'h58820120@gmail.com';
+// ── STATE ──
 const SHIFTS = ['日','小','大','休','上','下'];
-const SHIFT_LABELS = {日:'日班',小:'小夜',大:'大夜',休:'休假',上:'上午休',下:'下午休'};
-const WEEKDAYS = ['日','一','二','三','四','五','六'];
-const EMP_COLORS = 12; // 0–11
-
-// ── Firebase ──────────────────────────────────────
-const FB_CFG = {
-  apiKey:"AIzaSyCCJ_CQWryrLrs3iVhaOkO1SH4I6m7uHog",
-  authDomain:"schedule-516bd.firebaseapp.com",
-  databaseURL:"https://schedule-516bd-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId:"schedule-516bd"
-};
-firebase.initializeApp(FB_CFG);
-const auth = firebase.auth();
-const db   = firebase.database();
-
-// ── App State ──────────────────────────────────────
-let S = {
-  employees:[],
-  schedule:{},
-  monthEmpOrder:{},
-  monthOrders:{},
-  overtimeOrder:[],
-  leaveOrder:[],
-  holidays:{},
-  excluded:{},
-  leaveLog:[],
-  policy:{ leave_limit:{0:2,1:2,2:2,3:2,4:2,5:2,6:2}, leave_limit_day:{0:2,1:2,2:2,3:2,4:2,5:2,6:2}, leave_limit_am:{0:2,1:2,2:2,3:2,4:2,5:2,6:2}, leave_limit_pm:{0:2,1:2,2:2,3:2,4:2,5:2,6:2}, modify_deadline:5 }
-};
-let curUser = null;
-let curRole = 'staff'; // 'admin'|'supervisor'|'staff'
-let curYear, curMonth; // 0-indexed month
-let curWeekStart = null;
-let syncListener = null;
-let pendingImport = null;
-let swapMode = null; // null | { type:'cell'|'name', src:null, tgt:null }
-let editingEmpId = null;
-let pendingShiftEdit = null; // { empId, date, oldShift }
-let pendingRequestData = null;
-let notesSaveTimer = null;
-
-// ── Init ──────────────────────────────────────────
-document.getElementById('app-version').textContent = APP_VERSION;
-
-// Timeout fallback: if Firebase auth takes >8s, show auth screen anyway
-const _authTimeout = setTimeout(() => {
-  const loading = document.getElementById('loading');
-  if (loading && !loading.classList.contains('hidden')) {
-    console.warn('Firebase auth timeout - showing auth screen');
-    showAuthScreen(true);
-    hideLoading();
-  }
-}, 8000);
-
-auth.onAuthStateChanged(user => {
-  clearTimeout(_authTimeout);
-  if (user) {
-    curUser = user;
-    initAfterLogin();
-  } else {
-    curUser = null;
-    showAuthScreen(true);
-    hideLoading();
-  }
-});
-
-function initAfterLogin() {
-  showAuthScreen(false);
-  showLoading('載入資料中…');
-  // Determine role
-  const now = new Date();
-  curYear = now.getFullYear();
-  curMonth = now.getMonth();
-  curWeekStart = getWeekStart(now);
-  if (curUser.email === PERMANENT_ADMIN) {
-    curRole = 'admin';
-    updateRoleBadge();
-    const sbName = document.getElementById('sb-user-name');
-    if (sbName) sbName.textContent = curUser.displayName || curUser.email;
-    startSync();
-  } else {
-    db.ref('userRoles/' + curUser.uid).once('value').then(snap => {
-      const data = snap.val() || {};
-      curRole = data.role || 'staff';
-      updateRoleBadge();
-      const sbName = document.getElementById('sb-user-name');
-      if (sbName) sbName.textContent = curUser.displayName || curUser.email;
-      startSync();
-    }).catch(err => {
-      console.error('Role fetch error:', err);
-      curRole = 'staff';
-      updateRoleBadge();
-      startSync();
-    });
-  }
-}
-
-function updateRoleBadge() {
-  const el = document.getElementById('hdr-role-badge');
-  const labels = {admin:'管理員',supervisor:'主任',staff:''};
-  if (curRole !== 'staff') {
-    el.innerHTML = `<span class="hdr-role-badge">${labels[curRole]}</span>`;
-  } else el.innerHTML = '';
-}
-
-// ── Firebase Sync ─────────────────────────────────
-function startSync() {
-  if (syncListener) return;
-  const dbRef = db.ref('schedule');
-  const empRef = db.ref('employees');
-  const policyRef = db.ref('policy');
-  const leaveRef = db.ref('leaveLog');
-  const ordersRef = db.ref('monthOrders');
-
-  // Listen to employees
-  empRef.on('value', snap => {
-    const data = snap.val();
-    if (data) {
-      S.employees = Object.values(data).map(e => ({...e, id: Math.floor(Number(e.id))}));
-      S.employees.sort((a,b) => (a.sortOrder||999) - (b.sortOrder||999));
-    }
-    renderAll();
-  });
-
-  // Listen to schedule
-  syncListener = dbRef.on('value', snap => {
-    S.schedule = snap.val() || {};
-    renderAll();
-    hideLoading();
-  });
-
-  // Policy
-  policyRef.on('value', snap => {
-    const d = snap.val();
-    if (d) {
-      S.policy = {...S.policy, ...d};
-      // 確保 am/pm limit 有預設值
-      if (!S.policy.leave_limit_day) S.policy.leave_limit_day = {...(S.policy.leave_limit||{})};
-      if (!S.policy.leave_limit_am) S.policy.leave_limit_am = {...(S.policy.leave_limit||{})};
-      if (!S.policy.leave_limit_pm) S.policy.leave_limit_pm = {...(S.policy.leave_limit||{})};
-    }
-  });
-
-  // LeaveLog
-  leaveRef.on('value', snap => {
-    S.leaveLog = snap.val() || [];
-  });
-
-  // MonthOrders
-  ordersRef.on('value', snap => {
-    S.monthOrders = snap.val() || {};
-  });
-
-  // Notes
-  loadNotes();
-}
-
-function stopSync() {
-  if (syncListener) {
-    db.ref('schedule').off('value', syncListener);
-    db.ref('employees').off();
-    syncListener = null;
-  }
-}
-
-function loadNotes() {
-  const mk = monthKey(curYear, curMonth);
-  db.ref('notes/' + mk).once('value').then(snap => {
-    const t = document.getElementById('month-notes');
-    if (t) t.value = snap.val() || '';
-  });
-}
-
-function pushToFirebase(data) {
-  const empObj = {};
-  (data.employees || S.employees).forEach(e => {
-    const id = String(Math.floor(Number(e.id)));
-    empObj[id] = {...e, id: Math.floor(Number(e.id))};
-  });
-  const sched = data.schedule || S.schedule;
-
-  // 先確認 Firebase 連線正常
-  if (!db) {
-    return Promise.reject(new Error('Firebase 未初始化'));
-  }
-  if (!curUser) {
-    return Promise.reject(new Error('尚未登入，請重新整理後再試'));
-  }
-
-  return Promise.all([
-    db.ref('employees').set(empObj).catch(e => {
-      throw new Error('員工資料寫入失敗：' + (e.code || e.message));
-    }),
-    db.ref('schedule').set(sched).catch(e => {
-      throw new Error('班表資料寫入失敗：' + (e.code || e.message));
-    })
-  ]);
-}
-
-// ── Auth Functions ────────────────────────────────
-function showAuthScreen(v) {
-  document.getElementById('auth-screen').style.display = v ? 'flex' : 'none';
-}
-function showRegister() {
-  document.getElementById('auth-login-form').style.display = 'none';
-  document.getElementById('auth-register-form').style.display = 'block';
-}
-function showLogin() {
-  document.getElementById('auth-login-form').style.display = 'block';
-  document.getElementById('auth-register-form').style.display = 'none';
-}
-function setAuthErr(id, msg) { document.getElementById(id).textContent = msg; }
-
-function doLogin() {
-  const em = document.getElementById('auth-email').value.trim();
-  const pw = document.getElementById('auth-password').value;
-  setAuthErr('auth-err','');
-  if (!em || !pw) { setAuthErr('auth-err','請填寫帳號與密碼'); return; }
-  auth.signInWithEmailAndPassword(em, pw).catch(e => setAuthErr('auth-err', firebaseErrMsg(e)));
-}
-function doGoogleLogin() {
-  const prov = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(prov).catch(e => setAuthErr('auth-err', firebaseErrMsg(e)));
-}
-function doRegister() {
-  const name = document.getElementById('reg-name').value.trim();
-  const em = document.getElementById('reg-email').value.trim();
-  const pw = document.getElementById('reg-password').value;
-  setAuthErr('reg-err','');
-  if (!name || !em || !pw) { setAuthErr('reg-err','請填寫完整'); return; }
-  if (pw.length < 6) { setAuthErr('reg-err','密碼至少6個字元'); return; }
-  auth.createUserWithEmailAndPassword(em, pw).then(cred => {
-    return cred.user.updateProfile({displayName: name});
-  }).catch(e => setAuthErr('reg-err', firebaseErrMsg(e)));
-}
-function doLogout() {
-  stopSync();
-  auth.signOut();
-}
-function firebaseErrMsg(e) {
-  const map = {
-    'auth/invalid-email':'電子郵件格式錯誤',
-    'auth/user-not-found':'找不到此帳號',
-    'auth/wrong-password':'密碼錯誤',
-    'auth/email-already-in-use':'此電子郵件已被使用',
-    'auth/invalid-credential':'帳號或密碼錯誤'
-  };
-  return map[e.code] || e.message;
-}
-
-// ── Month Nav ─────────────────────────────────────
-function changeMonth(delta) {
-  curMonth += delta;
-  if (curMonth > 11) { curMonth = 0; curYear++; }
-  if (curMonth < 0)  { curMonth = 11; curYear--; }
-  loadNotes();
-  renderAll();
-}
-function changeWeek(delta) {
-  curWeekStart = new Date(curWeekStart);
-  curWeekStart.setDate(curWeekStart.getDate() + delta * 7);
-  renderWeekView();
-}
-function getWeekStart(d) {
-  const dt = new Date(d);
-  const day = dt.getDay();
-  dt.setDate(dt.getDate() - day);
-  dt.setHours(0,0,0,0);
-  return dt;
-}
-
-// ── Render All ────────────────────────────────────
-function renderAll() {
-  updateMonthLabel();
-  renderMonthView();
-  renderWeekView();
-  renderMyView();
-  renderStatsView();
-  renderSettingsView();
-}
-
-function updateMonthLabel() {
-  const lbl = `${curYear} 年 ${curMonth+1} 月`;
-  const el1 = document.getElementById('hdr-month');
-  const el2 = document.getElementById('month-view-title');
-  const el3 = document.getElementById('sb-month-val');
-  if (el1) el1.textContent = lbl;
-  if (el2) el2.textContent = lbl;
-  if (el3) el3.textContent = `${curYear}/${String(curMonth+1).padStart(2,'0')}`;
-}
-
-// ── Month View ────────────────────────────────────
-function renderMonthView() {
-  const grid = document.getElementById('month-grid');
-  if (!grid) return;
-
-  const days = daysInMonth(curYear, curMonth);
-  const dates = Array.from({length:days}, (_,i) => new Date(curYear, curMonth, i+1));
-  const mk = monthKey(curYear, curMonth);
-  const today = new Date(); today.setHours(0,0,0,0);
-
-  const emps = [...S.employees].sort((a,b) => {
-    const ao = a.monthSortOrder?.[mk] ?? a.sortOrder ?? 999;
-    const bo = b.monthSortOrder?.[mk] ?? b.sortOrder ?? 999;
-    return ao - bo;
-  });
-
-  grid.style.gridTemplateColumns = `90px repeat(${days}, minmax(34px,1fr))`;
-
-  let html = '';
-
-  // ── 標題列 ──
-  html += `<div class="grid-head-cell name-col">姓名</div>`;
-  dates.forEach(d => {
-    const wd = d.getDay();
-    const isTod = d.getTime() === today.getTime();
-    const cls = ['grid-head-cell',
-      wd===0?'sun':(wd===6?'sat':''),
-      S.holidays?.[fmtDate(d)]?'holiday':'',
-      isTod?'today':''
-    ].filter(Boolean).join(' ');
-    html += `<div class="${cls}"><div>${d.getDate()}</div><div style="font-size:14px">${WEEKDAYS[wd]}</div></div>`;
-  });
-
-  // ── 員工列（完美還原 Excel 雙列表現方式） ──
-  emps.forEach(emp => {
-    const eid = String(Math.floor(Number(emp.id)));
-    const dotCls = `emp-color-${emp.colorIdx||0}`;
-
-    // 姓名格（設定 grid-row: span 2 讓它跨越兩列高度）
-    html += `<div class="name-cell" style="grid-row: span 2;" onclick="handleNameClick('${eid}')">
-      <span class="emp-dot ${dotCls}"></span>
-      <span class="emp-name">${escHtml(emp.name)}</span>
-      <span class="emp-type" style="font-size:10px">${escHtml(emp.type||'')}</span>
-    </div>`;
-
-    let amHtml = '';
-    let pmHtml = '';
-
-    dates.forEach(d => {
-      const dk = fmtDate(d);
-      const wd = d.getDay();
-      const isTod = d.getTime() === today.getTime();
-      const keyAM   = eid+'_'+dk+'_AM';
-      const keyPM   = eid+'_'+dk+'_PM';
-      const keyFull = eid+'_'+dk;
-      const keyOld  = String(emp.id)+'_'+dk;
-
-      let shiftAM = S.schedule[keyAM];
-      let shiftPM = S.schedule[keyPM];
-      const shiftFull = S.schedule[keyFull] || S.schedule[keyOld] || '';
-
-      // 處理全天班別的對應邏輯（若只有整天班，預設放入 AM 列）
-      if (shiftAM === undefined) {
-         if (shiftFull === '上') shiftAM = '上';
-         else if (shiftFull === '下') shiftAM = '';
-         else shiftAM = shiftFull;
-      }
-      if (shiftPM === undefined) {
-         if (shiftFull === '下') shiftPM = '下';
-         else shiftPM = '';
-      }
-      shiftAM = (shiftAM || '').trim();
-      shiftPM = (shiftPM || '').trim();
-
-      let cls = 'grid-cell';
-      if (wd===6) cls += ' sat-col';
-      if (wd===0||S.holidays?.[dk]) cls += ' sun-col holiday-col';
-      if (isTod) cls += ' today-col';
-      if (swapMode?.src?.empId===eid&&swapMode?.src?.date===dk) cls += ' swap-src';
-      if (swapMode?.tgt?.empId===eid&&swapMode?.tgt?.date===dk) cls += ' swap-tgt';
-
-      // 動態產生徽章（若遇到「正常班」等非標準字串，仍會渲染出灰色小徽章，不會變空白）
-      const renderBadge = (s) => {
-        if (!s) return '';
-        if (['日','小','大','休','上','下'].includes(s)) return `<span class="shift-badge shift-${s}">${s}</span>`;
-        return `<span class="shift-badge" style="background:var(--card-hover);color:var(--text-dim);border:1px solid var(--border-light);padding:0 3px;font-size:10px;width:auto;min-width:24px">${escHtml(s)}</span>`;
-      };
-
-      // 上午列 (上半格，以虛線與下半格區分)
-      amHtml += `<div class="${cls}" style="border-bottom:1px dashed var(--border-light); display:flex; align-items:center; justify-content:center; min-height:22px" onclick="event.stopPropagation();handleCellClick('${eid}','${dk}','AM')">${renderBadge(shiftAM)}</div>`;
-      // 下午列 (下半格)
-      pmHtml += `<div class="${cls}" style="display:flex; align-items:center; justify-content:center; min-height:22px" onclick="event.stopPropagation();handleCellClick('${eid}','${dk}','PM')">${renderBadge(shiftPM)}</div>`;
-    });
-
-    // 依照 Grid 自動排列特性，先推入 AM 再推入 PM
-    html += amHtml + pmHtml;
-  });
-
-  // ── 休假計數列 ──
-  html += `<div class="leave-cell leave-name-cell">
-    <div class="leave-name-half">休</div>
-    <div class="leave-name-half">上午</div>
-    <div class="leave-name-half">下午</div>
-  </div>`;
-  dates.forEach(d => {
-    const dk = fmtDate(d);
-    const wd = d.getDay();
-    const limitDay = S.policy?.leave_limit_day?.[wd] ?? S.policy?.leave_limit?.[wd] ?? 2;
-    const limitAM  = S.policy?.leave_limit_am?.[wd]  ?? S.policy?.leave_limit?.[wd] ?? 2;
-    const limitPM  = S.policy?.leave_limit_pm?.[wd]  ?? S.policy?.leave_limit?.[wd] ?? 2;
-    const countDay = emps.filter(e => {
-      const eid = String(Math.floor(Number(e.id)));
-      const full = S.schedule[eid+'_'+dk]||S.schedule[e.id+'_'+dk]||'';
-      const am   = S.schedule[eid+'_'+dk+'_AM']||'';
-      const pm   = S.schedule[eid+'_'+dk+'_PM']||'';
-      return full==='休'||(am==='休'&&pm==='休')||(am==='休'&&!pm);
-    }).length;
-    const countAM = emps.filter(e => {
-      const eid = String(Math.floor(Number(e.id)));
-      const full = S.schedule[eid+'_'+dk]||S.schedule[e.id+'_'+dk]||'';
-      const am   = S.schedule[eid+'_'+dk+'_AM']||'';
-      return am==='休'||am==='上'||full==='上'||full==='休';
-    }).length;
-    const countPM = emps.filter(e => {
-      const eid = String(Math.floor(Number(e.id)));
-      const full = S.schedule[eid+'_'+dk]||S.schedule[e.id+'_'+dk]||'';
-      const pm   = S.schedule[eid+'_'+dk+'_PM']||'';
-      return pm==='休'||pm==='下'||full==='下'||full==='休';
-    }).length;
-    const dc = 'leave-count'+(countDay>=limitDay?' over':countDay>=limitDay-1?' near':' ok');
-    const ac = 'leave-count'+(countAM>=limitAM?' over':countAM>=limitAM-1?' near':' ok');
-    const pc = 'leave-count'+(countPM>=limitPM?' over':countPM>=limitPM-1?' near':' ok');
-    html += `<div class="leave-cell">
-      <div class="leave-cell-half"><span class="${dc}">${countDay}</span></div>
-      <div class="leave-cell-half"><span class="${ac}">${countAM}</span></div>
-      <div class="leave-cell-half"><span class="${pc}">${countPM}</span></div>
-    </div>`;
-  });
-
-  grid.innerHTML = html;
-}
-
-// ── Cell / Name Click ─────────────────────────────
-function handleCellClick(empId, date, period) {
-  // period: 'AM' | 'PM' | undefined（舊版相容）
-  if (swapMode) {
-    handleSwapCellClick(empId, date);
-    return;
-  }
-  openShiftModal(empId, date, period);
-}
-function handleNameClick(empId) {
-  if (swapMode && swapMode.type === 'name') {
-    handleSwapNameClick(empId);
-    return;
-  }
-  if (swapMode && swapMode.type === 'cell') {
-    // Cancel and open month swap mode
-  }
-  // Admin: open employee detail
-  if (canEdit()) openEmpDetailModal(empId);
-}
-
-// ── Shift Modal ───────────────────────────────────
-function openShiftModal(empId, date, period) {
-  if (!canEditCell(empId, date)) return;
-  const emp = S.employees.find(e => String(Math.floor(Number(e.id))) === String(empId));
-  if (!emp) return;
-
-  const d = new Date(date + 'T00:00:00');
-  const dk = fmtDate(d);
-  const eid = String(empId);
-  const wd = d.getDay();
-
-  // 月曆格點擊不傳 period → 不分上下午，整天 key
-  // 六個選項：休假/上午休/下午休/日班/小夜/大夜
-  const schedKey = eid + '_' + dk; // 月曆統一用整天 key
-  const existingShift = S.schedule[schedKey] || S.schedule[String(emp.id)+'_'+dk] || '';
-
-  pendingShiftEdit = { empId: eid, date: dk, period: null, schedKey, oldShift: existingShift };
-
-  document.getElementById('shift-modal-title').textContent = `${emp.name}　${curYear}/${curMonth+1}/${d.getDate()}`;
-
-  // 休假計數資訊
-  const limitDay2 = S.policy?.leave_limit_day?.[wd] ?? 2;
-  const limitAM2  = S.policy?.leave_limit_am?.[wd]  ?? 2;
-  const limitPM2  = S.policy?.leave_limit_pm?.[wd]  ?? 2;
-  const countDay2 = S.employees.filter(e => {
-    const ei = String(Math.floor(Number(e.id)));
-    return (S.schedule[ei+'_'+dk]||'') === '休';
-  }).length;
-  const countAM2 = S.employees.filter(e => {
-    const ei = String(Math.floor(Number(e.id)));
-    return (S.schedule[ei+'_'+dk]||'') === '上' || (S.schedule[ei+'_'+dk+'_AM']||'') === '上';
-  }).length;
-  const countPM2 = S.employees.filter(e => {
-    const ei = String(Math.floor(Number(e.id)));
-    return (S.schedule[ei+'_'+dk]||'') === '下' || (S.schedule[ei+'_'+dk+'_PM']||'') === '下';
-  }).length;
-
-  const infoEl = document.getElementById('shift-modal-leave-info');
-  infoEl.innerHTML = `全天休 <b style="color:${countDay2>=limitDay2?'var(--red)':'var(--teal)'}">${countDay2}/${limitDay2}</b>　上午休 <b style="color:${countAM2>=limitAM2?'var(--red)':'var(--teal)'}">${countAM2}/${limitAM2}</b>　下午休 <b style="color:${countPM2>=limitPM2?'var(--red)':'var(--teal)'}">${countPM2}/${limitPM2}</b>`;
-
-  // 班別按鈕（依需求：休假/上午休/下午休/日班/小夜/大夜）
-  const showShifts = ['休','上','下','日','小','大'];
-  const gridEl = document.getElementById('shift-modal-grid');
-  gridEl.innerHTML = showShifts.map(s =>
-    `<button class="shift-btn shift-btn-${s}${existingShift===s?' selected':''}" onclick="selectShift('${s}')">${s}<br><span style="font-size:.6rem;font-weight:400">${SHIFT_LABELS[s]}</span></button>`
-  ).join('') + `<button class="shift-btn" style="background:var(--border);color:var(--text-muted);grid-column:span 2" onclick="clearShift()">✕ 清除</button>`;
-
-  openModal('shift-modal');
-}
-
-function selectShift(s) {
-  document.querySelectorAll('.shift-btn').forEach(b => b.classList.remove('selected'));
-  const btn = document.querySelector(`.shift-btn-${s}`);
-  if (btn) btn.classList.add('selected');
-  pendingShiftEdit.newShift = s;
-}
-
-function clearShift() {
-  if (!pendingShiftEdit) return;
-  const { schedKey } = pendingShiftEdit;
-  if (!canEditByDeadline(pendingShiftEdit.date) && curRole === 'staff') {
-    toast('已超過修改截止日','error'); return;
-  }
-  db.ref('schedule/' + schedKey).remove().then(() => {
-    delete S.schedule[schedKey];
-    toast('已清除','success');
-    renderMonthView();
-    closeModal('shift-modal');
-  });
-}
-
-function confirmShiftEdit() {
-  if (!pendingShiftEdit) return;
-  const { empId, date, period, schedKey, oldShift, newShift } = pendingShiftEdit;
-  if (!newShift) { toast('請選擇班別','error'); return; }
-
-  // Check deadline
-  if (!canEditByDeadline(date) && curRole === 'staff') {
-    pendingRequestData = { empId, date, period, schedKey, oldShift, newShift };
-    closeModal('shift-modal');
-    openModal('request-modal');
-    return;
-  }
-
-  // 若是整天班別（日/小/大/休）寫入無 period 的 key，並清除 AM/PM key
-  const isHalfShift = newShift === '上' || newShift === '下';
-  const writeKey = schedKey; // 已由 openShiftModal 設好（含 _AM/_PM 或無）
-
-  const updates = {};
-  updates[writeKey] = newShift;
-
-  // 若整天班別（日小大休），清除對應的 AM/PM 分割 key 避免衝突
-  if (!isHalfShift && !period) {
-    updates[empId + '_' + date + '_AM'] = null;
-    updates[empId + '_' + date + '_PM'] = null;
-  }
-  // 若在半格填了整天班，也清除另一半和整天 key
-  if (!isHalfShift && period) {
-    const other = period === 'AM' ? 'PM' : 'AM';
-    updates[empId + '_' + date + '_' + other] = null;
-    updates[empId + '_' + date] = null;
-  }
-
-  db.ref('schedule').update(updates).then(() => {
-    Object.entries(updates).forEach(([k,v]) => {
-      if (v === null) delete S.schedule[k];
-      else S.schedule[k] = v;
-    });
-    toast('已儲存','success');
-    renderMonthView();
-    closeModal('shift-modal');
-  });
-}
-
-function canEditCell(empId, date) {
-  if (!curUser) return false;
-  if (curRole === 'admin') return true;
-  // Supervisor can edit anyone
-  if (curRole === 'supervisor') return true;
-  // Staff can only edit themselves
-  const myEmpIds = getMyEmpIds();
-  return myEmpIds.includes(String(empId));
-}
-function canEdit() { return curRole === 'admin' || curRole === 'supervisor'; }
-function canEditByDeadline(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00');
-  const now = new Date();
-  const deadline = S.policy?.modify_deadline ?? 5;
-  // Can edit current and next month any time, previous months only until deadline of current month
-  if (d.getFullYear() > now.getFullYear()) return true;
-  if (d.getFullYear() === now.getFullYear() && d.getMonth() >= now.getMonth()) return true;
-  // Previous month: allowed until `deadline` of current month
-  return now.getDate() <= deadline;
-}
-function getMyEmpIds() {
-  if (!curUser) return [];
-  const matched = S.employees.filter(e =>
-    e.name === curUser.displayName || e.email === curUser.email
-  );
-  return matched.map(e => String(Math.floor(Number(e.id))));
-}
-
-// ── Change Request ────────────────────────────────
-function submitChangeRequest() {
-  const reason = document.getElementById('req-reason').value.trim();
-  if (!reason) { toast('請填寫原因','error'); return; }
-  if (!pendingRequestData) return;
-  const {empId, date, period, schedKey, oldShift, newShift} = pendingRequestData;
-  const emp = S.employees.find(e => String(Math.floor(Number(e.id))) === String(empId));
-  db.ref('changeRequests').push({
-    empId, date, period: period||null, schedKey: schedKey||(empId+'_'+date), oldShift, newShift,
-    empName: emp?.name || empId,
-    requesterId: curUser.uid,
-    requesterEmail: curUser.email,
-    reason,
-    status: 'pending',
-    createdAt: Date.now()
-  }).then(() => {
-    toast('申請已送出，待審核','info');
-    closeModal('request-modal');
-    pendingRequestData = null;
-  });
-}
-
-// ── Swap Mode ─────────────────────────────────────
-function toggleSwapMode(type) {
-  if (swapMode) {
-    cancelSwap();
-    return;
-  }
-  swapMode = { type, src: null, tgt: null };
-  document.getElementById('swap-banner').classList.add('active');
-  document.getElementById('swap-banner-text').textContent = type==='cell' ? '點選來源格子' : '點選第一位員工名字';
-  renderMonthView();
-}
-function cancelSwap() {
-  swapMode = null;
-  document.getElementById('swap-banner').classList.remove('active');
-  renderMonthView();
-}
-function handleSwapCellClick(empId, date) {
-  if (!swapMode.src) {
-    swapMode.src = {empId, date};
-    document.getElementById('swap-banner-text').textContent = '再點選目標格子';
-  } else if (!swapMode.tgt) {
-    swapMode.tgt = {empId, date};
-    confirmSwapCells();
-  }
-  renderMonthView();
-}
-function confirmSwapCells() {
-  const {src, tgt} = swapMode;
-  if (!src || !tgt) return;
-  const k1 = src.empId + '_' + src.date;
-  const k2 = tgt.empId + '_' + tgt.date;
-  const v1 = S.schedule[k1] || '';
-  const v2 = S.schedule[k2] || '';
-  // Confirm
-  if (!confirm(`確認互換？\n${getEmpName(src.empId)} ${src.date}: ${v1||'(空)'}  ↔  ${getEmpName(tgt.empId)} ${tgt.date}: ${v2||'(空)'}`)) {
-    cancelSwap(); return;
-  }
-  const updates = {};
-  // 互換：若值為空字串則用 null 刪除 key（Firebase 不允許存空字串）
-  updates[k1] = v2 || null;
-  updates[k2] = v1 || null;
-  // 同時互換 _AM/_PM key（若有）
-  const k1AM = src.empId+'_'+src.date+'_AM', k1PM = src.empId+'_'+src.date+'_PM';
-  const k2AM = tgt.empId+'_'+tgt.date+'_AM', k2PM = tgt.empId+'_'+tgt.date+'_PM';
-  const v1AM = S.schedule[k1AM]||null, v1PM = S.schedule[k1PM]||null;
-  const v2AM = S.schedule[k2AM]||null, v2PM = S.schedule[k2PM]||null;
-  updates[k1AM] = v2AM; updates[k1PM] = v2PM;
-  updates[k2AM] = v1AM; updates[k2PM] = v1PM;
-
-  db.ref('schedule').update(updates).then(() => {
-    // 更新本地 S.schedule
-    Object.entries(updates).forEach(([k,v]) => {
-      if (v === null) delete S.schedule[k];
-      else S.schedule[k] = v;
-    });
-    db.ref('leaveLog').push({type:'swap', empId1:src.empId, date1:src.date, empId2:tgt.empId, date2:tgt.date, at:Date.now()});
-    toast('已互換','success');
-    cancelSwap();
-  }).catch(err => {
-    toast('互換失敗：' + (err.message||err), 'error');
-    cancelSwap();
-  });
-}
-function handleSwapNameClick(empId) {
-  if (!swapMode.src) {
-    swapMode.src = {empId};
-    document.getElementById('swap-banner-text').textContent = `已選 ${getEmpName(empId)}，再點選第二位員工`;
-  } else if (!swapMode.tgt) {
-    swapMode.tgt = {empId};
-    openMonthSwapModal();
-  }
-}
-function openMonthSwapModal() {
-  const {src, tgt} = swapMode;
-  const body = document.getElementById('swap-month-body');
-  body.innerHTML = `<p style="font-size:.82rem;color:var(--text-muted);margin-bottom:12px">
-    確認要將 <strong style="color:var(--teal-light)">${getEmpName(src.empId)}</strong> 與 
-    <strong style="color:var(--gold)">${getEmpName(tgt.empId)}</strong> 在 ${curYear}年${curMonth+1}月 的班表全部互換？
-  </p>`;
-  document.getElementById('swap-month-confirm-btn').style.display = 'inline-block';
-  closeModal('swap-banner');
-  openModal('swap-month-modal');
-}
-function confirmMonthSwap() {
-  const {src, tgt} = swapMode;
-  const days = daysInMonth(curYear, curMonth);
-  const updates = {};
-  for (let i = 1; i <= days; i++) {
-    const d = fmtDate(new Date(curYear, curMonth, i));
-    const k1 = src.empId + '_' + d;
-    const k2 = tgt.empId + '_' + d;
-    const v1 = S.schedule[k1] || '';
-    const v2 = S.schedule[k2] || '';
-    updates[k1] = v2;
-    updates[k2] = v1;
-  }
-  db.ref('schedule').update(updates).then(() => {
-    Object.entries(updates).forEach(([k,v]) => { S.schedule[k] = v; });
-    db.ref('leaveLog').push({type:'month-swap',empId1:src.empId,empId2:tgt.empId,month:monthKey(curYear,curMonth),at:Date.now()});
-    toast('整月班表已互換','success');
-    closeModal('swap-month-modal');
-    cancelSwap();
-  });
-}
-function getEmpName(empId) {
-  const e = S.employees.find(e => String(Math.floor(Number(e.id))) === String(empId));
-  return e ? e.name : empId;
-}
-
-// ── Week View ─────────────────────────────────────
-function renderWeekView() {
-  const tbl = document.getElementById('week-table');
-  if (!tbl) return;
-  const ws = curWeekStart || getWeekStart(new Date());
-  const dates = Array.from({length:7}, (_,i) => {
-    const d = new Date(ws);
-    d.setDate(d.getDate() + i);
-    return d;
-  });
-  const title = document.getElementById('week-title');
-  if (title) title.textContent = `${fmtDate(dates[0])} ~ ${fmtDate(dates[6])}`;
-
-  const today = new Date(); today.setHours(0,0,0,0);
-  let html = '<thead><tr><th style="min-width:60px">姓名</th>';
-  dates.forEach(d => {
-    const wd = d.getDay();
-    const isTod = d.getTime() === today.getTime();
-    const cls = isTod ? 'today-col' : '';
-    html += `<th class="${cls}">${d.getDate()}<br><span style="font-size:.6rem">${WEEKDAYS[wd]}</span></th>`;
-  });
-  html += '</tr></thead><tbody>';
-
-  const mk = monthKey(curYear, curMonth);
-  const emps = [...S.employees].sort((a,b) => {
-    const ao = a.monthSortOrder?.[mk] ?? a.sortOrder ?? 999;
-    const bo = b.monthSortOrder?.[mk] ?? b.sortOrder ?? 999;
-    return ao - bo;
-  });
-  emps.forEach(emp => {
-    const eid = String(Math.floor(Number(emp.id)));
-    html += `<tr><td class="name-td">${escHtml(emp.name)}</td>`;
-    dates.forEach(d => {
-      const dk = fmtDate(d);
-      const shiftFull = S.schedule[eid+'_'+dk] || S.schedule[emp.id+'_'+dk] || '';
-      const shiftAM = S.schedule[eid+'_'+dk+'_AM'] || (shiftFull && shiftFull!=='下' ? shiftFull : '');
-      const shiftPM = S.schedule[eid+'_'+dk+'_PM'] || (shiftFull && shiftFull!=='上' ? shiftFull : '');
-      const isTod = d.getTime() === today.getTime();
-      const cls = isTod ? 'today-col' : '';
-      const badgeAM = shiftAM ? `<span class="shift-badge shift-${shiftAM}" style="display:block;margin:1px auto">${shiftAM}</span>` : '';
-      const badgePM = shiftPM && shiftPM !== shiftAM ? `<span class="shift-badge shift-${shiftPM}" style="display:block;margin:1px auto">${shiftPM}</span>` : '';
-      html += `<td class="${cls}" style="padding:2px">${badgeAM}${badgePM}</td>`;
-    });
-    html += '</tr>';
-  });
-  html += '</tbody>';
-  tbl.innerHTML = html;
-}
-
-// ── My Schedule View ──────────────────────────────
-function renderMyView() {
-  const sel  = document.getElementById('my-emp-select');
-  const list = document.getElementById('my-schedule-list');
-  if (!sel || !list) return;
-
-  // 建立員工選項
-  const myIds = getMyEmpIds();
-  const sortedEmps = [...S.employees].sort((a,b) => (a.sortOrder||999)-(b.sortOrder||999));
-  sel.innerHTML = sortedEmps.map(e => {
-    const eid = String(Math.floor(Number(e.id)));
-    return `<option value="${eid}"${myIds.includes(eid)?' selected':''}>${escHtml(e.name)} (${escHtml(e.type||'')})</option>`;
-  }).join('');
-
-  const selectedId = sel.value;
-  if (!selectedId) { list.innerHTML = '<p style="color:var(--text-muted);font-size:14px">尚無員工</p>'; return; }
-
-  const today = new Date(); today.setHours(0,0,0,0);
-  const WD_HDR = ['一','二','三','四','五','六','日'];
-  // 月曆週一起始
-  const firstDay = new Date(curYear, curMonth, 1);
-  const startWd  = (firstDay.getDay() + 6) % 7; // 0=Mon
-  const days     = daysInMonth(curYear, curMonth);
-  const total    = Math.ceil((startWd + days) / 7) * 7;
-
-  let html = `<div style="font-size:14px;color:var(--text-muted);margin-bottom:8px">${curYear} 年 ${curMonth+1} 月</div>`;
-  html += `<div class="my-cal-wrap"><table class="my-cal-table"><thead><tr>`;
-  WD_HDR.forEach((w,i) => {
-    const cls = i===5?'sat':i===6?'sun':'';
-    html += `<th class="my-wk-hdr ${cls}">${w}</th>`;
-  });
-  html += `</tr></thead><tbody>`;
-
-  for (let cell=0; cell<total; cell++) {
-    if (cell%7===0) html += '<tr>';
-    const dayNum = cell - startWd + 1;
-    const valid  = dayNum>=1 && dayNum<=days;
-    if (!valid) {
-      html += `<td class="my-cal-cell other-month"></td>`;
-    } else {
-      const d   = new Date(curYear, curMonth, dayNum);
-      const dk  = fmtDate(d);
-      const col = cell % 7; // 0=Mon,5=Sat,6=Sun
-      const isSat     = col === 5;
-      const isSun     = col === 6;
-      const isHoliday = !!S.holidays?.[dk];
-      const isToday   = d.getTime() === today.getTime();
-
-      // 取班別
-      const shiftFull = S.schedule[selectedId+'_'+dk] || '';
-      const shiftAM   = S.schedule[selectedId+'_'+dk+'_AM'] || '';
-      const shiftPM   = S.schedule[selectedId+'_'+dk+'_PM'] || '';
-      const dispAM = shiftAM || (shiftFull && shiftFull!=='下' ? shiftFull : '');
-      const dispPM = shiftPM || (shiftFull==='下' ? '下' : '');
-
-      let cls = 'my-cal-cell';
-      if (isToday)   cls += ' is-today';
-      if (isSat)     cls += ' is-sat';
-      if (isSun||isHoliday) cls += ' is-sun';
-
-      const badgeAM = dispAM ? `<div class="my-cal-badge shift-${dispAM}">${SHIFT_LABELS[dispAM]||dispAM}</div>` : '';
-      const badgePM = dispPM && dispPM!==dispAM ? `<div class="my-cal-badge shift-${dispPM}">${SHIFT_LABELS[dispPM]||dispPM}</div>` : '';
-
-      html += `<td class="${cls}" onclick="handleCellClick('${selectedId}','${dk}')">
-        <div class="my-cal-date">${dayNum}</div>
-        <div class="my-cal-shift">${badgeAM}${badgePM}</div>
-      </td>`;
-    }
-    if (cell%7===6) html += '</tr>';
-  }
-  html += '</tbody></table></div>';
-  list.innerHTML = html;
-}
-
-// ── Stats View ────────────────────────────────────
-function renderStatsView() {
-  const content = document.getElementById('stats-content');
-  if (!content) return;
-  const mk = monthKey(curYear, curMonth);
-  const days = daysInMonth(curYear, curMonth);
-  const emps = [...S.employees].sort((a,b) => {
-    const ao = a.monthSortOrder?.[mk] ?? a.sortOrder ?? 999;
-    const bo = b.monthSortOrder?.[mk] ?? b.sortOrder ?? 999;
-    return ao - bo;
-  });
-
-  // Calculate per-employee counts
-  const stats = emps.map(emp => {
-    const eid = String(Math.floor(Number(emp.id)));
-    const counts = {日:0,小:0,大:0,休:0,上:0,下:0};
-    for (let i=1;i<=days;i++) {
-      const dk = fmtDate(new Date(curYear,curMonth,i));
-      // 整天 key
-      const sf = S.schedule[eid+'_'+dk] || S.schedule[emp.id+'_'+dk] || '';
-      if (sf && counts[sf]!==undefined) counts[sf]++;
-      // 上午/下午 key（獨立計數）
-      const am = S.schedule[eid+'_'+dk+'_AM'] || '';
-      const pm = S.schedule[eid+'_'+dk+'_PM'] || '';
-      if (am && counts[am]!==undefined) counts[am]++;
-      if (pm && counts[pm]!==undefined) counts[pm]++;
-    }
-    const workDays = counts['日'] + counts['小'] + counts['大'];
-    return { emp, eid, counts, workDays };
-  });
-
-  const maxWork = Math.max(...stats.map(s => s.workDays), 1);
-
-  let html = `<div class="stats-section"><h3>${curYear} 年 ${curMonth+1} 月 班次統計</h3>`;
-  stats.forEach(({emp, counts, workDays}) => {
-    const pct = Math.round(workDays / maxWork * 100);
-    const dotCls = `emp-color-${emp.colorIdx||0}`;
-    html += `<div class="stat-row">
-      <div class="stat-name" style="display:flex;align-items:center;gap:6px">
-        <span class="emp-dot ${dotCls}" style="width:8px;height:8px;border-radius:50%;display:inline-block"></span>
-        ${escHtml(emp.name)}
-      </div>
-      <div style="flex:2;display:flex;flex-wrap:wrap;gap:3px;align-items:center">
-        ${SHIFTS.map(s => counts[s]>0 ? `<span class="shift-badge shift-${s}" style="font-size:.6rem;padding:2px 5px;height:auto;width:auto">${s}:${counts[s]}</span>` : '').join('')}
-      </div>
-      <div class="stat-val">${workDays}天</div>
-    </div>`;
-  });
-  html += '</div>';
-
-  // Shift distribution summary
-  const totals = {日:0,小:0,大:0,休:0,上:0,下:0};
-  Object.values(S.schedule).forEach(v => { if (totals[v]!==undefined) totals[v]++; });
-  html += `<div class="stats-section"><h3>班別分佈</h3>`;
-  SHIFTS.forEach(s => {
-    html += `<div class="stat-row">
-      <div class="stat-name"><span class="shift-badge shift-${s}" style="font-size:.68rem;margin-right:4px">${s}</span>${SHIFT_LABELS[s]}</div>
-      <div class="stat-bar-wrap"><div class="stat-bar shift-${s}" style="width:${Math.round((totals[s]||0)/Math.max(1,...Object.values(totals))*100)}%"></div></div>
-      <div class="stat-val">${totals[s]||0}</div>
-    </div>`;
-  });
-  html += '</div>';
-
-  content.innerHTML = html;
-}
-
-// ── Settings View ─────────────────────────────────
-function renderSettingsView() {
-  const content = document.getElementById('settings-content');
-  if (!content) return;
-
-  const empName = curUser?.displayName || curUser?.email || '—';
-  const roleLabel = {admin:'管理員',supervisor:'主任',staff:'員工'}[curRole] || '員工';
-  const roleCls = 'role-' + curRole;
-
-  let html = `
-  <div class="settings-group">
-    <div class="settings-group-title">帳號資訊</div>
-    <div class="settings-row">
-      <div class="user-info">
-        <div class="user-avatar">${empName[0]||'?'}</div>
-        <div class="user-details">
-          <div class="u-name">${escHtml(empName)}</div>
-          <div class="u-email">${escHtml(curUser?.email||'')}</div>
-          <span class="u-role ${roleCls}">${roleLabel}</span>
-        </div>
-      </div>
-    </div>
-    <div class="settings-row"><label>登出帳號</label><button class="btn-danger btn-sm" onclick="doLogout()">登出</button></div>
-  </div>
-
-  <div class="settings-group">
-    <div class="settings-group-title">班表操作</div>
-    <div class="settings-row"><label>匯入 Excel 班表</label><button class="btn-secondary btn-sm" onclick="openImportModal()">📥 匯入</button></div>
-    <div class="settings-row"><label>員工管理</label><button class="btn-secondary btn-sm" onclick="openEmpModal()">👥 管理員工</button></div>
-    <div class="settings-row"><label>交換班表（格子對格子）</label><button class="btn-secondary btn-sm" onclick="toggleSwapMode('cell');switchTab('month-view')">🔄 開始交換</button></div>
-    <div class="settings-row"><label>整月互換（名字對名字）</label><button class="btn-secondary btn-sm" onclick="toggleSwapMode('name');switchTab('month-view')">🔄 整月互換</button></div>
-  </div>`;
-
-  if (curRole === 'admin' || curRole === 'supervisor') {
-    html += `
-  <div class="settings-group">
-    <div class="settings-group-title">修改申請（待審核）</div>
-    <div id="change-requests-list"><div style="padding:10px 14px;font-size:.78rem;color:var(--text-muted)">載入中…</div></div>
-  </div>`;
-  }
-
-  if (curRole === 'admin') {
-    const wd = ['日','一','二','三','四','五','六'];
-    let leaveLimitHtml = wd.map((d,i) => `
-      <div class="settings-row" style="flex-wrap:wrap;gap:6px;padding:10px 14px">
-        <label style="width:100%;font-size:.78rem;color:var(--text-dim);font-weight:700;margin-bottom:6px">星期${d}</label>
-        <div style="display:flex;gap:8px;flex:1;flex-wrap:wrap">
-          <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:100px">
-            <span style="font-size:.68rem;color:var(--shift-off-text);background:var(--shift-off);padding:1px 6px;border-radius:3px;font-weight:700">全天休</span>
-            <input type="number" min="0" max="20" value="${S.policy?.leave_limit_day?.[i] ?? S.policy?.leave_limit?.[i] ?? 2}" style="width:46px" onchange="updateLeaveLimitDay(${i},this.value)">人
-          </div>
-          <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:100px">
-            <span style="font-size:.68rem;color:var(--shift-am-text);background:var(--shift-am);padding:1px 6px;border-radius:3px;font-weight:700">上午休</span>
-            <input type="number" min="0" max="20" value="${S.policy?.leave_limit_am?.[i] ?? S.policy?.leave_limit?.[i] ?? 2}" style="width:46px" onchange="updateLeaveLimitAM(${i},this.value)">人
-          </div>
-          <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:100px">
-            <span style="font-size:.68rem;color:var(--shift-pm-text);background:var(--shift-pm);padding:1px 6px;border-radius:3px;font-weight:700">下午休</span>
-            <input type="number" min="0" max="20" value="${S.policy?.leave_limit_pm?.[i] ?? S.policy?.leave_limit?.[i] ?? 2}" style="width:46px" onchange="updateLeaveLimitPM(${i},this.value)">人
-          </div>
-        </div>
-      </div>`).join('');
-    html += `
-  <div class="settings-group">
-    <div class="settings-group-title">政策設定（管理員）</div>
-    <div style="padding:8px 14px 4px;font-size:.72rem;color:var(--text-muted)">每日全天休／上午休／下午休 人數上限：</div>
-    ${leaveLimitHtml}
-    <div class="settings-row">
-      <label>修改截止（當月幾號前）</label>
-      <input type="number" min="1" max="28" value="${S.policy?.modify_deadline ?? 5}" style="width:60px" onchange="updateDeadline(this.value)">
-    </div>
-  </div>
-  <div class="settings-group">
-    <div class="settings-group-title">危險操作</div>
-    <div class="settings-row"><label>清除本月班表</label><button class="btn-danger btn-sm" onclick="clearMonthSchedule()">清除</button></div>
-    <div class="settings-row"><label>新增員工</label><button class="btn-secondary btn-sm" onclick="openAddEmpModal()">＋ 新增</button></div>
-  </div>`;
-  }
-
-  html += `
-  <div style="text-align:center;padding:16px;font-size:.68rem;color:var(--text-muted)">
-    花醫班表系統 ${APP_VERSION} · 衛生福利部花蓮醫院 檢驗科
-  </div>`;
-
-  content.innerHTML = html;
-
-  // Load change requests
-  if (curRole === 'admin' || curRole === 'supervisor') {
-    loadChangeRequests();
-  }
-}
-
-function updateLeaveLimit(wd, val) {
-  if (!S.policy.leave_limit) S.policy.leave_limit = {};
-  S.policy.leave_limit[wd] = parseInt(val);
-  db.ref('policy/leave_limit').set(S.policy.leave_limit);
-  renderMonthView();
-}
-function updateLeaveLimitDay(wd, val) {
-  if (!S.policy.leave_limit_day) S.policy.leave_limit_day = {};
-  S.policy.leave_limit_day[wd] = parseInt(val);
-  db.ref('policy/leave_limit_day').set(S.policy.leave_limit_day);
-  renderMonthView();
-}
-function updateLeaveLimitAM(wd, val) {
-  if (!S.policy.leave_limit_am) S.policy.leave_limit_am = {};
-  S.policy.leave_limit_am[wd] = parseInt(val);
-  db.ref('policy/leave_limit_am').set(S.policy.leave_limit_am);
-  renderMonthView();
-}
-function updateLeaveLimitPM(wd, val) {
-  if (!S.policy.leave_limit_pm) S.policy.leave_limit_pm = {};
-  S.policy.leave_limit_pm[wd] = parseInt(val);
-  db.ref('policy/leave_limit_pm').set(S.policy.leave_limit_pm);
-  renderMonthView();
-}
-function updateDeadline(val) {
-  S.policy.modify_deadline = parseInt(val);
-  db.ref('policy/modify_deadline').set(parseInt(val));
-}
-function clearMonthSchedule() {
-  if (!confirm(`確認要清除 ${curYear}年${curMonth+1}月 的所有班表嗎？`)) return;
-  const days = daysInMonth(curYear, curMonth);
-  const toRemove = {};
-  for (let i=1;i<=days;i++) {
-    const dk = fmtDate(new Date(curYear,curMonth,i));
-    S.employees.forEach(e => {
-      const eid = String(Math.floor(Number(e.id)));
-      [eid+'_'+dk, eid+'_'+dk+'_AM', eid+'_'+dk+'_PM'].forEach(key => {
-        if (S.schedule[key] !== undefined) toRemove[key] = null;
-      });
-    });
-  }
-  db.ref('schedule').update(toRemove).then(() => {
-    Object.keys(toRemove).forEach(k => delete S.schedule[k]);
-    toast('已清除','success');
-    renderAll();
-  });
-}
-
-function loadChangeRequests() {
-  const el = document.getElementById('change-requests-list');
-  if (!el) return;
-  db.ref('changeRequests').orderByChild('status').equalTo('pending').once('value').then(snap => {
-    const reqs = snap.val();
-    if (!reqs) { el.innerHTML = '<div style="padding:10px 14px;font-size:.78rem;color:var(--text-muted)">無待審核申請</div>'; return; }
-    let html = '';
-    Object.entries(reqs).forEach(([id, r]) => {
-      html += `<div class="req-card">
-        <div class="req-card-top">
-          <span class="req-name">${escHtml(r.empName||'')} — ${r.date}</span>
-          <span class="req-badge badge-pending">待審核</span>
-        </div>
-        <div class="req-detail">${r.oldShift||'空'} → ${r.newShift||'空'}　原因：${escHtml(r.reason||'')}</div>
-        <div class="req-actions">
-          <button class="btn-primary btn-sm" onclick="approveRequest('${id}',true)">✓ 核准</button>
-          <button class="btn-danger btn-sm" onclick="approveRequest('${id}',false)">✗ 拒絕</button>
-        </div>
-      </div>`;
-    });
-    el.innerHTML = html;
-  });
-}
-
-function approveRequest(id, approve) {
-  db.ref('changeRequests/' + id).once('value').then(snap => {
-    const r = snap.val();
-    if (!r) return;
-    const status = approve ? 'approved' : 'denied';
-    const updates = { status, reviewerId: curUser.uid, reviewedAt: Date.now() };
-    if (approve) {
-      const key = r.schedKey || (r.empId + '_' + r.date);
-      db.ref('schedule/' + key).set(r.newShift);
-      S.schedule[key] = r.newShift;
-    }
-    db.ref('changeRequests/' + id).update(updates).then(() => {
-      toast(approve ? '已核准' : '已拒絕', approve ? 'success' : 'error');
-      renderAll();
-    });
-  });
-}
-
-// ── Employee Modal ────────────────────────────────
-function openEmpModal() {
-  const body = document.getElementById('emp-modal-body');
-  const emps = [...S.employees].sort((a,b) => (a.sortOrder||999)-(b.sortOrder||999));
-  let html = '';
-  if (emps.length === 0) {
-    html = '<p style="color:var(--text-muted);font-size:.82rem">尚無員工，請先匯入班表或新增員工</p>';
-  }
-  emps.forEach(emp => {
-    const eid = String(Math.floor(Number(emp.id)));
-    const dotCls = `emp-color-${emp.colorIdx||0}`;
-    html += `<div class="emp-list-item">
-      <span class="emp-list-dot ${dotCls}"></span>
-      <span class="emp-list-name">${escHtml(emp.name)}</span>
-      <span class="emp-list-type">${escHtml(emp.type||'')}</span>
-      <div class="emp-list-actions">
-        ${canEdit() ? `<button class="btn-secondary btn-sm" onclick="openEditEmpModal('${eid}')">編輯</button>` : ''}
-      </div>
-    </div>`;
-  });
-  if (canEdit()) {
-    html += `<div style="margin-top:12px"><button class="btn-primary" onclick="openAddEmpModal()">＋ 新增員工</button></div>`;
-  }
-  body.innerHTML = html;
-  openModal('emp-modal');
-}
-
-function openEmpDetailModal(empId) {
-  openEmpModal();
-}
-
-function openAddEmpModal() {
-  editingEmpId = null;
-  document.getElementById('emp-edit-title').textContent = '新增員工';
-  document.getElementById('ee-name').value = '';
-  document.getElementById('ee-type').value = '夜班';
-  buildColorGrid(0);
-  openModal('emp-edit-modal');
-}
-function openEditEmpModal(empId) {
-  editingEmpId = empId;
-  const emp = S.employees.find(e => String(Math.floor(Number(e.id))) === String(empId));
-  if (!emp) return;
-  document.getElementById('emp-edit-title').textContent = '編輯員工';
-  document.getElementById('ee-name').value = emp.name || '';
-  document.getElementById('ee-type').value = emp.type || '夜班';
-  buildColorGrid(emp.colorIdx || 0);
-  openModal('emp-edit-modal');
-}
-function buildColorGrid(selected) {
-  const grid = document.getElementById('ee-color-grid');
-  let html = '';
-  for (let i=0;i<EMP_COLORS;i++) {
-    html += `<div onclick="selectEmpColor(${i})" id="color-opt-${i}" style="width:28px;height:28px;border-radius:50%;cursor:pointer;transition:transform .15s;${i===selected?'transform:scale(1.3);outline:3px solid #fff;outline-offset:1px':''}" class="emp-color-${i}"></div>`;
-  }
-  grid.innerHTML = html;
-  grid.dataset.selected = selected;
-}
-function selectEmpColor(idx) {
-  const grid = document.getElementById('ee-color-grid');
-  grid.dataset.selected = idx;
-  for (let i=0;i<EMP_COLORS;i++) {
-    const el = document.getElementById('color-opt-'+i);
-    if (el) el.style.transform = i===idx?'scale(1.3)':'';
-    if (el) el.style.outline = i===idx?'3px solid #fff':'';
-    if (el) el.style.outlineOffset = i===idx?'1px':'';
-  }
-}
-function saveEmployee() {
-  const name = document.getElementById('ee-name').value.trim();
-  const type = document.getElementById('ee-type').value;
-  const colorIdx = parseInt(document.getElementById('ee-color-grid').dataset.selected || '0');
-  if (!name) { toast('請填寫姓名','error'); return; }
-
-  if (editingEmpId) {
-    const emp = S.employees.find(e => String(Math.floor(Number(e.id))) === String(editingEmpId));
-    if (emp) { emp.name = name; emp.type = type; emp.colorIdx = colorIdx; }
-  } else {
-    const newId = Date.now() + Math.floor(Math.random()*1000);
-    S.employees.push({ id: newId, name, type, colorIdx, sortOrder: S.employees.length + 1, monthSortOrder:{} });
-  }
-  pushToFirebase({employees: S.employees, schedule: S.schedule}).then(() => {
-    toast('已儲存','success');
-    closeModal('emp-edit-modal');
-    renderAll();
-  });
-}
-
-// ── Import Excel ──────────────────────────────────
-function downloadTemplate() {
-  const wb = XLSX.utils.book_new();
-  const y = curYear || new Date().getFullYear();
-  const m = curMonth !== undefined ? curMonth : new Date().getMonth();
-  const daysInMo = new Date(y, m+1, 0).getDate();
-  const WD = ['一','二','三','四','五','六','日'];
-
-  // ── 示範員工（每人兩列：上午/下午）──
-  const demoEmps = [
-    {area:'本院',order:1,name:'員工甲',type:'夜班',
-     am:['小','小','休','休','大','大','大','大','大','休','休','休','小','小','小','休','休','大','大','大','大','大','休','休','休','小','小','小','休','休',''],
-     pm:['','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','']},
-    {area:'本院',order:2,name:'員工乙',type:'夜班',
-     am:['大','大','大','休','休','休','小','小','小','小','小','休','休','大','大','大','大','大','休','休','休','小','小','休','休','大','大','大','大','大',''],
-     pm:['','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','']},
-    {area:'本院',order:3,name:'員工丙',type:'正常班',
-     am:['','','','','日','日','日','日','日','','','日','日','日','日','日','','','日','日','日','日','日','','','日','日','日','日','日',''],
-     pm:['','','','','','','','','','','','','','','','','','','','','','','','','','','','','','','']},
-    {area:'本院',order:4,name:'員工丁',type:'正常班',
-     am:['日','日','日','日','上','','','日','日','日','日','日','','','日','日','日','日','日','','','日','日','日','日','日','','','日','日',''],
-     pm:['','','','','下','','','','','','','','','','','','','','','','','','','','','','','','','','']},
-  ];
-
-  // ── 建立工作表資料（aoa = array of arrays）──
-  const wsData = [];
-
-  // R1 說明
-  const r1 = ['花醫班表系統匯入樣板　每位員工兩列（上午/下午）　班別：日 小 大 休 上 下'];
-  for(let i=1;i<4+daysInMo;i++) r1.push('');
-  wsData.push(r1);
-
-  // R2 月份
-  const r2 = [`${y}年${m+1}月 班表`];
-  for(let i=1;i<4+daysInMo;i++) r2.push('');
-  wsData.push(r2);
-
-  // R3 欄標題 + 日期
-  const r3 = ['院區','順序','姓名','班別類型'];
-  for(let d=1;d<=daysInMo;d++) r3.push(new Date(y,m,d));
-  wsData.push(r3);
-
-  // R4 星期
-  const r4 = ['','順序','','星期'];
-  for(let d=1;d<=daysInMo;d++) r4.push(WD[new Date(y,m,d).getDay()]);
-  wsData.push(r4);
-
-  // R5+ 員工（每人兩列）
-  demoEmps.forEach(emp => {
-    // 上午列
-    const amRow = [emp.area, emp.order, emp.name, emp.type];
-    for(let d=0;d<daysInMo;d++) amRow.push(emp.am[d]||'');
-    wsData.push(amRow);
-    // 下午列（固定欄空白，只有班別）
-    const pmRow = ['','','',''];
-    for(let d=0;d<daysInMo;d++) pmRow.push(emp.pm[d]||'');
-    wsData.push(pmRow);
-  });
-
-  // 空白員工（10人）
-  for(let i=0;i<10;i++){
-    wsData.push(['本院', demoEmps.length+i+1, '', '夜班', ...Array(daysInMo).fill('')]);
-    wsData.push(['','','','', ...Array(daysInMo).fill('')]);
-  }
-
-  const ws = XLSX.utils.aoa_to_sheet(wsData, {cellDates:true, dateNF:'yyyy-mm-dd'});
-  ws['!cols'] = [{wch:6},{wch:5},{wch:8},{wch:8},...Array(daysInMo).fill({wch:3.2})];
-  ws['!freeze'] = {xSplit:4, ySplit:4};
-
-  // ── 說明工作表 ──
-  const ws2 = XLSX.utils.aoa_to_sheet([
-    ['花醫班表系統 匯入格式說明（AM/PM 雙列版）',''],
-    ['',''],
-    ['【格式規則】',''],
-    ['欄位','說明'],
-    ['A欄（院區）','本院 / 豐濱 等'],
-    ['B欄（順序）','排序數字，決定月視圖顯示順序'],
-    ['C欄（姓名）','員工姓名（同名自動對應，不重複新增）'],
-    ['D欄（班別類型）','夜班 / 正常班 / 生化 / 細菌 / 豐濱 等'],
-    ['E欄起','第3列=日期，第5列起=班別代碼'],
-    ['',''],
-    ['【每人雙列格式】',''],
-    ['第1列（上午）','填 日/小/大/休/上　→ 寫入 empId_日期_AM'],
-    ['第2列（下午）','填 日/小/大/休/下　→ 寫入 empId_日期_PM'],
-    ['整天班別','日/小/大/休 填上午列，系統上下午都顯示'],
-    ['半天班別','上午休=上午列填「上」，下午休=下午列填「下」'],
-    ['',''],
-    ['【班別代碼】',''],
-    ['日','日班（07:00～15:00）'],
-    ['小','小夜班（15:00～23:00）'],
-    ['大','大夜班（23:00～07:00）'],
-    ['休','全天休假'],
-    ['上','上午休假（上午列）'],
-    ['下','下午休假（下午列）'],
-    ['',''],
-    ['【注意事項】',''],
-    ['1.','每位員工固定佔兩列，上午列含姓名，下午列固定欄空白'],
-    ['2.','遇到「緊急加班順序」等文字自動停止解析'],
-    ['3.','日期格式：YYYY-MM-DD 或 YYYY/M/D 均可'],
-  ]);
-  ws2['!cols'] = [{wch:22},{wch:55}];
-
-  XLSX.utils.book_append_sheet(wb, ws, '班表');
-  XLSX.utils.book_append_sheet(wb, ws2, '說明');
-  XLSX.writeFile(wb, `花醫班表_匯入樣板_${y}年${m+1}月.xlsx`);
-  toast('樣板已下載 📥','success');
-}
-
-function openImportModal() {
-  // Reset
-  document.getElementById('import-step-1').style.display = 'block';
-  document.getElementById('import-step-2').style.display = 'none';
-  document.getElementById('import-confirm-btn').style.display = 'none';
-  pendingImport = null;
-
-  // 檢查 Firebase 連線與登入狀態
-  const hint = document.getElementById('firebase-check-info');
-  if (hint) {
-    if (!curUser) {
-      hint.style.display = 'block';
-      hint.innerHTML = '❌ <strong>尚未登入！</strong>請先登入後再匯入。';
-    } else {
-      // 測試寫入權限
-      db.ref('.info/connected').once('value').then(snap => {
-        if (!snap.val()) {
-          hint.style.display = 'block';
-          hint.innerHTML = '⚠️ <strong>Firebase 未連線</strong>，請檢查網路後重試。';
-        } else {
-          hint.style.display = 'none';
-        }
-      });
-    }
-  }
-  openModal('import-modal');
-}
-function handleFileDrop(e) {
-  e.preventDefault();
-  document.getElementById('import-drop-zone').classList.remove('drag');
-  const file = e.dataTransfer.files[0];
-  if (file) processImportFile(file);
-}
-function handleFileSelect(e) {
-  const file = e.target.files[0];
-  if (file) processImportFile(file);
-}
-function processImportFile(file) {
-  stopSync();
+const SHIFT_LABELS = {'日':'日班','小':'小夜','大':'大夜','休':'休假','上':'上午休','下':'下午休'};
+let allSheets = {}; // { sheetName: parsedData }
+let currentSheetName = '';
+let currentData = null; // { monthLabel, dates, employees, overtimeOrder, leaveOrder, note }
+let showStats = false;
+let activeFilter = '';
+let pendingEdit = null; // { empIdx, dateIdx, oldShift }
+let workbook = null;
+
+// ── FILE HANDLING ──
+function handleFile(input) {
+  const file = input.files[0];
+  if (!file) return;
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = e => {
     try {
-      const wb = XLSX.read(e.target.result, {type:'binary', cellDates:true});
-      // 花醫班表格式：優先選「班表」工作表，其次選有最多資料的工作表
-      let sheetName = wb.SheetNames[0];
-      const preferred = ['班表','六月2','sheet1','Sheet1'];
-      for (const p of preferred) {
-        if (wb.SheetNames.includes(p)) { sheetName = p; break; }
+      workbook = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+      const validSheets = workbook.SheetNames.filter(n => n !== '資料' && n !== '工作表1');
+      if (validSheets.length === 0) { showToast('❌ 找不到有效班表工作表'); return; }
+      if (validSheets.length === 1) {
+        loadSheet(validSheets[0]);
+      } else {
+        openSheetPicker(validSheets);
       }
-      // 若有多張表，選有最多 cell 的（排除「資料」、「工作表1」）
-      let bestName = sheetName;
-      let bestCount = 0;
-      wb.SheetNames.forEach(name => {
-        if (name === '資料' || name === '工作表1') return;
-        const s = wb.Sheets[name];
-        const ref = s['!ref'];
-        if (!ref) return;
-        const range = XLSX.utils.decode_range(ref);
-        const count = (range.e.r - range.s.r) * (range.e.c - range.s.c);
-        if (count > bestCount) { bestCount = count; bestName = name; }
-      });
-      const ws = wb.Sheets[bestName];
-      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:false, dateNF:'yyyy-mm-dd'});
-      // raw:false 讓 SheetJS 把日期格式化為字串，dateNF 指定格式
-      parseImportData(rows, bestName);
     } catch(err) {
-      toast('讀取失敗：' + err.message, 'error');
-      startSync();
+      showToast('❌ 讀取失敗：' + err.message);
     }
   };
-  reader.readAsBinaryString(file);
+  reader.readAsArrayBuffer(file);
+  input.value = '';
 }
 
-function parseImportData(rows, sheetUsed) {
-  if (!rows || rows.length < 8) { toast('格式錯誤：資料不足','error'); startSync(); return; }
+function openSheetPicker(sheets) {
+  const list = document.getElementById('sheetList');
+  list.innerHTML = '';
+  sheets.forEach(name => {
+    const el = document.createElement('div');
+    el.className = 'sheet-item';
+    el.innerHTML = `<span class="sheet-icon">📅</span>${name}`;
+    el.onclick = () => { closeSheetPicker(); loadSheet(name); };
+    list.appendChild(el);
+  });
+  document.getElementById('sheetPicker').classList.add('show');
+}
+function closeSheetPicker() {
+  document.getElementById('sheetPicker').classList.remove('show');
+}
 
-  // ── 針對花醫班表格式 ──────────────────────────────────────────
-  // 格式：
-  //   R7 (index 6)：C1=院區, C2=工作, C3=姓名, C4=日期, C5起=各天日期(Date物件)
-  //   R8 (index 7)：C2=順序, C4=星期, C5起=星期名
-  //   R9,R11,R13…(每隔一列)：C1=院區, C2=順序, C3=姓名, C4=類型, C5起=班別
-  //   遇到 C3 含「順序」「加班」「填假」等關鍵字則停止
-  // ──────────────────────────────────────────────────────────────
-
-  const STOP_KEYWORDS = ['順序','加班','填假','實際','緊急'];
-  const VALID_SHIFTS = new Set(SHIFTS);
-
-  // 找日期列（R7, index=6）：C5起有 Date 物件或日期字串
-  let dateRow = null;
-  let dateRowIdx = -1;
-  for (let r = 0; r < Math.min(rows.length, 15); r++) {
-    const row = rows[r];
-    // C5(index4)起找 Date 物件
-    let dateCount = 0;
-    for (let c = 4; c < row.length; c++) {
-      const v = row[c];
-      if (v instanceof Date && !isNaN(v)) dateCount++;
-      else if (typeof v === 'string' && /\d{4}[-\/]\d{1,2}[-\/]\d{1,2}/.test(v)) dateCount++;
-      else if (typeof v === 'number' && v > 40000 && v < 60000) dateCount++; // Excel serial date
-    }
-    if (dateCount >= 20) { dateRow = row; dateRowIdx = r; break; }
+function loadSheet(sheetName) {
+  currentSheetName = sheetName;
+  if (allSheets[sheetName]) {
+    currentData = allSheets[sheetName];
+  } else {
+    currentData = parseSheet(sheetName);
+    if (!currentData) { showToast('❌ 無法解析此工作表'); return; }
+    allSheets[sheetName] = currentData;
   }
-  if (!dateRow) { toast('找不到日期列（需20天以上）','error'); startSync(); return; }
+  renderSchedule();
+}
 
-  // 解析日期欄位
-  const dateCols = [];
-  for (let c = 4; c < dateRow.length; c++) {
+// ── PARSE SHEET ──
+function parseSheet(sheetName) {
+  const ws = workbook.Sheets[sheetName];
+  if (!ws) return null;
+  const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: false, dateNF: 'yyyy-mm-dd' });
+
+  // Find header row (has '院區' in col 0 or col A)
+  let headerRowIdx = -1;
+  for (let i = 0; i < raw.length; i++) {
+    const row = raw[i];
+    if (row && row[0] === '院區' && row[2] === '姓名') { headerRowIdx = i; break; }
+  }
+  if (headerRowIdx < 0) return null;
+
+  const dateRow = raw[headerRowIdx];      // dates in cols 4+
+  const weekRow = raw[headerRowIdx + 1];  // weekdays
+
+  // Parse dates (cols 4..34)
+  const dates = [];
+  for (let c = 4; c < dateRow.length - 1; c++) {
     const v = dateRow[c];
-    if (!v) continue;
-    let d = null;
-    if (v instanceof Date && !isNaN(v)) d = v;
-    else if (typeof v === 'string' && v.length >= 8) {
-      // raw:false 時已是 "2026-04-01" 或 "2026-4-1" 格式
-      const parsed = new Date(v.replace(/\//g,'-') + 'T00:00:00');
-      if (!isNaN(parsed) && parsed.getFullYear() > 2000) d = parsed;
-    } else if (typeof v === 'number' && v > 40000) {
-      // Excel serial（若 raw:true）
-      d = new Date(Math.round((v - 25569) * 86400 * 1000));
+    if (!v) break;
+    let dateStr = null;
+    if (v instanceof Date) {
+      dateStr = fmtDate(v);
+    } else if (typeof v === 'string' && v.match(/\d{4}-\d{2}-\d{2}/)) {
+      dateStr = v.slice(0,10);
     }
-    if (d && d.getFullYear() > 2000) {
-      dateCols.push({ col: c, date: fmtDate(d) });
+    if (!dateStr) break;
+    const week = weekRow ? (weekRow[c] || '') : '';
+    const isWeekend = week.trim().startsWith('六') || week.trim().startsWith('日');
+    dates.push({ dateStr, day: parseInt(dateStr.slice(8)), weekday: week.trim(), isWeekend });
+  }
+  if (dates.length === 0) return null;
+
+  // Month label (row 3, col 0)
+  let monthLabel = sheetName;
+  for (let i = 0; i < 6; i++) {
+    const r = raw[i];
+    if (r && r[0] && typeof r[0] === 'string' && r[0].match(/[一二三四五六七八九十]{1,2}月/)) {
+      monthLabel = r[0].replace(/\s.*/,'');
+      break;
     }
   }
-  if (dateCols.length === 0) { toast('日期欄位解析失敗','error'); startSync(); return; }
 
-  const importedMonths = new Set(dateCols.map(dc => dc.date.slice(0,7)));
+  // Note (row 3, col 3 or large text)
+  let note = '';
+  for (let i = 0; i < 6; i++) {
+    const r = raw[i];
+    if (r) {
+      for (let c = 1; c < r.length; c++) {
+        const v = r[c];
+        if (typeof v === 'string' && v.length > 50) { note = v; break; }
+      }
+    }
+    if (note) break;
+  }
 
-  // ── 員工資料：支援「每人雙列（上午/下午）」和「每人單列（舊格式）」──
+  // Parse employees (every 2 rows starting from headerRowIdx+2)
   const employees = [];
-  const schedule = {};
-  let r = dateRowIdx + 2; // 跳過星期列
+  for (let ri = headerRowIdx + 2; ri < raw.length; ri += 2) {
+    const row = raw[ri];
+    if (!row) continue;
+    const order = row[1];
+    const name = row[2];
+    const type = row[3];
+    if (!name || typeof name !== 'string' || !name.trim()) continue;
+    if (!order && !type) continue;
+    // Shifts in cols 4..4+dates.length-1
+    const shifts = [];
+    for (let ci = 0; ci < dates.length; ci++) {
+      const v = row[4 + ci];
+      if (v === null || v === undefined || v === '') shifts.push('');
+      else shifts.push(String(v).trim());
+    }
+    employees.push({
+      order: order ? parseInt(order) : 99,
+      name: name.trim(),
+      type: type ? String(type).trim() : '',
+      site: row[0] ? String(row[0]).trim() : '',
+      shifts
+    });
+  }
 
-  while (r < rows.length) {
-    const row = rows[r];
-    const rawName = String(row[2] || '').trim();   // C3=姓名
-    const rawOrder = row[1];                        // C2=順序
-    const rawType = String(row[3] || '').trim();   // C4=類型
-
-    // 停止條件
-    if (STOP_KEYWORDS.some(kw => rawName.includes(kw))) break;
-
-    // 判斷是否為員工列（有姓名或有順序）
-    const hasName = rawName.length > 0;
-    const hasOrder = rawOrder !== '' && rawOrder !== null && rawOrder !== undefined;
-    const hasShifts = dateCols.some(dc => VALID_SHIFTS.has(String(row[dc.col]||'').trim()));
-
-    if (!hasName && !hasShifts) { r++; continue; }  // 空白列跳過
-    if (!hasName && !hasOrder) { r++; continue; }   // 無姓名無順序跳過
-
-    // 檢查下一列是否為「下午列」（姓名欄空白，有班別）
-    const nextRow = rows[r+1] || [];
-    const nextName = String(nextRow[2] || '').trim();
-    const nextHasShifts = dateCols.some(dc => VALID_SHIFTS.has(String(nextRow[dc.col]||'').trim()));
-    const isPairFormat = !nextName && nextHasShifts; // 下一列無名字但有班別 → 雙列格式
-
-    const sortNum = parseInt(rawOrder) || (employees.length + 1);
-    const tempId = Date.now() + Math.floor(Math.random() * 1000) + employees.length * 7;
-    const monthSortOrder = {};
-    importedMonths.forEach(mk => { monthSortOrder[mk] = sortNum; });
-    const emp = {
-      id: tempId, name: rawName || `員工${sortNum}`, type: rawType || '夜班',
-      colorIdx: employees.length % EMP_COLORS,
-      sortOrder: sortNum, monthSortOrder
-    };
-    employees.push(emp);
-
-    if (isPairFormat) {
-      // ── 雙列格式：上午列 + 下午列 ──
-      dateCols.forEach(dc => {
-        const amVal = String(row[dc.col] || '').trim();
-        const pmVal = String(nextRow[dc.col] || '').trim();
-        // 整天班別（日/小/大/休）→ 兩格都寫，key 用 _AM/_PM
-        if (VALID_SHIFTS.has(amVal)) {
-          if (amVal === '上') {
-            schedule[tempId + '_' + dc.date + '_AM'] = '上';
-          } else {
-            schedule[tempId + '_' + dc.date + '_AM'] = amVal;
+  // Parse overtime & leave order (rows below employees)
+  let overtimeOrder = [], leaveOrder = [];
+  for (let ri = headerRowIdx; ri < raw.length; ri++) {
+    const row = raw[ri];
+    if (!row) continue;
+    for (let c = 0; c < row.length; c++) {
+      const v = row[c];
+      if (typeof v === 'string' && v.includes('緊急加班順序')) {
+        // collect names in same row or next row
+        for (let cc = c + 1; cc < Math.min(c + 15, row.length); cc++) {
+          const vv = row[cc];
+          if (typeof vv === 'string' && vv.trim()) {
+            const nm = vv.replace(/^\d+\.|^\d+/, '').trim();
+            if (nm) overtimeOrder.push(nm);
           }
         }
-        if (VALID_SHIFTS.has(pmVal)) {
-          if (pmVal === '下') {
-            schedule[tempId + '_' + dc.date + '_PM'] = '下';
-          } else {
-            schedule[tempId + '_' + dc.date + '_PM'] = pmVal;
+        // also check next row
+        const nrow = raw[ri + 1];
+        if (nrow && overtimeOrder.length === 0) {
+          for (let cc = c + 1; cc < Math.min(c + 15, nrow.length); cc++) {
+            const vv = nrow[cc];
+            if (typeof vv === 'string' && vv.trim()) {
+              const nm = vv.replace(/^\d+\.|^\d+/, '').trim();
+              if (nm) overtimeOrder.push(nm);
+            }
           }
         }
-      });
-      r += 2; // 跳過兩列
-    } else {
-      // ── 單列格式（舊版相容）──
-      dateCols.forEach(dc => {
-        const cellVal = String(row[dc.col] || '').trim();
-        if (VALID_SHIFTS.has(cellVal)) {
-          // 上/下 半天班別保留舊 key 格式相容
-          if (cellVal === '上') schedule[tempId + '_' + dc.date + '_AM'] = '上';
-          else if (cellVal === '下') schedule[tempId + '_' + dc.date + '_PM'] = '下';
-          else schedule[tempId + '_' + dc.date + '_AM'] = cellVal; // 整天班別放 _AM
+      }
+      if (typeof v === 'string' && v.includes('填假順序')) {
+        for (let cc = c + 1; cc < Math.min(c + 15, row.length); cc++) {
+          const vv = row[cc];
+          if (typeof vv === 'string' && vv.trim()) {
+            leaveOrder.push(vv.trim());
+          }
         }
-      });
-      r++; // 跳過一列
+        const nrow = raw[ri + 1];
+        if (nrow && leaveOrder.length === 0) {
+          for (let cc = c + 1; cc < Math.min(c + 15, nrow.length); cc++) {
+            const vv = nrow[cc];
+            if (typeof vv === 'string' && vv.trim()) leaveOrder.push(vv.trim());
+          }
+        }
+      }
     }
   }
 
-  if (employees.length === 0) { toast('未找到員工資料','error'); startSync(); return; }
-
-  pendingImport = { employees, schedule, importedMonths: [...importedMonths] };
-
-  // Step 2：員工選擇畫面
-  document.getElementById('import-step-1').style.display = 'none';
-  document.getElementById('import-step-2').style.display = 'block';
-  document.getElementById('import-confirm-btn').style.display = 'inline-block';
-  document.getElementById('import-preview-info').textContent =
-    `工作表「${sheetUsed||''}」：找到 ${employees.length} 位員工，共 ${dateCols.length} 天（${[...importedMonths].join('、')}）`;
-
-  const listEl = document.getElementById('emp-select-list');
-  listEl.innerHTML = employees.map((emp, idx) => `
-    <div class="emp-select-item">
-      <input type="checkbox" id="imp-emp-${idx}" checked>
-      <label for="imp-emp-${idx}">${escHtml(emp.name)}
-        <span style="color:var(--text-muted);font-size:.68rem;margin-left:4px">${escHtml(emp.type)}</span>
-      </label>
-    </div>
-  `).join('');
+  return { monthLabel, dates, employees, overtimeOrder, leaveOrder, note };
 }
 
-function confirmEmpSelect() {
-  if (!pendingImport) return;
-  const { employees, schedule, importedMonths } = pendingImport;
-
-  // Find which employees are selected
-  const selectedNames = new Set(
-    employees.filter((_,i) => {
-      const cb = document.getElementById('imp-emp-'+i);
-      return cb && cb.checked;
-    }).map(e => e.name)
-  );
-
-  // Build existing-by-name lookup
-  const existingByName = {};
-  S.employees.forEach(e => { existingByName[e.name] = e; });
-
-  // idRemap: tempId -> finalId
-  const idRemap = {};
-  const newEmployees = [...S.employees];
-  employees.forEach(newEmp => {
-    if (!selectedNames.has(newEmp.name)) return;
-    const existing = existingByName[newEmp.name];
-    if (existing) {
-      // Merge monthSortOrder
-      Object.assign(existing.monthSortOrder, newEmp.monthSortOrder);
-      idRemap[newEmp.id] = String(Math.floor(Number(existing.id)));
-    } else {
-      const finalId = Date.now() + Math.floor(Math.random()*1000) + newEmployees.length;
-      const finalEmp = { ...newEmp, id: finalId };
-      newEmployees.push(finalEmp);
-      idRemap[newEmp.id] = String(Math.floor(Number(finalId)));
-    }
-  });
-
-  // Build merged schedule: keep other months, replace imported months
-  const mergedSchedule = {};
-  Object.entries(S.schedule).forEach(([k, v]) => {
-    const dateK = k.slice(k.indexOf('_')+1);
-    const mk = dateK.slice(0,7);
-    if (!importedMonths.includes(mk)) mergedSchedule[k] = v;
-  });
-  // Add new schedule entries with final IDs
-  Object.entries(schedule).forEach(([k, v]) => {
-    const uscore = k.indexOf('_');
-    const rawId = k.slice(0, uscore);
-    const dateK = k.slice(uscore+1);
-    const finalId = idRemap[rawId];
-    if (finalId) mergedSchedule[finalId + '_' + dateK] = v;
-  });
-
-  showLoading('儲存中…');
-  pushToFirebase({ employees: newEmployees, schedule: mergedSchedule }).then(() => {
-    S.employees = newEmployees;
-    S.schedule = mergedSchedule;
-    pendingImport = null;
-    closeModal('import-modal');
-    hideLoading();
-    toast('匯入成功 🎉','success');
-    setTimeout(() => startSync(), 2000);
-    renderAll();
-  }).catch(err => {
-    hideLoading();
-    const msg = err.message || String(err);
-    console.error('Import save error:', err);
-    // 顯示詳細錯誤
-    toast('儲存失敗：' + msg, 'error');
-    // 同時在頁面上顯示（toast 可能太短）
-    const info = document.getElementById('import-preview-info');
-    if (info) info.innerHTML = `<span style="color:var(--red)">❌ 儲存失敗：${msg}<br>請確認 Firebase 規則已允許寫入，並確認已登入。</span>`;
-    startSync();
-  });
-}
-function cancelImport() {
-  pendingImport = null;
-  startSync();
-}
-
-// ── Notes Save ────────────────────────────────────
-function scheduleNotesSave() {
-  if (notesSaveTimer) clearTimeout(notesSaveTimer);
-  notesSaveTimer = setTimeout(() => {
-    const val = document.getElementById('month-notes')?.value || '';
-    const mk = monthKey(curYear, curMonth);
-    db.ref('notes/' + mk).set(val);
-  }, 800);
-}
-
-// ── Tab Nav ───────────────────────────────────────
-function switchTab(viewId) {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.querySelectorAll('.nav-tab,.sb-nav-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.view === viewId);
-  });
-  const view = document.getElementById(viewId);
-  if (view) view.classList.add('active');
-  if (viewId === 'stats-view') renderStatsView();
-  if (viewId === 'settings-view') renderSettingsView();
-  if (viewId === 'my-view') renderMyView();
-  if (viewId === 'week-view') renderWeekView();
-}
-
-// ── Modal Helpers ─────────────────────────────────
-function openModal(id) {
-  const el = document.getElementById(id);
-  if (el) { el.classList.add('open'); document.body.style.overflow='hidden'; }
-}
-function closeModal(id) {
-  const el = document.getElementById(id);
-  if (el) el.classList.remove('open');
-  // Check if any modal is still open
-  if (!document.querySelector('.modal-backdrop.open')) document.body.style.overflow='';
-}
-// Close modal on backdrop click
-document.querySelectorAll('.modal-backdrop').forEach(bd => {
-  bd.addEventListener('click', e => {
-    if (e.target === bd) {
-      const id = bd.id;
-      closeModal(id);
-      if (id === 'import-modal') cancelImport();
-      if (id === 'swap-month-modal') cancelSwap();
-    }
-  });
-});
-
-// ── Toast ─────────────────────────────────────────
-let toastTimer;
-function toast(msg, type='info') {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = 'show ' + (type||'');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
-}
-
-// ── Loading ───────────────────────────────────────
-function showLoading(msg) {
-  const el = document.getElementById('loading');
-  el.querySelector('.loading-text').textContent = msg || '載入中…';
-  el.classList.remove('hidden');
-}
-function hideLoading() {
-  document.getElementById('loading').classList.add('hidden');
-}
-
-// ── Utility ───────────────────────────────────────
-function daysInMonth(y, m) { return new Date(y, m+1, 0).getDate(); }
 function fmtDate(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth()+1).padStart(2,'0');
-  const day = String(d.getDate()).padStart(2,'0');
-  return `${y}-${m}-${day}`;
-}
-function monthKey(y, m) { return `${y}-${String(m+1).padStart(2,'0')}`; }
-function escHtml(s) {
-  if (!s) return '';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
 }
 
-// ── PWA Service Worker ────────────────────────────
-if ('serviceWorker' in navigator) {
-  const swCode = `
-const CACHE='huayi-schedule-v1';
-const URLS=['/schedule/','/schedule/index.html'];
-self.addEventListener('install',e=>{
-  e.waitUntil(caches.open(CACHE).then(c=>c.addAll(URLS)).catch(()=>{}));
-  self.skipWaiting();
-});
-self.addEventListener('activate',e=>{
-  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));
-  self.clients.claim();
-});
-self.addEventListener('fetch',e=>{
-  if(e.request.method!=='GET')return;
-  e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)));
-});`;
-  const swBlob = new Blob([swCode], {type:'application/javascript'});
-  const swUrl = URL.createObjectURL(swBlob);
-  navigator.serviceWorker.register(swUrl).catch(()=>{});
+// ── RENDER ──
+function renderSchedule() {
+  const data = currentData;
+  if (!data || !data.employees.length) { showToast('❌ 此工作表沒有班表資料'); return; }
+
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('toolbar').style.display = 'flex';
+  document.getElementById('legend').style.display = 'flex';
+  document.getElementById('scheduleWrap').style.display = 'block';
+  document.getElementById('printBtn').style.display = '';
+  document.getElementById('monthNav').style.display = 'flex';
+
+  // Month label
+  document.getElementById('monthLabel').textContent = data.monthLabel;
+
+  // Note
+  const noteBar = document.getElementById('noteBar');
+  if (data.note) {
+    noteBar.style.display = 'block';
+    noteBar.innerHTML = `<strong>📌 ${data.monthLabel} 備註：</strong>${data.note.split('\\n').join('<br>')}`;
+  } else {
+    noteBar.style.display = 'none';
+  }
+
+  const today = new Date(); const todayStr = fmtDate(today);
+
+  const emps = getFilteredEmps();
+  const tbl = document.getElementById('scheduleTable');
+  tbl.innerHTML = '';
+
+  // ── HEADER ROWS ──
+  const thead = document.createElement('thead');
+  // Row 1: labels + dates
+  const hr1 = document.createElement('tr');
+  ['順','姓名','班別'].forEach((t,i) => {
+    const th = document.createElement('th');
+    th.textContent = t;
+    th.style.width = i === 0 ? '28px' : i === 1 ? '80px' : '56px';
+    hr1.appendChild(th);
+  });
+  data.dates.forEach(d => {
+    const th = document.createElement('th');
+    th.className = 'date-th' + (d.isWeekend ? ' weekend' : '');
+    th.textContent = d.day;
+    if (d.dateStr === todayStr) {
+      th.style.background = '#c57a00';
+      th.style.color = '#fff';
+    }
+    hr1.appendChild(th);
+  });
+  if (showStats) {
+    ['日','小','大','休'].forEach(s => {
+      const th = document.createElement('th');
+      th.textContent = s;
+      th.style.width = '28px';
+      hr1.appendChild(th);
+    });
+  }
+  thead.appendChild(hr1);
+
+  // Row 2: weekdays
+  const hr2 = document.createElement('tr');
+  ['','',''].forEach(() => { const th = document.createElement('th'); hr2.appendChild(th); });
+  data.dates.forEach(d => {
+    const th = document.createElement('th');
+    th.className = 'date-th' + (d.isWeekend ? ' weekend' : '');
+    th.style.fontSize = '0.62rem';
+    th.textContent = d.weekday.slice(0,1) === '一'?'一':d.weekday.slice(0,1) === '二'?'二':d.weekday.slice(0,1) === '三'?'三':d.weekday.slice(0,1) === '四'?'四':d.weekday.slice(0,1) === '五'?'五':d.weekday.slice(0,1) === '六'?'六':d.weekday.slice(0,1) === '日'?'日':'';
+    if (d.dateStr === todayStr) th.style.background = '#c57a00';
+    hr2.appendChild(th);
+  });
+  if (showStats) {
+    ['班','次','次','天'].forEach(s => {
+      const th = document.createElement('th'); th.textContent=''; hr2.appendChild(th);
+    });
+  }
+  thead.appendChild(hr2);
+  tbl.appendChild(thead);
+
+  // ── BODY ──
+  const tbody = document.createElement('tbody');
+  emps.forEach((emp, empIdx) => {
+    const tr = document.createElement('tr');
+    // Check if this row has today
+    const hasTodayShift = data.dates.some(d => d.dateStr === todayStr);
+
+    // Order cell
+    const tdOrd = document.createElement('td');
+    tdOrd.className = 'emp-order-td';
+    tdOrd.textContent = emp.order < 99 ? emp.order : '';
+    tr.appendChild(tdOrd);
+
+    // Name cell
+    const tdName = document.createElement('td');
+    tdName.className = 'emp-name-td';
+    tdName.textContent = emp.name;
+    if (emp.site && emp.site !== '本院') {
+      tdName.style.color = 'var(--teal)';
+    }
+    tr.appendChild(tdName);
+
+    // Type cell
+    const tdType = document.createElement('td');
+    tdType.className = 'emp-type-td';
+    tdType.textContent = emp.type;
+    tr.appendChild(tdType);
+
+    // Shift cells
+    data.dates.forEach((d, di) => {
+      const td = document.createElement('td');
+      if (d.isWeekend) td.parentElement?.classList?.add?.('weekend-col');
+      const shift = emp.shifts[di] || '';
+      const span = document.createElement('span');
+      const cls = SHIFTS.includes(shift) ? `shift shift-${shift}` : `shift shift-empty`;
+      span.className = cls;
+      span.textContent = shift || '·';
+      span.title = `${emp.name} ${d.dateStr} (${d.weekday}) ${SHIFT_LABELS[shift]||shift||'—'}`;
+      span.onclick = () => openEditModal(empIdx, di, shift, emp, d);
+      td.appendChild(span);
+
+      // Weekend col style
+      if (d.isWeekend) td.style.background = '#f5f7ff';
+      // Today col
+      if (d.dateStr === todayStr) td.style.background = '#fffbeb';
+      tr.appendChild(td);
+    });
+
+    // Stats
+    if (showStats) {
+      const counts = {日:0,小:0,大:0,休:0};
+      emp.shifts.forEach(s => { if (counts[s]!==undefined) counts[s]++; });
+      ['日','小','大','休'].forEach(s => {
+        const td = document.createElement('td');
+        if (counts[s] > 0) {
+          const b = document.createElement('span');
+          b.className = `stat-badge stat-${s}`;
+          b.textContent = counts[s];
+          td.appendChild(b);
+        }
+        tr.appendChild(td);
+      });
+    }
+    tbody.appendChild(tr);
+  });
+
+  // ── PER-DAY STATS ROW ──
+  if (showStats) {
+    const sr = document.createElement('tr');
+    sr.className = 'stats-row';
+    ['班數','',''].forEach(t => {
+      const td = document.createElement('td');
+      td.textContent = t;
+      td.style.fontWeight = '700';
+      td.style.fontSize = '0.7rem';
+      sr.appendChild(td);
+    });
+    data.dates.forEach((d, di) => {
+      const td = document.createElement('td');
+      const counts = {};
+      emps.forEach(emp => {
+        const s = emp.shifts[di];
+        if (s) counts[s] = (counts[s]||0)+1;
+      });
+      const fragments = [];
+      ['日','小','大'].forEach(s => { if(counts[s]) fragments.push(`<span class="stat-badge stat-${s}">${counts[s]}</span>`); });
+      td.innerHTML = fragments.join('');
+      sr.appendChild(td);
+    });
+    ['','','',''].forEach(() => { const td = document.createElement('td'); sr.appendChild(td); });
+    tbody.appendChild(sr);
+  }
+
+  tbl.appendChild(tbody);
+
+  // Order section
+  renderOrderSection();
 }
 
-// ── Init render on load ───────────────────────────
-// Loading stays visible until auth.onAuthStateChanged resolves
+function getFilteredEmps() {
+  if (!currentData) return [];
+  let emps = [...currentData.employees];
+  const q = document.getElementById('searchBox')?.value?.trim().toLowerCase() || '';
+  if (q) emps = emps.filter(e => e.name.toLowerCase().includes(q) || e.type.toLowerCase().includes(q));
+  if (activeFilter) emps = emps.filter(e => e.type.includes(activeFilter));
+  return emps;
+}
+
+function renderOrderSection() {
+  const sec = document.getElementById('orderSection');
+  const data = currentData;
+  if (!data || (!data.overtimeOrder.length && !data.leaveOrder.length)) { sec.style.display='none'; return; }
+  sec.style.display = 'block';
+  sec.innerHTML = `
+    <h3>📋 ${data.monthLabel} 排序</h3>
+    <div class="order-row">
+      ${data.overtimeOrder.length ? `
+        <div class="order-group">
+          <h4>緊急加班順序</h4>
+          <div class="order-list">
+            ${data.overtimeOrder.map((n,i) => `<span class="order-badge">${i+1}. ${n}</span>`).join('')}
+          </div>
+        </div>` : ''}
+      ${data.leaveOrder.length ? `
+        <div class="order-group">
+          <h4>填假順序</h4>
+          <div class="order-list">
+            ${data.leaveOrder.map((n,i) => `<span class="order-badge">${i+1}. ${n}</span>`).join('')}
+          </div>
+        </div>` : ''}
+    </div>
+  `;
+}
+
+// ── NAVIGATION ──
+function changeMonth(delta) {
+  const validSheets = workbook ? workbook.SheetNames.filter(n => n !== '資料' && n !== '工作表1') : [];
+  if (!validSheets.length) return;
+  const idx = validSheets.indexOf(currentSheetName);
+  const next = idx + delta;
+  if (next < 0 || next >= validSheets.length) { showToast('已到最前/最後一個月份'); return; }
+  loadSheet(validSheets[next]);
+}
+
+// ── FILTERS ──
+function filterTable() { renderSchedule(); }
+function showAllEmps() { activeFilter = ''; renderSchedule(); }
+function filterByType(t) { activeFilter = t; renderSchedule(); }
+function toggleStats() { showStats = !showStats; renderSchedule(); }
+
+// ── EDIT MODAL ──
+function openEditModal(empIdx, dateIdx, currentShift, emp, d) {
+  pendingEdit = { empIdx: currentData.employees.indexOf(emp), dateIdx, oldShift: currentShift };
+  document.getElementById('modalTitle').textContent = `修改班別`;
+  document.getElementById('modalSub').textContent = `${emp.name}  ·  ${d.dateStr} (${d.weekday})`;
+  const picker = document.getElementById('shiftPicker');
+  picker.innerHTML = '';
+  SHIFTS.forEach(s => {
+    const el = document.createElement('div');
+    el.className = `shift-opt shift-${s}${s === currentShift ? ' selected' : ''}`;
+    el.textContent = s;
+    el.title = SHIFT_LABELS[s];
+    el.onclick = () => {
+      picker.querySelectorAll('.shift-opt').forEach(x => x.classList.remove('selected'));
+      el.classList.add('selected');
+    };
+    picker.appendChild(el);
+  });
+  // Add empty option
+  const elEmpty = document.createElement('div');
+  elEmpty.className = `shift-opt shift-empty${!currentShift ? ' selected' : ''}`;
+  elEmpty.textContent = '—';
+  elEmpty.title = '清除';
+  elEmpty.onclick = () => {
+    picker.querySelectorAll('.shift-opt').forEach(x => x.classList.remove('selected'));
+    elEmpty.classList.add('selected');
+  };
+  picker.appendChild(elEmpty);
+
+  document.getElementById('modal').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('show');
+  pendingEdit = null;
+}
+
+function saveShift() {
+  if (!pendingEdit) return;
+  const selected = document.querySelector('#shiftPicker .shift-opt.selected');
+  const newShift = selected ? (selected.textContent === '—' ? '' : selected.textContent) : '';
+  const emp = currentData.employees[pendingEdit.empIdx];
+  if (emp) {
+    emp.shifts[pendingEdit.dateIdx] = newShift;
+    showToast(`✅ ${emp.name} 已更新為「${newShift || '—'}」`);
+  }
+  closeModal();
+  renderSchedule();
+}
+
+// ── TOAST ──
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── DRAG & DROP on empty state ──
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  const file = e.dataTransfer?.files?.[0];
+  if (file && file.name.match(/\.xlsx?$/i)) {
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    document.getElementById('fileInput').files = dt.files;
+    handleFile(document.getElementById('fileInput'));
+  }
+});
 </script>
 </body>
 </html>
