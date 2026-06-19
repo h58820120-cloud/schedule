@@ -847,7 +847,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.3.4';
+const APP_VERSION = '1.3.5';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -1051,6 +1051,20 @@ function startSync() {
       S.monthEmpOrder = data.monthEmpOrder || {};
       saveLocal();
       // myPrefs is per-user, loaded separately
+      renderAll();
+    } else {
+      // Firebase 'schedule' node is empty/deleted - clear local state to match,
+      // instead of silently leaving the last-known data on screen.
+      S.employees = [];
+      S.schedule = {};
+      S.holidays = {};
+      S.excluded = {};
+      S.leaveLog = [];
+      S.overtimeOrder = [];
+      S.leaveOrder = [];
+      S.monthOrders = {};
+      S.monthEmpOrder = {};
+      saveLocal();
       renderAll();
     }
   });
