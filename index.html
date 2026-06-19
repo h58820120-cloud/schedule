@@ -420,10 +420,26 @@ function handleFile(input) {
       workbook = XLSX.read(e.target.result, { type: 'array', cellDates: true });
       const validSheets = workbook.SheetNames.filter(n => n !== '資料' && n !== '工作表1');
       if (validSheets.length === 0) { showToast('❌ 找不到有效班表工作表'); return; }
-      if (validSheets.length === 1) {
-        loadSheet(validSheets[0]);
+
+      // Pre-check each sheet so we can give a helpful message if all fail.
+      const results = validSheets.map(name => ({ name, data: parseSheet(name) }));
+      const okSheets = results.filter(r => r.data).map(r => r.name);
+      allSheets = {};
+      results.forEach(r => { if (r.data) allSheets[r.name] = r.data; });
+
+      if (okSheets.length === 0) {
+        showToast('❌ 所有工作表都無法解析，請查看下方說明');
+        showParseFailureHelp(validSheets);
+        return;
+      }
+      if (okSheets.length < validSheets.length) {
+        const failed = validSheets.filter(n => !okSheets.includes(n));
+        showToast(`⚠️ ${okSheets.length}/${validSheets.length} 個月份解析成功（"${failed.join('、')}" 解析失敗，可能是公式快取問題）`);
+      }
+      if (okSheets.length === 1) {
+        loadSheet(okSheets[0]);
       } else {
-        openSheetPicker(validSheets);
+        openSheetPicker(okSheets);
       }
     } catch(err) {
       showToast('❌ 讀取失敗：' + err.message);
@@ -431,6 +447,24 @@ function handleFile(input) {
   };
   reader.readAsArrayBuffer(file);
   input.value = '';
+}
+
+function showParseFailureHelp(sheetNames) {
+  const wrap = document.getElementById('emptyState');
+  wrap.style.display = 'block';
+  wrap.innerHTML = `
+    <div class="icon">⚠️</div>
+    <h2>無法解析這個檔案</h2>
+    <p style="text-align:left;max-width:520px;line-height:1.7;">
+      已嘗試解析工作表：<strong>${sheetNames.join('、')}</strong>，但都找不到有效的日期/姓名資料。<br><br>
+      最常見的原因：此工作表的儲存格內容是 <strong>公式</strong>（例如 VLOOKUP / IF 從「資料」工作表取值），
+      而瀏覽器只能讀取 Excel 上次存檔時「計算後的快取值」。如果存檔時快取沒有更新（或快取是 #VALUE!/#REF! 錯誤），
+      匯入就會失敗。<br><br>
+      <strong>解法：</strong>請用 Microsoft Excel 開啟此檔案 → 按一下 <code>Ctrl+Alt+F9</code>（強制重新計算全部公式）
+      → 存檔 → 再重新匯入一次。或者，將該工作表「複製後以值貼上」成另一個不含公式的工作表再匯入。
+    </p>
+    <button class="upload-btn" style="margin-top:8px;" onclick="document.getElementById('fileInput').click()">重新選擇檔案</button>
+  `;
 }
 
 function openSheetPicker(sheets) {
@@ -451,13 +485,9 @@ function closeSheetPicker() {
 
 function loadSheet(sheetName) {
   currentSheetName = sheetName;
-  if (allSheets[sheetName]) {
-    currentData = allSheets[sheetName];
-  } else {
-    currentData = parseSheet(sheetName);
-    if (!currentData) { showToast('❌ 無法解析此工作表'); return; }
-    allSheets[sheetName] = currentData;
-  }
+  currentData = allSheets[sheetName] || parseSheet(sheetName);
+  if (!currentData) { showToast('❌ 無法解析此工作表'); return; }
+  allSheets[sheetName] = currentData;
   renderSchedule();
 }
 
@@ -465,36 +495,66 @@ function loadSheet(sheetName) {
 function parseSheet(sheetName) {
   const ws = workbook.Sheets[sheetName];
   if (!ws) return null;
-  const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: false, dateNF: 'yyyy-mm-dd' });
+  const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true });
 
-  // Find header row (has '院區' in col 0 or col A)
+  // Find header row (has '院區' in col 0 and '姓名' in col 2).
+  // Some sheets (e.g. formula-driven '班表') may still have these as literal
+  // text even though the data cells below are VLOOKUP/IF formulas.
   let headerRowIdx = -1;
   for (let i = 0; i < raw.length; i++) {
     const row = raw[i];
-    if (row && row[0] === '院區' && row[2] === '姓名') { headerRowIdx = i; break; }
+    if (!row) continue;
+    if (row[0] === '院區' && (row[2] === '姓名' || row[1] === '工作')) { headerRowIdx = i; break; }
   }
-  if (headerRowIdx < 0) return null;
+  if (headerRowIdx < 0) {
+    console.warn(`[parseSheet] '${sheetName}': 找不到標頭列 (院區/姓名)`);
+    return null;
+  }
 
   const dateRow = raw[headerRowIdx];      // dates in cols 4+
   const weekRow = raw[headerRowIdx + 1];  // weekdays
 
-  // Parse dates (cols 4..34)
+  // Parse dates (cols 4..34). Be defensive: formula-driven sheets may return
+  // cached values as Date objects, date-like strings, Excel serial numbers,
+  // or (if the cache is stale/broken) error strings like '#VALUE!' / '#REF!'.
   const dates = [];
+  let formulaIssue = false;
   for (let c = 4; c < dateRow.length - 1; c++) {
     const v = dateRow[c];
-    if (!v) break;
+    if (v === null || v === undefined || v === '') break;
     let dateStr = null;
     if (v instanceof Date) {
       dateStr = fmtDate(v);
-    } else if (typeof v === 'string' && v.match(/\d{4}-\d{2}-\d{2}/)) {
-      dateStr = v.slice(0,10);
+    } else if (typeof v === 'string') {
+      if (v.match(/^\d{4}-\d{2}-\d{2}/)) {
+        dateStr = v.slice(0, 10);
+      } else if (v.startsWith('#')) {
+        // Stale/broken formula cache (e.g. #VALUE!, #REF!) - stop here,
+        // flag it so the user gets a helpful message instead of silent failure.
+        formulaIssue = true;
+        break;
+      } else if (!isNaN(Date.parse(v))) {
+        dateStr = fmtDate(new Date(v));
+      }
+    } else if (typeof v === 'number' && v > 25000 && v < 60000) {
+      // Excel serial date number fallback
+      const d = new Date(Math.round((v - 25569) * 86400 * 1000));
+      dateStr = fmtDate(d);
     }
     if (!dateStr) break;
     const week = weekRow ? (weekRow[c] || '') : '';
-    const isWeekend = week.trim().startsWith('六') || week.trim().startsWith('日');
-    dates.push({ dateStr, day: parseInt(dateStr.slice(8)), weekday: week.trim(), isWeekend });
+    const weekStr = String(week).trim();
+    const isWeekend = weekStr.startsWith('六') || weekStr.startsWith('日');
+    dates.push({ dateStr, day: parseInt(dateStr.slice(8)), weekday: weekStr, isWeekend });
   }
-  if (dates.length === 0) return null;
+  if (dates.length === 0) {
+    if (formulaIssue) {
+      console.warn(`[parseSheet] '${sheetName}': 日期欄位是公式且快取值無效 (#VALUE!/#REF!)，請在 Excel 中開啟並重新存檔讓公式重新計算後再匯入`);
+    } else {
+      console.warn(`[parseSheet] '${sheetName}': 找不到任何日期欄`);
+    }
+    return null;
+  }
 
   // Month label (row 3, col 0)
   let monthLabel = sheetName;
@@ -525,19 +585,25 @@ function parseSheet(sheetName) {
     const row = raw[ri];
     if (!row) continue;
     const order = row[1];
-    const name = row[2];
+    let name = row[2];
     const type = row[3];
+    if (name && typeof name === 'string' && name.startsWith('#')) name = null; // stale formula cache
     if (!name || typeof name !== 'string' || !name.trim()) continue;
     if (!order && !type) continue;
+    // Stop once we hit summary rows (order/overtime/leave sections use text labels, not numbers)
+    if (typeof order === 'string' && (order.includes('順序') || order.includes('日期') || order.includes('天數'))) break;
     // Shifts in cols 4..4+dates.length-1
     const shifts = [];
     for (let ci = 0; ci < dates.length; ci++) {
-      const v = row[4 + ci];
+      let v = row[4 + ci];
       if (v === null || v === undefined || v === '') shifts.push('');
-      else shifts.push(String(v).trim());
+      else {
+        const s = String(v).trim();
+        shifts.push(s.startsWith('#') ? '' : s); // skip stale formula errors
+      }
     }
     employees.push({
-      order: order ? parseInt(order) : 99,
+      order: order ? parseInt(order) || 99 : 99,
       name: name.trim(),
       type: type ? String(type).trim() : '',
       site: row[0] ? String(row[0]).trim() : '',
@@ -545,48 +611,39 @@ function parseSheet(sheetName) {
     });
   }
 
-  // Parse overtime & leave order (rows below employees)
+  // Parse overtime & leave order (rows below employees).
+  // Layout varies: label cell can be in different columns, and names may not
+  // start immediately in the next column (nulls in between), e.g.:
+  //   row35: [...,'緊急加班順序：', null, null, '1.慧敏', '2逸薇', ...]
+  //   row39: [...,'填假順序', null, '長親', '雅順', ...]
   let overtimeOrder = [], leaveOrder = [];
+  const ORDER_STOPWORDS = new Set(['備註','說明','注意','合計','總計','日期','順序','姓名']);
+  const collectNames = (row, startCol) => {
+    const names = [];
+    for (let cc = startCol; cc < Math.min(startCol + 20, row.length); cc++) {
+      const vv = row[cc];
+      if (vv === null || vv === undefined || vv === '') continue;
+      let s = String(vv).trim();
+      if (!s || s.startsWith('#')) continue;
+      // Strip leading numbering like "1.", "2", "3、" etc.
+      s = s.replace(/^\d+[\.\、\s]*/, '').trim();
+      // Skip anything that's clearly not a short name (long notes/paragraphs/labels)
+      if (!s || s.length > 6 || s.includes('\n') || ORDER_STOPWORDS.has(s)) continue;
+      names.push(s);
+    }
+    return names;
+  };
   for (let ri = headerRowIdx; ri < raw.length; ri++) {
     const row = raw[ri];
     if (!row) continue;
     for (let c = 0; c < row.length; c++) {
       const v = row[c];
-      if (typeof v === 'string' && v.includes('緊急加班順序')) {
-        // collect names in same row or next row
-        for (let cc = c + 1; cc < Math.min(c + 15, row.length); cc++) {
-          const vv = row[cc];
-          if (typeof vv === 'string' && vv.trim()) {
-            const nm = vv.replace(/^\d+\.|^\d+/, '').trim();
-            if (nm) overtimeOrder.push(nm);
-          }
-        }
-        // also check next row
-        const nrow = raw[ri + 1];
-        if (nrow && overtimeOrder.length === 0) {
-          for (let cc = c + 1; cc < Math.min(c + 15, nrow.length); cc++) {
-            const vv = nrow[cc];
-            if (typeof vv === 'string' && vv.trim()) {
-              const nm = vv.replace(/^\d+\.|^\d+/, '').trim();
-              if (nm) overtimeOrder.push(nm);
-            }
-          }
-        }
+      if (typeof v !== 'string') continue;
+      if (v.includes('緊急加班順序') && overtimeOrder.length === 0) {
+        overtimeOrder = collectNames(row, c + 1);
       }
-      if (typeof v === 'string' && v.includes('填假順序')) {
-        for (let cc = c + 1; cc < Math.min(c + 15, row.length); cc++) {
-          const vv = row[cc];
-          if (typeof vv === 'string' && vv.trim()) {
-            leaveOrder.push(vv.trim());
-          }
-        }
-        const nrow = raw[ri + 1];
-        if (nrow && leaveOrder.length === 0) {
-          for (let cc = c + 1; cc < Math.min(c + 15, nrow.length); cc++) {
-            const vv = nrow[cc];
-            if (typeof vv === 'string' && vv.trim()) leaveOrder.push(vv.trim());
-          }
-        }
+      if (v.includes('填假順序') && leaveOrder.length === 0) {
+        leaveOrder = collectNames(row, c + 1);
       }
     }
   }
@@ -814,12 +871,12 @@ function renderOrderSection() {
 
 // ── NAVIGATION ──
 function changeMonth(delta) {
-  const validSheets = workbook ? workbook.SheetNames.filter(n => n !== '資料' && n !== '工作表1') : [];
-  if (!validSheets.length) return;
-  const idx = validSheets.indexOf(currentSheetName);
+  const okSheets = Object.keys(allSheets);
+  if (!okSheets.length) return;
+  const idx = okSheets.indexOf(currentSheetName);
   const next = idx + delta;
-  if (next < 0 || next >= validSheets.length) { showToast('已到最前/最後一個月份'); return; }
-  loadSheet(validSheets[next]);
+  if (next < 0 || next >= okSheets.length) { showToast('已到最前/最後一個月份'); return; }
+  loadSheet(okSheets[next]);
 }
 
 // ── FILTERS ──
