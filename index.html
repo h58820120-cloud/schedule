@@ -847,7 +847,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.3.5';
+const APP_VERSION = '1.3.6';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -3262,7 +3262,7 @@ function pickShift(sv) {
 
   // If adding a leave shift, check limit
   if (toShift && LEAVE_KEYS.includes(toShift)) {
-    const check = checkLeaveLimitWeekday(dateKey, fromShift, toShift);
+    const check = checkLeaveLimitWeekday(dateKey, fromShift, toShift, empId);
     if (!check.ok) {
       // Over limit → must go through review flow
       closeModal();
@@ -3416,16 +3416,29 @@ function getWeekdayLimit(dateKey, type) {
 
 function countLeaveTypeOnDate(dateKey, type) {
   // type: 'full'=休, 'am'=上, 'pm'=下
+  // 夜班 (night-shift type) and 豐濱 (Fengbin branch) employees are excluded
+  // from the general weekday leave-limit count (separate, uncapped rules apply to them).
   const sv = type === 'full' ? '休' : type === 'am' ? '上' : '下';
   let count = 0;
   S.employees.forEach(emp => {
+    if (isLeaveLimitExempt(emp)) return;
     if (S.schedule[`${emp.id}_${dateKey}`] === sv) count++;
   });
   return count;
 }
 
-function checkLeaveLimitWeekday(dateKey, fromShift, toShift) {
+function isLeaveLimitExempt(emp) {
+  return emp.type === '夜班' || emp.dept === '豐濱';
+}
+
+function checkLeaveLimitWeekday(dateKey, fromShift, toShift, empId) {
   if (!toShift || !LEAVE_KEYS.includes(toShift)) return { ok: true };
+  // 夜班/豐濱 employees have their own separate leave rules - not subject to
+  // the general weekday limit at all.
+  if (empId !== undefined) {
+    const emp = S.employees.find(e => e.id == empId);
+    if (emp && isLeaveLimitExempt(emp)) return { ok: true };
+  }
   const type = toShift === '休' ? 'full' : toShift === '上' ? 'am' : 'pm';
   const max = getWeekdayLimit(dateKey, type);
   if (max === 0) return { ok: true }; // 0 = unlimited
