@@ -848,7 +848,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.3.8';
+const APP_VERSION = '1.3.9';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -2091,37 +2091,47 @@ function handleFile(file) {
         sheetsProcessed++;
 
         // ── Parse 緊急加班順序 and 填假順序 rows ──────────────────────
+        // Scan starting right after wherever the label cell actually is,
+        // instead of a hardcoded column index - the label's column shifts
+        // between sheets (col D vs col E depending on how the sheet was edited),
+        // and a fixed start column silently drops the first name(s) when it does.
+        const ORDER_STOPWORDS = ['備註','說明','注意','合計','總計','日期','順序','姓名'];
+        const stripNumbering = s => s.replace(/^\d+[.\s。、]?/, '').trim();
         for (let ri = headerRow + 2; ri < raw.length; ri++) {
           const row = raw[ri];
           if (!row) continue;
-          // Check col D (index 3) for keywords
-          const label = row[3] != null ? String(row[3]).trim() : '';
-          const label4 = row[4] != null ? String(row[4]).trim() : '';
 
-          if (label.includes('緊急加班')) {
-            // Read names from col 6 onwards (index 6 = C7)
-            const names = [];
-            for (let c = 6; c < row.length; c++) {
-              const v = row[c];
-              if (v == null) continue;
-              const s = String(v).trim();
-              if (!s) continue;
-              // Strip leading number and dots: "1.慧敏" → "慧敏", "2逸薇" → "逸薇"
-              const name = s.replace(/^\d+[.\s。、]?/, '').trim();
-              if (name) names.push(name);
-            }
-            if (names.length) data.overtimeOrder = names;
-          }
+          for (let lc = 0; lc < row.length; lc++) {
+            const cellVal = row[lc] != null ? String(row[lc]).trim() : '';
+            if (!cellVal) continue;
 
-          if (label4.includes('填假') || label.includes('填假')) {
-            const names = [];
-            for (let c = 6; c < row.length; c++) {
-              const v = row[c];
-              if (v == null) continue;
-              const s = String(v).trim();
-              if (s && !s.includes('備') && !s.includes('：')) names.push(s);
+            if (cellVal.includes('緊急加班') && !data.overtimeOrder) {
+              const names = [];
+              for (let c = lc + 1; c < Math.min(lc + 20, row.length); c++) {
+                const v = row[c];
+                if (v == null || v === '') continue;
+                const s = String(v).trim();
+                if (!s) continue;
+                const name = stripNumbering(s);
+                if (!name || name.length > 6 || ORDER_STOPWORDS.includes(name)) continue;
+                names.push(name);
+              }
+              if (names.length) data.overtimeOrder = names;
             }
-            if (names.length) data.leaveOrder = names;
+
+            if (cellVal.includes('填假') && !cellVal.includes('日期') && !data.leaveOrder) {
+              const names = [];
+              for (let c = lc + 1; c < Math.min(lc + 20, row.length); c++) {
+                const v = row[c];
+                if (v == null || v === '') continue;
+                const s = String(v).trim();
+                if (!s) continue;
+                const name = stripNumbering(s);
+                if (!name || name.length > 6 || ORDER_STOPWORDS.includes(name)) continue;
+                names.push(name);
+              }
+              if (names.length) data.leaveOrder = names;
+            }
           }
         }
 
