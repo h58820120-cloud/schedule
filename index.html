@@ -848,7 +848,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.3.9';
+const APP_VERSION = '1.4.0';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -2090,6 +2090,13 @@ function handleFile(file) {
         // Process employee rows every 2 rows from headerRow+2
         sheetsProcessed++;
 
+        // This sheet's own month key (YYYY-MM), used to scope its order data
+        // so multi-sheet imports don't let one sheet's order data block another's.
+        const sheetFirstDate = dates.find(d => d);
+        const sheetMonthKey = sheetFirstDate
+          ? sheetFirstDate.getFullYear() + '-' + String(sheetFirstDate.getMonth()+1).padStart(2,'0')
+          : null;
+
         // ── Parse 緊急加班順序 and 填假順序 rows ──────────────────────
         // Scan starting right after wherever the label cell actually is,
         // instead of a hardcoded column index - the label's column shifts
@@ -2097,6 +2104,7 @@ function handleFile(file) {
         // and a fixed start column silently drops the first name(s) when it does.
         const ORDER_STOPWORDS = ['備註','說明','注意','合計','總計','日期','順序','姓名'];
         const stripNumbering = s => s.replace(/^\d+[.\s。、]?/, '').trim();
+        let sheetOvertimeOrder = null, sheetLeaveOrder = null;
         for (let ri = headerRow + 2; ri < raw.length; ri++) {
           const row = raw[ri];
           if (!row) continue;
@@ -2105,7 +2113,7 @@ function handleFile(file) {
             const cellVal = row[lc] != null ? String(row[lc]).trim() : '';
             if (!cellVal) continue;
 
-            if (cellVal.includes('緊急加班') && !data.overtimeOrder) {
+            if (cellVal.includes('緊急加班') && !sheetOvertimeOrder) {
               const names = [];
               for (let c = lc + 1; c < Math.min(lc + 20, row.length); c++) {
                 const v = row[c];
@@ -2116,10 +2124,10 @@ function handleFile(file) {
                 if (!name || name.length > 6 || ORDER_STOPWORDS.includes(name)) continue;
                 names.push(name);
               }
-              if (names.length) data.overtimeOrder = names;
+              if (names.length) sheetOvertimeOrder = names;
             }
 
-            if (cellVal.includes('填假') && !cellVal.includes('日期') && !data.leaveOrder) {
+            if (cellVal.includes('填假') && !cellVal.includes('日期') && !sheetLeaveOrder) {
               const names = [];
               for (let c = lc + 1; c < Math.min(lc + 20, row.length); c++) {
                 const v = row[c];
@@ -2130,10 +2138,22 @@ function handleFile(file) {
                 if (!name || name.length > 6 || ORDER_STOPWORDS.includes(name)) continue;
                 names.push(name);
               }
-              if (names.length) data.leaveOrder = names;
+              if (names.length) sheetLeaveOrder = names;
             }
           }
         }
+        // Record this sheet's order data keyed by its own month, so it
+        // doesn't get blocked or overwritten by other sheets in the same import.
+        if (sheetMonthKey) {
+          if (!data.monthOrders) data.monthOrders = {};
+          if (!data.monthOrders[sheetMonthKey]) data.monthOrders[sheetMonthKey] = {};
+          if (sheetOvertimeOrder) data.monthOrders[sheetMonthKey].overtime = sheetOvertimeOrder;
+          if (sheetLeaveOrder) data.monthOrders[sheetMonthKey].leave = sheetLeaveOrder;
+        }
+        // Keep flat overtimeOrder/leaveOrder too (back-compat: last sheet's data,
+        // used as fallback for single-sheet imports / older code paths).
+        if (sheetOvertimeOrder) data.overtimeOrder = sheetOvertimeOrder;
+        if (sheetLeaveOrder) data.leaveOrder = sheetLeaveOrder;
 
         for (let ri = headerRow + 2; ri < raw.length; ri += 2) {
           const row = raw[ri];
@@ -2194,7 +2214,7 @@ function handleFile(file) {
 
       // Don't save yet — show employee selection modal
       pendingImport = { employees: S.employees, schedule: S.schedule, holidays: S.holidays, excluded: S.excluded, sheetsProcessed, totalImported, totalSkipped,
-        overtimeOrder: data.overtimeOrder || [], leaveOrder: data.leaveOrder || [] };
+        overtimeOrder: data.overtimeOrder || [], leaveOrder: data.leaveOrder || [], monthOrders: data.monthOrders || {} };
       // Reset S to original state while user selects
       S.employees = origEmployees;
       S.schedule = origSchedule;
@@ -2489,9 +2509,18 @@ function confirmEmpSelect(count) {
 
   // Merge holidays
   Object.assign(S.holidays, data.holidays || {});
-  // Save overtime/leave order per month
-  if (importMonthKey) {
-    if (!S.monthOrders) S.monthOrders = {};
+  // Save overtime/leave order per month — each sheet's order data goes to
+  // its own month (data.monthOrders), so a multi-sheet/multi-month Excel
+  // file correctly updates every month's order, not just one.
+  if (!S.monthOrders) S.monthOrders = {};
+  if (data.monthOrders && Object.keys(data.monthOrders).length) {
+    Object.entries(data.monthOrders).forEach(([mk, mo]) => {
+      if (!S.monthOrders[mk]) S.monthOrders[mk] = {};
+      if (mo.overtime && mo.overtime.length) S.monthOrders[mk].overtime = mo.overtime;
+      if (mo.leave && mo.leave.length) S.monthOrders[mk].leave = mo.leave;
+    });
+  } else if (importMonthKey) {
+    // Fallback for single-sheet imports / older data shape
     if (!S.monthOrders[importMonthKey]) S.monthOrders[importMonthKey] = {};
     if (data.overtimeOrder && data.overtimeOrder.length)
       S.monthOrders[importMonthKey].overtime = data.overtimeOrder;
