@@ -826,7 +826,7 @@ const SHIFTS = {
 const SHIFT_KEYS = ['日','小','大','休','上','下'];
 const LEAVE_KEYS = ['休','上','下']; // 休假相關班別
 const EMP_COLORS = ['#E24B4A','#EF9F27','#1D9E75','#378ADD','#7F77DD','#D4537E','#639922','#BA7517','#0F6E56','#534AB7'];
-const EMP_TYPE_OPTIONS = ['夜班','正常班','生化','細菌'];
+const EMP_TYPE_OPTIONS = ['夜班','正常班','生化','細菌','豐濱'];
 const MONTHS_TW = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
 
 // ══════════════════════════════════════════════
@@ -848,7 +848,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.3.7';
+const APP_VERSION = '1.3.8';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -3456,7 +3456,7 @@ function countLeaveTypeOnDate(dateKey, type) {
 }
 
 function isLeaveLimitExempt(emp) {
-  return emp.type === '夜班' || emp.dept === '豐濱';
+  return emp.type === '夜班' || emp.type === '豐濱' || emp.dept === '豐濱';
 }
 
 function checkLeaveLimitWeekday(dateKey, fromShift, toShift, empId) {
