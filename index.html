@@ -826,6 +826,7 @@ const SHIFTS = {
 const SHIFT_KEYS = ['日','小','大','休','上','下'];
 const LEAVE_KEYS = ['休','上','下']; // 休假相關班別
 const EMP_COLORS = ['#E24B4A','#EF9F27','#1D9E75','#378ADD','#7F77DD','#D4537E','#639922','#BA7517','#0F6E56','#534AB7'];
+const EMP_TYPE_OPTIONS = ['夜班','正常班','生化','細菌'];
 const MONTHS_TW = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
 
 // ══════════════════════════════════════════════
@@ -847,7 +848,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.3.6';
+const APP_VERSION = '1.3.7';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -1402,7 +1403,8 @@ function renderMonth() {
       <span class="emp-nm" style="${isSwapMonthSel?'color:var(--blue-tx);font-weight:700':''}">
         ${swapMode?'🔄 ':''}${emp.name}</span>`;
     if (!S.isReadOnly && !swapMode) h += `<button class="del-e" onclick="removeEmp(${emp.id})">✕</button>`;
-    h += `</div><div class="mg-cell mg-type"><span style="font-size:11px;color:var(--tx3)">${emp.type||''}</span></div>`;
+    const typeClickable = myRole() === 'admin' && !swapMode;
+    h += `</div><div class="mg-cell mg-type"><span style="font-size:11px;color:var(--tx3)${typeClickable?';cursor:pointer;text-decoration:underline dotted':''}" ${typeClickable?`onclick="openEditEmpType(${emp.id})"`:''}>${emp.type||(typeClickable?'設定班型':'')}</span></div>`;
 
     days.forEach(d => {
       const dk = fmtKey(d);
@@ -1933,6 +1935,32 @@ function removeEmp(id) {
   S.employees = S.employees.filter(e => e.id !== id);
   Object.keys(S.schedule).forEach(k => { if (k.startsWith(id+'_')) delete S.schedule[k]; });
   saveAll(); renderAll();
+}
+
+// ── 班型編輯（僅限管理員）──
+function openEditEmpType(empId) {
+  if (myRole() !== 'admin') { showToast('只有管理員可以修改班型'); return; }
+  const emp = S.employees.find(e => e.id == empId);
+  if (!emp) return;
+  const opts = EMP_TYPE_OPTIONS.map(t => {
+    const sel = emp.type === t;
+    return `<button class="btn${sel?' btn-teal':''}" style="margin:3px" onclick="confirmEmpType(${empId},'${t}')">${t}</button>`;
+  }).join('');
+  openModal(`<div class="mt">修改班型</div>
+    <div class="ms">${emp.name} 目前班型：${emp.type||'（未設定）'}</div>
+    <div style="display:flex;flex-wrap:wrap;margin-bottom:14px">${opts}</div>
+    <div class="ma">
+      <button class="btn" onclick="confirmEmpType(${empId},'')" style="flex:1">清除班型</button>
+      <button class="btn" onclick="closeModal()" style="flex:1">取消</button>
+    </div>`);
+}
+function confirmEmpType(empId, newType) {
+  if (myRole() !== 'admin') { showToast('只有管理員可以修改班型'); closeModal(); return; }
+  const emp = S.employees.find(e => e.id == empId);
+  if (!emp) { closeModal(); return; }
+  emp.type = newType || '';
+  saveAll(); closeModal(); renderAll();
+  showToast(`✅ ${emp.name} 班型已更新為「${newType||'（未設定）'}」`);
 }
 
 // ══════════════════════════════════════════════
