@@ -848,7 +848,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.4.0';
+const APP_VERSION = '1.4.2';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -1365,12 +1365,21 @@ function renderMonth() {
     // 假日不顯示超額紅色；只在尚未滿且非假日時才顯示綠色計數
     const isHoliday = !!(isHol || isSunH);
     const lvOver  = !isHoliday && ((maxFull>0&&cntFull>=maxFull)||(maxAm>0&&cntAm>=maxAm)||(maxPm>0&&cntPm>=maxPm));
-    // 顯示計數：假日不顯示；非假日且有休假才顯示（滿了就不顯示，表示不需提醒）
-    const showLvCount = !isHoliday && (cntFull+cntAm+cntPm)>0 && !lvOver;
+    // 顯示剩餘名額：有設上限且非假日才顯示，滿了顯示 0（紅色提示），未設上限不顯示
+    const remFull = maxFull > 0 ? maxFull - cntFull : null;
+    const remAm   = maxAm   > 0 ? maxAm   - cntAm   : null;
+    const remPm   = maxPm   > 0 ? maxPm   - cntPm   : null;
+    const showRemain = !isHoliday && (remFull !== null || remAm !== null || remPm !== null);
+    const remText = [
+      remFull !== null ? `休${remFull}` : '',
+      remAm   !== null ? `上${remAm}`   : '',
+      remPm   !== null ? `下${remPm}`   : '',
+    ].filter(Boolean).join(' ');
+    const remColor = lvOver ? '#dc2626' : '#1a6040';
     h += `<div class="mg-hcell${isT?' today':(isHol||isSunH)?' holiday':isSatH?' sat-hdr':''}">
       <div style="font-size:10px;color:${(isHol||isSun)?'#be185d':isSat?'#166534':'var(--tx3)'}">${dw}</div>
       <div style="font-size:12px;font-weight:600;color:${isT?'var(--teal-tx)':(isHol||isSun)?'#be185d':isSat?'#166534':'var(--tx)'}">${d.getDate()}</div>
-      ${showLvCount?`<div style="font-size:10px;font-weight:700;color:#1a6040;line-height:1.3">${cntFull?'休'+cntFull:''}${cntAm?'上'+cntAm:''}${cntPm?'下'+cntPm:''}</div>`:''}
+      ${showRemain?`<div style="font-size:10px;font-weight:700;color:${remColor};line-height:1.3">${remText}</div>`:''}
     </div>`;
   });
   h += `</div>`; // end header
@@ -2183,9 +2192,18 @@ function handleFile(file) {
             // Mark holiday dates from pink columns
             if (holidayCols.has(ci + 4)) S.holidays[fmtKey(d)] = true;
             const rawSv = row[ci + 4];
-            if (rawSv == null) return;
+            const cellEmpty = rawSv == null || String(rawSv).trim() === '' || String(rawSv).trim() === '/' || String(rawSv).trim().startsWith('=');
+            if (cellEmpty) {
+              // 六日預設為休假：只適用「正常班」員工，且 Excel 原儲存格確實是空的
+              // (Excel 有寫班別一律以 Excel 為準，不覆蓋)
+              const dow = d.getDay();
+              if (empType === '正常班' && (dow === 0 || dow === 6)) {
+                S.schedule[`${emp.id}_${fmtKey(d)}`] = '休';
+                totalImported++;
+              }
+              return;
+            }
             const sv = String(rawSv).trim();
-            if (!sv || sv === '/' || sv.startsWith('=')) return;
             if (!SHIFTS[sv]) { totalSkipped++; return; }
             S.schedule[`${emp.id}_${fmtKey(d)}`] = sv;
             totalImported++;
