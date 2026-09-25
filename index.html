@@ -104,7 +104,7 @@ input,select,button{font-family:inherit;font-size:13px}
 /* ── Month view ── */
 .month-lbl{padding:13px 22px 0;font-size:15px;font-weight:600;color:var(--tx2)}
 .month-grid-wrap{overflow-x:auto;padding:0 22px 22px;-webkit-overflow-scrolling:touch}
-.mgrid{display:grid;width:max-content;border:0.5px solid var(--bd);border-radius:var(--r);overflow:hidden}
+.mgrid{display:grid;width:max-content;border:0.5px solid var(--bd);border-radius:var(--r);overflow:visible}
 .mgrid-header{display:grid;grid-template-columns:90px 54px repeat(31,34px);background:var(--s2);border-bottom:0.5px solid var(--bd)}
 .mg-hcell{padding:6px 3px;text-align:center;font-size:11px;font-weight:500;color:var(--tx3);border-right:0.5px solid var(--bd)}
 .mg-hcell:last-child{border-right:none}
@@ -122,7 +122,11 @@ input,select,button{font-family:inherit;font-size:13px}
 .mg-emp{justify-content:flex-start;padding:5px 8px;gap:6px}
 .mg-type{font-size:11px;color:var(--tx3);justify-content:center}
 .emp-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.emp-nm{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:75px}
+.emp-nm{font-size:12px;font-weight:600;white-space:nowrap}
+/* 姓名欄固定在左側，往左滑不會消失 */
+.mg-emp,.mg-hcell.mg-name-h{position:sticky;left:0;z-index:3;background:var(--surface);box-shadow:1px 0 0 var(--bd)}
+.mg-hcell.mg-name-h{background:var(--s2);z-index:4}
+.mg-emp.swap-highlight,.mg-emp.swap-select-1{background:#eff6ff}
 .shift-pill{display:inline-flex;align-items:center;justify-content:center;width:26px;height:22px;border-radius:5px;font-size:11px;font-weight:700;border:0.5px solid transparent;cursor:pointer;transition:transform 0.1s}
 .shift-pill:hover{transform:scale(1.12)}
 .shift-pill.ro{cursor:default}
@@ -142,6 +146,8 @@ th.ec{text-align:left;padding-left:8px;min-width:105px}
 .today-h .dn{color:var(--teal-tx);font-weight:700}
 td{padding:3px 3px;vertical-align:middle}
 td.ec2{padding:4px 8px;white-space:nowrap}
+th.ec,td.ec2{position:sticky;left:0;z-index:2;background:var(--surface);box-shadow:1px 0 0 var(--bd)}
+th.ec{background:var(--s2);z-index:3}
 .erow:hover td{background:var(--s2)}
 .en{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600}
 .sft-btn{width:64px;padding:5px 2px;border-radius:16px;border:0.5px solid var(--bd);background:transparent;color:var(--tx3);cursor:pointer;font-size:12px;font-weight:600;transition:transform 0.1s}
@@ -238,10 +244,12 @@ td.ec2{padding:4px 8px;white-space:nowrap}
   .nav,.month-grid-wrap,.week-wrap,.legend,.xp,.fb-setup,.stats-grid,.detail-wrap{padding-left:10px;padding-right:10px}
   .fb-fields{grid-template-columns:1fr}
   #pane-month,#pane-week,#pane-my,#pane-stats,#pane-excel,#pane-review,#pane-leave-log,#pane-setup{padding-bottom:72px}
-  .mgrid-header,.mgrid-row{grid-template-columns:70px 46px repeat(31,1fr)}
+  .mgrid-header,.mgrid-row{grid-template-columns:62px 40px repeat(31,28px)}
+  .mg-emp{padding:5px 6px;gap:4px}
+  .mg-emp .emp-dot,.mg-emp .del-e{display:none}
   .shift-pill{width:22px;height:20px;font-size:10px;border-radius:4px}
   .shift-btn{width:54px;padding:6px 2px;font-size:11px}
-  .emp-nm{max-width:52px;font-size:11px}
+  .emp-nm{font-size:12px}
   .mg-hcell{padding:4px 1px;font-size:10px}
   .nav-btn{width:38px;height:38px;font-size:18px}
 }
@@ -333,7 +341,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
         <div class="app-sub" id="app-sub">
           <span class="sync-dot sync-off" id="sync-dot"></span>
           <span id="sync-label">本機模式</span>
-          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.6.0</span>
+          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.6.2</span>
         </div>
       </div>
     </div>
@@ -851,7 +859,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.6.0';
+const APP_VERSION = '1.6.2';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -1399,7 +1407,7 @@ function renderMonth() {
   // header row
   let h = `<div class="mgrid">
   <div class="mgrid-header">
-    <div class="mg-hcell" style="text-align:left;padding-left:8px">姓名</div>
+    <div class="mg-hcell mg-name-h" style="text-align:left;padding-left:8px">姓名</div>
     <div class="mg-hcell">班型</div>`;
   days.forEach(d => {
     const isT = fmtKey(d) === tk;
@@ -1537,10 +1545,15 @@ function renderMonth() {
     const monthData = S.monthOrders && S.monthOrders[curMonthKey];
     const ot = (monthData && monthData.overtime) || S.overtimeOrder || [];
     const lv = (monthData && monthData.leave) || S.leaveOrder || [];
-    if (ot.length || lv.length) {
-      orderEl.innerHTML = `<div style="display:flex;gap:16px;flex-wrap:wrap;padding:7px 16px;background:var(--s2);border-bottom:0.5px solid var(--bd);font-size:11px;color:var(--tx3)">
-        ${ot.length ? `<span><b style="color:var(--amber-tx)">🚨 緊急加班：</b>${ot.map((n,i)=>'<b>'+(i+1)+'.</b>'+n).join(' ')}</span>` : ''}
-        ${lv.length ? `<span><b style="color:var(--teal-tx)">📋 填假順序：</b>${lv.join(' → ')}</span>` : ''}
+    const canEditOrders = myRole() === 'admin';
+    const editBtn = canEditOrders
+      ? `<button class="btn" style="padding:2px 9px;font-size:11px;margin-left:auto" onclick="openMonthOrderModal()">✏️ 編輯順序</button>`
+      : '';
+    if (ot.length || lv.length || canEditOrders) {
+      orderEl.innerHTML = `<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;padding:7px 16px;background:var(--s2);border-bottom:0.5px solid var(--bd);font-size:11px;color:var(--tx3)">
+        ${ot.length ? `<span><b style="color:var(--amber-tx)">🚨 緊急加班：</b>${ot.map((n,i)=>'<b>'+(i+1)+'.</b>'+n).join(' ')}</span>` : (canEditOrders ? '<span style="color:var(--tx3)">🚨 緊急加班：尚未設定</span>' : '')}
+        ${lv.length ? `<span><b style="color:var(--teal-tx)">📋 填假順序：</b>${lv.join(' → ')}</span>` : (canEditOrders ? '<span style="color:var(--tx3)">📋 填假順序：尚未設定</span>' : '')}
+        ${editBtn}
       </div>`;
     } else {
       orderEl.innerHTML = '';
@@ -3031,7 +3044,11 @@ function selectSwapCell(empId, empName, dateKey, dateLabel) {
       showToast('已取消選擇');
       return;
     }
-    openModal(`<div class="mt">確認交換班別</div>
+    // 超過當月可自由修改期限 → 改走主任審核
+    const needApproval = !canEditFree(a.dateKey) || !canEditFree(b.dateKey);
+    _pendingSwap = needApproval ? { a, b } : null;
+    openModal(`<div class="mt">${needApproval ? '換班申請' : '確認交換班別'}</div>
+      ${needApproval ? `<div style="font-size:12px;color:var(--amber-tx);background:var(--amber-bg);border:0.5px solid var(--amber-bd);border-radius:var(--r);padding:8px 12px;margin-bottom:12px">⚠️ 已超過本月自由修改期限，交換需經主任同意</div>` : ''}
       <div style="margin-bottom:14px">
         <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--s2);border-radius:var(--r);margin-bottom:8px">
           <div style="flex:1;font-size:13px"><b>${a.empName}</b> ${a.dateLabel}</div>
@@ -3043,11 +3060,52 @@ function selectSwapCell(empId, empName, dateKey, dateLabel) {
           <div style="padding:4px 10px;border-radius:8px;background:${b.shift?SHIFTS[b.shift]?.bg:'var(--s3)'};color:${b.shift?SHIFTS[b.shift]?.tx:'var(--tx3)'};font-weight:600">${b.shiftLabel}</div>
         </div>
       </div>
+      ${needApproval ? `<textarea id="swap-reason" placeholder="換班原因（必填）" style="width:100%;min-height:60px;padding:8px;border:0.5px solid var(--bd);border-radius:var(--r);font-family:inherit;font-size:13px;margin-bottom:12px;box-sizing:border-box"></textarea>` : ''}
       <div class="ma">
         <button class="btn" onclick="closeModal()" style="flex:1">取消</button>
-        <button class="btn btn-teal" onclick="doSwapCells('${a.empId}','${a.dateKey}','${a.shiftLabel}','${b.empId}','${b.dateKey}','${b.shiftLabel}','${a.empName}','${b.empName}')" style="flex:2">確認交換</button>
+        ${needApproval
+          ? `<button class="btn btn-teal" onclick="submitSwapRequest()" style="flex:2">送出換班申請</button>`
+          : `<button class="btn btn-teal" onclick="doSwapCells('${a.empId}','${a.dateKey}','${a.shiftLabel}','${b.empId}','${b.dateKey}','${b.shiftLabel}','${a.empName}','${b.empName}')" style="flex:2">確認交換</button>`}
       </div>`);
   }
+}
+
+let _pendingSwap = null;
+
+function submitSwapRequest() {
+  if (!requireLogin()) return;
+  if (!requestsRef) { showToast('請先登入'); return; }
+  if (!_pendingSwap) return;
+  const reason = document.getElementById('swap-reason')?.value?.trim();
+  if (!reason) { showToast('請填寫換班原因'); return; }
+  const { a, b } = _pendingSwap;
+  const reqId = 'req_' + Date.now();
+  // empName / dateKey / from / to 寫成可讀字串，讓審核頁、紀錄與 Email 不用改就能顯示
+  requestsRef.child(reqId).set({
+    type: 'swap',
+    a: { empId: a.empId, empName: a.empName, dateKey: a.dateKey, shift: a.shift || null },
+    b: { empId: b.empId, empName: b.empName, dateKey: b.dateKey, shift: b.shift || null },
+    empName: a.empName + ' ↔ ' + b.empName,
+    dateKey: a.dateKey === b.dateKey ? a.dateKey : a.dateKey + ' / ' + b.dateKey,
+    from: `${a.empName} ${a.dateLabel} ${a.shiftLabel}`,
+    to:   `${b.empName} ${b.dateLabel} ${b.shiftLabel}`,
+    reason,
+    requestedBy: currentUser.email,
+    requestedByUid: currentUser.uid.replace(/[.#$[\]]/g,'_'),
+    requestedAt: new Date().toISOString(),
+    status: 'pending_chief',
+    reviews: []
+  }).then(() => {
+    showToast('✅ 換班申請已送出，等待主任審核');
+  }).catch(err => {
+    showToast('送出失敗：' + (err.code || err.message));
+  });
+  _pendingSwap = null;
+  swapMode = false;
+  swapSelected = null;
+  document.querySelectorAll('.swap-mode-btn').forEach(btn => btn.classList.remove('active'));
+  closeModal();
+  renderAll();
 }
 
 function selectSwapMonth(empId, empName) {
@@ -3698,6 +3756,105 @@ function saveEmpOrder() {
   showToast('✅ 排序已更新');
 }
 
+// ══════════════════════════════════════════════
+// 緊急加班順序 / 填假順序（管理員手動調整）
+// ══════════════════════════════════════════════
+let _monthOrderDraft = null; // { overtime:[name], leave:[name] }
+
+function getMonthOrders(monthKey) {
+  const mk = monthKey || curMonthKeyOf();
+  const md = (S.monthOrders && S.monthOrders[mk]) || {};
+  return {
+    overtime: (md.overtime || S.overtimeOrder || []).slice(),
+    leave:    (md.leave    || S.leaveOrder    || []).slice(),
+  };
+}
+
+function openMonthOrderModal() {
+  if (!requireLogin()) return;
+  if (myRole() !== 'admin') { showToast('只有管理員可以調整順序'); return; }
+  if (!S.employees.length) { showToast('尚無員工資料'); return; }
+  const mk = curMonthKeyOf();
+  _monthOrderDraft = getMonthOrders(mk);
+  openModal(`
+    <div class="mt">加班／填假順序</div>
+    <div class="ms">${mk.replace('-','年')}月 · 只影響此月份</div>
+    <div style="font-size:12px;font-weight:600;color:var(--amber-tx);margin-bottom:6px">🚨 緊急加班順序</div>
+    <div id="mo-list-overtime" style="margin-bottom:8px"></div>
+    <div id="mo-add-overtime" style="margin-bottom:16px"></div>
+    <div style="font-size:12px;font-weight:600;color:var(--teal-tx);margin-bottom:6px">📋 填假順序</div>
+    <div id="mo-list-leave" style="margin-bottom:8px"></div>
+    <div id="mo-add-leave" style="margin-bottom:12px"></div>
+    <div class="ma">
+      <button class="btn" onclick="closeModal()" style="flex:1">取消</button>
+      <button class="btn btn-teal" onclick="saveMonthOrder()" style="flex:1">儲存順序</button>
+    </div>`);
+  renderMonthOrderLists();
+}
+
+function renderMonthOrderLists() {
+  if (!_monthOrderDraft) return;
+  ['overtime','leave'].forEach(kind => {
+    const arr = _monthOrderDraft[kind];
+    const box = document.getElementById('mo-list-' + kind);
+    if (box) {
+      box.innerHTML = arr.length ? arr.map((name, i) => `
+        <div style="display:flex;align-items:center;gap:8px;padding:5px 10px;border:0.5px solid var(--bd);border-radius:var(--r);margin-bottom:5px;background:var(--surface)">
+          <span style="font-size:12px;color:var(--tx3);width:20px">${i+1}</span>
+          <span style="flex:1;font-size:14px">${name}</span>
+          <button class="btn" style="padding:2px 8px" onclick="moveMonthOrder('${kind}',${i},-1)" ${i===0?'disabled':''}>▲</button>
+          <button class="btn" style="padding:2px 8px" onclick="moveMonthOrder('${kind}',${i},1)" ${i===arr.length-1?'disabled':''}>▼</button>
+          <button class="btn" style="padding:2px 8px;color:var(--red-tx)" onclick="removeMonthOrder('${kind}',${i})">✕</button>
+        </div>`).join('') : '<div style="font-size:12px;color:var(--tx3);padding:4px 0">（尚未設定）</div>';
+    }
+    // 只列出還沒被加入的人
+    const addBox = document.getElementById('mo-add-' + kind);
+    if (addBox) {
+      const rest = sortEmpsForMonth(S.employees).filter(e => !arr.includes(e.name));
+      addBox.innerHTML = rest.length ? `<div style="display:flex;flex-wrap:wrap;gap:5px">` + rest.map(e =>
+        `<button class="btn" style="padding:3px 10px;font-size:12px" onclick="addMonthOrder('${kind}','${e.name}')">+ ${e.name}</button>`
+      ).join('') + `</div>` : '';
+    }
+  });
+}
+
+function moveMonthOrder(kind, idx, dir) {
+  if (!_monthOrderDraft) return;
+  const arr = _monthOrderDraft[kind];
+  const j = idx + dir;
+  if (j < 0 || j >= arr.length) return;
+  const t = arr[idx]; arr[idx] = arr[j]; arr[j] = t;
+  renderMonthOrderLists();
+}
+
+function addMonthOrder(kind, name) {
+  if (!_monthOrderDraft) return;
+  if (!_monthOrderDraft[kind].includes(name)) _monthOrderDraft[kind].push(name);
+  renderMonthOrderLists();
+}
+
+function removeMonthOrder(kind, idx) {
+  if (!_monthOrderDraft) return;
+  _monthOrderDraft[kind].splice(idx, 1);
+  renderMonthOrderLists();
+}
+
+function saveMonthOrder() {
+  if (!requireLogin()) return;
+  if (myRole() !== 'admin') { showToast('只有管理員可以調整順序'); return; }
+  if (!_monthOrderDraft) return;
+  const mk = curMonthKeyOf();
+  if (!S.monthOrders) S.monthOrders = {};
+  if (!S.monthOrders[mk]) S.monthOrders[mk] = {};
+  S.monthOrders[mk].overtime = _monthOrderDraft.overtime.slice();
+  S.monthOrders[mk].leave    = _monthOrderDraft.leave.slice();
+  _monthOrderDraft = null;
+  saveAll();
+  closeModal();
+  renderAll();
+  showToast('✅ 順序已更新');
+}
+
 function renderWeekdayLimitTable() {
   const wl = policy.weekdayLimits || {};
   // 正在輸入中的欄位不要被即時同步蓋掉
@@ -4012,10 +4169,28 @@ function reviewRequest(reqId, action, note) {
     reviews: [...(req.reviews||[]), review]
   };
   if (newStatus === 'approved') {
-    // Actually apply the change
-    const key = req.empId + '_' + req.dateKey;
-    if (req.to && req.to !== '（空白）') S.schedule[key] = req.to;
-    else delete S.schedule[key];
+    if (req.type === 'swap' && req.a && req.b) {
+      // 換班：依申請當下的班別互換
+      const keyA = req.a.empId + '_' + req.a.dateKey;
+      const keyB = req.b.empId + '_' + req.b.dateKey;
+      if (req.a.shift) S.schedule[keyB] = req.a.shift; else delete S.schedule[keyB];
+      if (req.b.shift) S.schedule[keyA] = req.b.shift; else delete S.schedule[keyA];
+      const lbl = k => k ? (SHIFTS[k]?.label || k) : '（空白）';
+      S.leaveLog = [{
+        type: 'swap',
+        empA: req.a.empName, empB: req.b.empName,
+        dateA: req.a.dateKey, dateB: req.b.dateKey,
+        shiftA: lbl(req.a.shift), shiftB: lbl(req.b.shift),
+        by: reviewer, byName: myDisplayName(),
+        at: timestamp, viaRequest: reqId,
+      }, ...(S.leaveLog || [])].slice(0, 500);
+    } else {
+      // 單格修改：申請存的是班別名稱（如「日班」），要換回班別代碼（「日」）
+      const key = req.empId + '_' + req.dateKey;
+      const toKey = SHIFT_KEYS.find(k => k === req.to || SHIFTS[k].label === req.to) || null;
+      if (toKey) S.schedule[key] = toKey;
+      else delete S.schedule[key];
+    }
     saveAll();
     updates.appliedAt = timestamp;
   }
