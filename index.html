@@ -333,7 +333,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
         <div class="app-sub" id="app-sub">
           <span class="sync-dot sync-off" id="sync-dot"></span>
           <span id="sync-label">本機模式</span>
-          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.3.3</span>
+          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.5.0</span>
         </div>
       </div>
     </div>
@@ -848,7 +848,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.4.2';
+const APP_VERSION = '1.5.0';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -886,11 +886,22 @@ let changeRequests = {};
 let policyRef = null, requestsRef = null;
 let reqUnsub = null, policyUnsub = null;
 
+// 訪客（未登入，匿名唯讀）
+function isGuest() {
+  return !!(currentUser && currentUser.isAnonymous);
+}
+// 需要寫入權限時呼叫；訪客一律擋下
+function requireLogin(msg) {
+  if (isGuest() || !currentUser) { showToast(msg || '訪客為唯讀模式，請先登入'); return false; }
+  return true;
+}
+
 function isSuperAdmin() {
   return !!(currentUser && currentUser.email === SUPER_ADMIN_EMAIL);
 }
 
 function myRole() {
+  if (isGuest()) return 'guest';
   if (!currentUser) return 'staff';
   if (currentUser.email === SUPER_ADMIN_EMAIL) return 'admin';
   const uid = currentUser.uid.replace(/[.#$[\]]/g,'_');
@@ -901,6 +912,7 @@ function myRole() {
 }
 
 function myDisplayName() {
+  if (isGuest()) return '訪客';
   if (!currentUser) return '';
   if (currentUser.email === SUPER_ADMIN_EMAIL) return currentUser.displayName || currentUser.email;
   const uid = currentUser.uid.replace(/[.#$[\]]/g,'_');
@@ -910,6 +922,7 @@ function myDisplayName() {
 
 function canEditFree(dateKey) {
   const role = myRole();
+  if (role === 'guest') return false;
   if (role === 'admin' || role === 'chief') return true;
   const cutoffDay = policy.cutoffDay ?? 25;
   const target = new Date(dateKey);
@@ -959,6 +972,9 @@ function saveLocal() {
       })); } catch(e) {}
   }
 }
+function isShareView() {
+  try { return new URLSearchParams(location.search).get('view') === 'share'; } catch(e) { return false; }
+}
 function loadLocal() {
   try {
     const params = new URLSearchParams(location.search);
@@ -992,12 +1008,24 @@ function initFirebase(cfg) {
 
     firebaseAuth.onAuthStateChanged(user => {
       currentUser = user;
+      if (!user) {
+        // 未登入：以匿名身分登入，讓任何人不需帳號就能看到班表（唯讀）
+        stopSync();
+        updateAuthUI();
+        if (!S.isReadOnly || !isShareView()) {
+          firebaseAuth.signInAnonymously().catch(e => {
+            updateSyncStatus('err', '訪客檢視失敗：' + e.message);
+          });
+        }
+        return;
+      }
+      // 匿名訪客 = 唯讀；正式登入 = 可編輯
+      if (!isShareView()) S.isReadOnly = isGuest();
       updateAuthUI();
-      if (user) startSync();
-      else stopSync();
+      startSync();
     });
 
-    updateSyncStatus('off', '已連線，請登入');
+    updateSyncStatus('off', '連線中…');
     return true;
   } catch(e) {
     updateSyncStatus('err', '連線失敗: ' + e.message);
@@ -1075,7 +1103,7 @@ function stopSync() {
 }
 
 function pushToFirebase() {
-  if (!currentUser) { console.warn('no user'); showToast('請先登入'); return; }
+  if (!requireLogin()) return;
   if (!dbRef) { console.warn('no dbRef'); return; }
   let payload;
   try {
@@ -1233,6 +1261,22 @@ function updateAuthUI() {
   const setupTab = document.getElementById('tab-setup');
   const pendingBanner = document.getElementById('pending-banner');
   const mainContent = document.getElementById('main-tabs-content');
+
+  if (isGuest()) {
+    // 訪客：可以看班表，不能改任何東西
+    if (ab) { ab.textContent = '登入'; ab.onclick = openLoginModal; ab.className = 'btn btn-teal'; }
+    if (ul) ul.textContent = '訪客・唯讀';
+    if (setupTab) setupTab.style.display = 'none';
+    if (pendingBanner) pendingBanner.style.display = 'none';
+    if (mainContent) mainContent.style.display = '';
+    document.querySelectorAll('.swap-mode-btn').forEach(b => b.style.display = 'none');
+    document.querySelectorAll('#swap-month-btn,#swap-month-btn-week').forEach(b => b.style.display = 'none');
+    updateSyncStatus('ok', '訪客檢視（唯讀）');
+    if (firebaseDb) initNotes();
+    S.myPrefs = {};
+    renderAll();
+    return;
+  }
 
   if (currentUser) {
     if (ab) { ab.textContent = '登出'; ab.onclick = confirmLogout; ab.className = 'btn'; }
@@ -1636,6 +1680,8 @@ function loadUserPrefs(cb) {
 }
 
 function saveUserPrefs() {
+  if (!requireLogin()) return;
+
   const ref = getUserPrefsRef();
   if (ref) ref.set(S.myPrefs);
   // Also save locally
@@ -1941,6 +1987,8 @@ function confirmAddEmp() {
   saveAll(); closeModal(); renderAll();
 }
 function removeEmp(id) {
+  if (!requireLogin()) return;
+
   S.employees = S.employees.filter(e => e.id !== id);
   Object.keys(S.schedule).forEach(k => { if (k.startsWith(id+'_')) delete S.schedule[k]; });
   saveAll(); renderAll();
@@ -1977,6 +2025,7 @@ function confirmEmpType(empId, newType) {
 // ══════════════════════════════════════════════
 let editingShift = null;
 function openShiftModal(empId, dateKey, empName, dateLabel) {
+  if (isGuest()) { showToast('訪客為唯讀模式，請先登入'); return; }
   // Permission check
   if (currentUser) {
     const role = myRole();
@@ -2030,6 +2079,8 @@ function doDrop(e) { e.preventDefault(); doDrag(e, false); handleFile(e.dataTran
 let pendingImport = null;
 
 function handleFile(file) {
+  if (!requireLogin()) return;
+
   if (!file) return;
   stopSync(); // pause Firebase sync during import to prevent overwrites
   const reader = new FileReader();
@@ -2935,6 +2986,8 @@ function pickShiftInLeaveMode(empId, dateKey, sv) {
 // ══════════════════════════════════════════════
 
 function toggleSwapMode() {
+  if (!requireLogin()) return;
+
   swapMode = !swapMode;
   swapSelected = null; // { type:'cell'|'month', empId, empName, dateKey?, ... }
   document.querySelectorAll('.swap-mode-btn').forEach(b => b.classList.toggle('active', swapMode));
@@ -2948,6 +3001,8 @@ function toggleSwapMode() {
 }
 
 function selectSwapCell(empId, empName, dateKey, dateLabel) {
+  if (!requireLogin()) return;
+
   if (!swapMode) return;
   // If month-type was selected first, switch to cell mode
   if (swapSelected && swapSelected.type === 'month') {
@@ -3053,6 +3108,8 @@ function doMonthSwapFromMode(aId, aName, bId, bName) {
 }
 
 function doSwapCells(aEmpId, aDate, aShiftLabel, bEmpId, bDate, bShiftLabel, aName, bName) {
+  if (!requireLogin()) return;
+
   closeModal();
   const keyA = aEmpId + '_' + aDate;
   const keyB = bEmpId + '_' + bDate;
@@ -3216,14 +3273,14 @@ function loadNotes() {
     const el = document.getElementById('month-notes-text');
     if (el) {
       el.value = txt;
-      el.readOnly = false;
+      el.readOnly = isGuest();
       el.style.opacity = '1';
     }
   });
 }
 
 function onNotesInput() {
-  if (!currentUser) return;
+  if (!currentUser || isGuest()) return;
   clearTimeout(_notesTimer);
   _notesTimer = setTimeout(() => {
     const el = document.getElementById('month-notes-text');
@@ -3800,6 +3857,8 @@ function renderRoleUserList() {
 
 // ── Change Request system ─────────────────────────────────────────────────
 function submitChangeRequest(empId, dateKey, fromShift, toShift, reason) {
+  if (!requireLogin()) return;
+
   if (!requestsRef || !currentUser) { showToast('請先登入'); return; }
   const reqId = 'req_' + Date.now();
   const emp = S.employees.find(e => e.id == empId);
@@ -3819,6 +3878,8 @@ function submitChangeRequest(empId, dateKey, fromShift, toShift, reason) {
 }
 
 function reviewRequest(reqId, action, note) {
+  if (!requireLogin()) return;
+
   // action: 'approve_chief' | 'approve_admin' | 'reject'
   if (!requestsRef || !currentUser) return;
   const req = changeRequests[reqId];
