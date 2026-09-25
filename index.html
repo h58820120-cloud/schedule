@@ -333,7 +333,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
         <div class="app-sub" id="app-sub">
           <span class="sync-dot sync-off" id="sync-dot"></span>
           <span id="sync-label">本機模式</span>
-          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.5.2</span>
+          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.6.0</span>
         </div>
       </div>
     </div>
@@ -390,6 +390,9 @@ td.ec2{padding:4px 8px;white-space:nowrap}
         </button>
         <button class="btn" id="swap-month-btn" onclick="openMonthSwapModal()" title="整月互換兩人班表" style="display:none">
           🔄 整月
+        </button>
+        <button class="btn emp-order-btn" id="emp-order-btn" onclick="openEmpOrderModal()" title="手動調整人員排序" style="display:none">
+          ↕ 排序
         </button>
         <button class="btn" style="font-size:12px" onclick="switchTab('week')">週視圖</button>
       </div>
@@ -848,7 +851,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.5.2';
+const APP_VERSION = '1.6.0';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -1274,6 +1277,7 @@ function updateAuthUI() {
     if (pendingBanner) pendingBanner.style.display = 'none';
     if (mainContent) mainContent.style.display = '';
     document.querySelectorAll('.swap-mode-btn').forEach(b => b.style.display = 'none');
+    document.querySelectorAll('.emp-order-btn').forEach(b => b.style.display = 'none');
     document.querySelectorAll('#swap-month-btn,#swap-month-btn-week').forEach(b => b.style.display = 'none');
     updateSyncStatus('ok', '訪客檢視（唯讀）');
     if (firebaseDb) initNotes();
@@ -1296,6 +1300,7 @@ function updateAuthUI() {
     if (firebaseDb) { initPolicyAndRequests(); initNotes(); }
     // Show swap buttons for all logged-in users
     document.querySelectorAll('.swap-mode-btn').forEach(b => b.style.display = '');
+    document.querySelectorAll('.emp-order-btn').forEach(b => b.style.display = role === 'admin' ? '' : 'none');
     if (!isPending) {
       loadUserPrefs(prefs => {
         S.myPrefs = prefs;
@@ -1308,6 +1313,7 @@ function updateAuthUI() {
   } else {
     if (ab) { ab.textContent = '登入'; ab.onclick = openLoginModal; ab.className = 'btn btn-teal'; }
     document.querySelectorAll('.swap-mode-btn').forEach(b => b.style.display = 'none');
+    document.querySelectorAll('.emp-order-btn').forEach(b => b.style.display = 'none');
     document.querySelectorAll('#swap-month-btn,#swap-month-btn-week').forEach(b => b.style.display = 'none');
     if (ul) ul.textContent = '';
     if (setupTab) setupTab.style.display = 'none';
@@ -1433,18 +1439,10 @@ function renderMonth() {
   h += `</div>`; // end header
 
   // Use per-month order if available, fallback to employees with data this month
-  const curMonthKey = (() => { const d = new Date(); d.setMonth(d.getMonth() + S.monthOffset); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); })();
+  const curMonthKey = curMonthKeyOf();
   const monthOrderNames = S.monthEmpOrder && S.monthEmpOrder[curMonthKey];
   // Always show all employees, sort by per-month order
-  const renderEmps = [...S.employees];
-  // Sort by per-month order if available, else global sortOrder
-  renderEmps.sort((a, b) => {
-    const ao = (a.monthSortOrder && a.monthSortOrder[curMonthKey] !== undefined)
-      ? a.monthSortOrder[curMonthKey] : (a.sortOrder || 999);
-    const bo = (b.monthSortOrder && b.monthSortOrder[curMonthKey] !== undefined)
-      ? b.monthSortOrder[curMonthKey] : (b.sortOrder || 999);
-    return ao - bo;
-  });
+  let renderEmps = sortEmpsForMonth(S.employees, curMonthKey);
   // If no employees found with data, show all (handles fresh/empty state)
   if (renderEmps.length === 0) {
     renderEmps = [...S.employees];
@@ -1573,9 +1571,11 @@ function renderWeek() {
   }
 
   // Filter by account view settings (only for logged-in users)
-  const renderEmpsW = (currentUser && S.myPrefs.viewEmps && S.myPrefs.viewEmps.length > 0 && !S.isReadOnly)
-    ? S.employees.filter(e => S.myPrefs.viewEmps.includes(e.name))
-    : S.employees;
+  const renderEmpsW = sortEmpsForMonth(
+    (currentUser && S.myPrefs.viewEmps && S.myPrefs.viewEmps.length > 0 && !S.isReadOnly)
+      ? S.employees.filter(e => S.myPrefs.viewEmps.includes(e.name))
+      : S.employees
+  );
 
   if (renderEmpsW.length === 0) {
     wrap.innerHTML = `<div style="text-align:center;padding:40px;color:var(--tx3);font-size:13px">此帳號未設定顯示員工<br><br><button class="btn btn-teal" onclick="switchTab('setup')">前往設定</button></div>`;
@@ -3599,6 +3599,103 @@ function checkLeaveLimitWeekday(dateKey, fromShift, toShift, empId) {
     return { ok: false, projected, max, msg: `${dn}「${shiftLabel}」上限 ${max} 人，目前已有 ${current} 人` };
   }
   return { ok: true };
+}
+
+// ══════════════════════════════════════════════
+// 人員排序（管理員手動調整）
+// ══════════════════════════════════════════════
+function curMonthKeyOf(offset) {
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + (offset !== undefined ? offset : (S.monthOffset || 0)));
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+
+// 依「該月排序 → 全域排序」排列，月視圖與週視圖共用同一套規則
+function sortEmpsForMonth(list, monthKey) {
+  const mk = monthKey || curMonthKeyOf();
+  return [...list].sort((a, b) => {
+    const ao = (a.monthSortOrder && a.monthSortOrder[mk] !== undefined) ? a.monthSortOrder[mk] : (a.sortOrder || 999);
+    const bo = (b.monthSortOrder && b.monthSortOrder[mk] !== undefined) ? b.monthSortOrder[mk] : (b.sortOrder || 999);
+    if (ao !== bo) return ao - bo;
+    return (a.name || '').localeCompare(b.name || '', 'zh-Hant');
+  });
+}
+
+let _empOrderDraft = null;
+
+function openEmpOrderModal() {
+  if (!requireLogin()) return;
+  if (myRole() !== 'admin') { showToast('只有管理員可以調整排序'); return; }
+  if (!S.employees.length) { showToast('尚無員工資料'); return; }
+  _empOrderDraft = sortEmpsForMonth(S.employees).map(e => e.id);
+  const mk = curMonthKeyOf();
+  openModal(`
+    <div class="mt">人員排序</div>
+    <div class="ms">${mk.replace('-','年')}月 · 用 ▲▼ 調整順序</div>
+    <div id="emp-order-list" style="max-height:52vh;overflow:auto;margin-bottom:12px"></div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--tx2);margin-bottom:12px">
+      <input type="checkbox" id="emp-order-all-months" />
+      同時套用為所有月份的預設排序
+    </label>
+    <div class="ma">
+      <button class="btn" onclick="closeModal()" style="flex:1">取消</button>
+      <button class="btn btn-teal" onclick="saveEmpOrder()" style="flex:1">儲存排序</button>
+    </div>`);
+  renderEmpOrderList();
+}
+
+function renderEmpOrderList() {
+  const box = document.getElementById('emp-order-list');
+  if (!box || !_empOrderDraft) return;
+  box.innerHTML = _empOrderDraft.map((id, i) => {
+    const emp = S.employees.find(e => e.id == id);
+    if (!emp) return '';
+    const c = EMP_COLORS[emp.colorIdx % EMP_COLORS.length];
+    return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:0.5px solid var(--bd);border-radius:var(--r);margin-bottom:6px;background:var(--surface)">
+      <span style="font-size:12px;color:var(--tx3);width:20px">${i+1}</span>
+      <div class="emp-dot" style="background:${c}"></div>
+      <span style="flex:1;font-size:14px">${emp.name}</span>
+      <span style="font-size:11px;color:var(--tx3)">${emp.type || ''}</span>
+      <button class="btn" style="padding:3px 9px" onclick="moveEmpOrder(${i},-1)" ${i===0?'disabled':''}>▲</button>
+      <button class="btn" style="padding:3px 9px" onclick="moveEmpOrder(${i},1)" ${i===_empOrderDraft.length-1?'disabled':''}>▼</button>
+    </div>`;
+  }).join('');
+}
+
+function moveEmpOrder(idx, dir) {
+  if (!_empOrderDraft) return;
+  const j = idx + dir;
+  if (j < 0 || j >= _empOrderDraft.length) return;
+  const t = _empOrderDraft[idx];
+  _empOrderDraft[idx] = _empOrderDraft[j];
+  _empOrderDraft[j] = t;
+  renderEmpOrderList();
+}
+
+function saveEmpOrder() {
+  if (!requireLogin()) return;
+  if (myRole() !== 'admin') { showToast('只有管理員可以調整排序'); return; }
+  if (!_empOrderDraft) return;
+  const mk = curMonthKeyOf();
+  const allMonths = !!document.getElementById('emp-order-all-months')?.checked;
+  _empOrderDraft.forEach((id, i) => {
+    const emp = S.employees.find(e => e.id == id);
+    if (!emp) return;
+    if (!emp.monthSortOrder) emp.monthSortOrder = {};
+    emp.monthSortOrder[mk] = i + 1;
+    if (allMonths) emp.sortOrder = i + 1;
+  });
+  // 同步該月的名字順序，讓匯出／分享沿用同一份排序
+  if (!S.monthEmpOrder) S.monthEmpOrder = {};
+  S.monthEmpOrder[mk] = _empOrderDraft
+    .map(id => S.employees.find(e => e.id == id))
+    .filter(Boolean).map(e => e.name);
+  _empOrderDraft = null;
+  saveAll();
+  closeModal();
+  renderAll();
+  showToast('✅ 排序已更新');
 }
 
 function renderWeekdayLimitTable() {
