@@ -333,7 +333,7 @@ td.ec2{padding:4px 8px;white-space:nowrap}
         <div class="app-sub" id="app-sub">
           <span class="sync-dot sync-off" id="sync-dot"></span>
           <span id="sync-label">本機模式</span>
-          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.5.0</span>
+          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.5.2</span>
         </div>
       </div>
     </div>
@@ -848,7 +848,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.5.0';
+const APP_VERSION = '1.5.2';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -1011,10 +1011,14 @@ function initFirebase(cfg) {
       if (!user) {
         // 未登入：以匿名身分登入，讓任何人不需帳號就能看到班表（唯讀）
         stopSync();
+        if (!isShareView()) S.isReadOnly = true; // 本機快取也只能看，不能改
         updateAuthUI();
         if (!S.isReadOnly || !isShareView()) {
           firebaseAuth.signInAnonymously().catch(e => {
-            updateSyncStatus('err', '訪客檢視失敗：' + e.message);
+            const hint = (e.code === 'auth/admin-restricted-operation')
+              ? '訪客檢視未啟用（請於 Firebase Authentication 開啟「匿名」登入）'
+              : '訪客檢視失敗：' + e.message;
+            updateSyncStatus('err', hint);
           });
         }
         return;
@@ -3599,18 +3603,21 @@ function checkLeaveLimitWeekday(dateKey, fromShift, toShift, empId) {
 
 function renderWeekdayLimitTable() {
   const wl = policy.weekdayLimits || {};
+  // 正在輸入中的欄位不要被即時同步蓋掉
+  const busy = el => !el || el === document.activeElement;
   for (let i = 0; i < 7; i++) {
     // Firebase may store keys as strings
     const row = wl[i] || wl[String(i)] || {};
     ['full','am','pm'].forEach(type => {
       const el = document.getElementById('wl-' + i + '-' + type);
-      if (el) el.value = (row[type] !== undefined) ? Number(row[type]) : 2;
+      if (busy(el)) return;
+      el.value = (row[type] !== undefined) ? Number(row[type]) : 2;
     });
   }
   const cfd = document.getElementById('free-edit-cutoff-day');
-  if (cfd) cfd.value = (policy.cutoffDay !== undefined) ? policy.cutoffDay : 25;
+  if (cfd && !busy(cfd)) cfd.value = (policy.cutoffDay !== undefined) ? policy.cutoffDay : 25;
   const fl2 = document.getElementById('review-flow');
-  if (fl2) fl2.value = policy.reviewFlow || 'two';
+  if (fl2 && !busy(fl2)) fl2.value = policy.reviewFlow || 'two';
 }
 
 // ══════════════════════════════════════════════
@@ -3741,21 +3748,29 @@ function registerUserRole() {
 // ── Policy settings (admin only) ─────────────────────────────────────────
 function savePolicySettings() {
   if (!isSuperAdmin()) { showToast('權限不足'); return; }
+  if (!policyRef) { showToast('請先連線 Firebase'); return; }
+  const el = document.getElementById('policy-result');
   const cutoffDay = parseInt(document.getElementById('free-edit-cutoff-day')?.value) || 25;
   const flow = document.getElementById('review-flow')?.value || 'two';
-  const updates = { cutoffDay, reviewFlow: flow };
-  // Save weekday limits
-  // Save each weekday limit directly as Firebase path to avoid key type issues
-  if (!policyRef) { showToast('請先連線 Firebase'); return; }
-  policyRef.update({ cutoffDay, reviewFlow: flow });
+  // 一次原子寫入，避免多筆 set 競爭
+  const weekdayLimits = {};
   for (let i = 0; i < 7; i++) {
-    const full = parseInt(document.getElementById('wl-'+i+'-full')?.value) || 0;
-    const am   = parseInt(document.getElementById('wl-'+i+'-am')?.value)   || 0;
-    const pm   = parseInt(document.getElementById('wl-'+i+'-pm')?.value)   || 0;
-    policyRef.child('weekdayLimits/'+i).set({ full, am, pm });
+    weekdayLimits[i] = {
+      full: parseInt(document.getElementById('wl-'+i+'-full')?.value) || 0,
+      am:   parseInt(document.getElementById('wl-'+i+'-am')?.value)   || 0,
+      pm:   parseInt(document.getElementById('wl-'+i+'-pm')?.value)   || 0,
+    };
   }
-  const el = document.getElementById('policy-result');
-  if (el) { el.innerHTML = '<div class="imp-ok">✅ 期限設定已儲存</div>'; setTimeout(()=>el.innerHTML='',3000); }
+  if (el) el.innerHTML = '<div style="font-size:13px;color:var(--tx2)">儲存中…</div>';
+  policyRef.update({ cutoffDay, reviewFlow: flow, weekdayLimits })
+    .then(() => {
+      if (el) { el.innerHTML = '<div class="imp-ok">✅ 期限設定已儲存</div>'; setTimeout(()=>{ if(el) el.innerHTML=''; },3000); }
+    })
+    .catch(err => {
+      // 寫入失敗一定要說出來，不能假裝成功
+      if (el) el.innerHTML = '<div class="imp-err">❌ 儲存失敗：' + (err.code || '') + ' ' + err.message + '</div>';
+      showToast('儲存失敗：' + (err.code || err.message));
+    });
 }
 
 function approveUser(uid) {
