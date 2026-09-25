@@ -9,6 +9,8 @@
 <meta http-equiv="Expires" content="0"/>
 <meta name="description" content="花蓮醫院檢驗科班表管理系統"/>
 <meta name="theme-color" content="#0d7377"/>
+<meta name="color-scheme" content="only light"/>
+<meta name="supported-color-schemes" content="light"/>
 <!-- PWA -->
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -104,16 +106,22 @@ input,select,button{font-family:inherit;font-size:13px}
 /* ── Month view ── */
 .month-lbl{padding:13px 22px 0;font-size:15px;font-weight:600;color:var(--tx2)}
 .month-grid-wrap{overflow-x:auto;padding:0 22px 22px;-webkit-overflow-scrolling:touch}
+:root{color-scheme:only light}
+html,body{forced-color-adjust:none;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+/* 週六／週日／假日底色：固定色碼，不吃系統主題 */
+.mg-cell.we-sat,.mg-hcell.we-sat{background:#dcfce7!important;forced-color-adjust:none}
+.mg-cell.we-sun,.mg-hcell.we-sun{background:#fce7f3!important;forced-color-adjust:none}
+.lv-done{color:#7c3aed!important;font-weight:700;background:#ede9fe;border-radius:6px;padding:0 4px;forced-color-adjust:none}
 .mgrid{display:grid;width:max-content;border:0.5px solid var(--bd);border-radius:var(--r);overflow:visible}
 .mgrid-header{display:grid;grid-template-columns:90px 54px repeat(31,34px);background:var(--s2);border-bottom:0.5px solid var(--bd)}
 .mg-hcell{padding:6px 3px;text-align:center;font-size:11px;font-weight:500;color:var(--tx3);border-right:0.5px solid var(--bd)}
 .mg-hcell:last-child{border-right:none}
 .mg-hcell.today{background:var(--teal-bg);color:var(--teal-tx)}
-.mg-hcell.holiday{background:#fdf2f8;color:#be185d}
-.mg-hcell.sat-h{background:#f0fdf4;color:#16a34a}
-.mg-hcell.saturday{background:#f0fdf4;color:#166534}
-.mg-hcell.saturday{background:#f0fdf4;color:#166534}
-.mg-hcell.sat-hdr{background:#f0fdf4;color:#166534}
+.mg-hcell.holiday{background:#fce7f3!important;color:#be185d}
+.mg-hcell.sat-h{background:#dcfce7!important;color:#16a34a}
+.mg-hcell.saturday{background:#dcfce7!important;color:#166534}
+.mg-hcell.saturday{background:#dcfce7!important;color:#166534}
+.mg-hcell.sat-hdr{background:#dcfce7!important;color:#166534}
 .mgrid-row{display:grid;grid-template-columns:90px 54px repeat(31,34px);border-bottom:0.5px solid var(--bd)}
 .mgrid-row:last-child{border-bottom:none}
 .mgrid-row:hover{background:var(--s2)}
@@ -341,7 +349,7 @@ th.ec{background:var(--s2);z-index:3}
         <div class="app-sub" id="app-sub">
           <span class="sync-dot sync-off" id="sync-dot"></span>
           <span id="sync-label">本機模式</span>
-          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.6.2</span>
+          <span id="user-label" style="margin-left:10px"></span><span style="font-size:10px;color:var(--tx3);margin-left:8px" id="ver-label">v1.7.0</span>
         </div>
       </div>
     </div>
@@ -420,24 +428,6 @@ th.ec{background:var(--s2);z-index:3}
     </div>
     <div class="legend" id="legend-month"></div>
 
-    <!-- Leave Order Panel -->
-    <div id="leave-order-panel" style="border-top:0.5px solid var(--bd);padding:16px 22px 24px">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
-        <div>
-          <div style="font-size:14px;font-weight:600">🗓 休假填寫順序</div>
-          <div style="font-size:12px;color:var(--tx3);margin-top:2px" id="leave-order-month-label"></div>
-        </div>
-        <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
-          <button class="btn btn-green" id="leave-done-btn" onclick="markLeaveDone()" style="display:none">
-            ✅ 我已選完
-          </button>
-          <button class="btn btn-amber" id="leave-order-edit-btn" onclick="openLeaveOrderEdit()" style="display:none">
-            ✏️ 調整順序
-          </button>
-        </div>
-      </div>
-      <div id="leave-order-list"></div>
-    </div>
   </div>
 
   <!-- ══ WEEK PANE ══ -->
@@ -859,7 +849,7 @@ let S = {
   weekOffset: 0,
   isReadOnly: false,
 };
-const APP_VERSION = '1.6.2';
+const APP_VERSION = '1.7.0';
 const SUPER_ADMIN_EMAIL = 'h58820120@gmail.com';
 
 // Force reload if cached version is old
@@ -1478,11 +1468,11 @@ function renderMonth() {
       const isT = dk === tk; const isHol = !!S.holidays[dk]; const isSun = d.getDay()===0; const isSat = d.getDay()===6; const isSatC = d.getDay()===6; const isSunC = d.getDay()===0;
       const isWPink = isHol || isSun; const isWSat = isSat;
       if (S.isReadOnly) {
-        h += `<div class="mg-cell" style="${isT?'background:var(--teal-bg)':(isHol||isSunC)?'background:#fdf2f8':isSatC?'background:#f0fdf4':''}">
+        h += `<div class="mg-cell${isT?'':(isHol||isSunC)?' we-sun':isSatC?' we-sat':''}" style="${isT?'background:var(--teal-bg)':(isHol||isSunC)?'background:#fce7f3':isSatC?'background:#dcfce7':''}">
           <div class="shift-pill ro ${sh?sh.cls:'sp-empty'}">${sh?sh.short:'·'}</div>
         </div>`;
       } else if (leaveMode) {
-        const cellBg = isT?'background:var(--teal-bg)':(isHol||isSunC)?'background:#fdf2f8':isSatC?'background:#f0fdf4':'';
+        const cellBg = isT?'background:var(--teal-bg)':(isHol||isSunC)?'background:#fce7f3!important':isSatC?'background:#dcfce7!important':'';
         // 六日和國定假日：休假模式下不顯示覆蓋層，直接顯示一般格子
         const dObj = new Date(dk);
         const isDayOff = !!S.holidays[dk] || dObj.getDay() === 0 || dObj.getDay() === 6;
@@ -1531,7 +1521,7 @@ function renderMonth() {
         const cellOnClick = swapMode
           ? `data-swap="1" onclick="selectSwapCell(${emp.id},'${emp.name}','${dk}','${cellDate}')" style="cursor:pointer"`
           : `onclick="openShiftModal(${emp.id},'${dk}','${emp.name}','${d.getMonth()+1}/${d.getDate()}')"`;
-        h += `<div class="mg-cell" style="${isT?'background:var(--teal-bg)':(isHol||isSunC)?'background:#fdf2f8':isSatC?'background:#f0fdf4':''}"><div class="shift-pill ${sh?sh.cls:'sp-empty'}${isSwapSel?' swap-select-1':swapMode?' swap-highlight':''}" ${cellOnClick}>${sh?sh.short:'·'}</div></div>`;
+        h += `<div class="mg-cell${isT?'':(isHol||isSunC)?' we-sun':isSatC?' we-sat':''}" style="${isT?'background:var(--teal-bg)':(isHol||isSunC)?'background:#fce7f3':isSatC?'background:#dcfce7':''}"><div class="shift-pill ${sh?sh.cls:'sp-empty'}${isSwapSel?' swap-select-1':swapMode?' swap-highlight':''}" ${cellOnClick}>${sh?sh.short:'·'}</div></div>`;
       }
     });
     h += `</div>`;
@@ -1546,13 +1536,25 @@ function renderMonth() {
     const ot = (monthData && monthData.overtime) || S.overtimeOrder || [];
     const lv = (monthData && monthData.leave) || S.leaveOrder || [];
     const canEditOrders = myRole() === 'admin';
+    const myEid = getMyEmpId();
+    const myDoneBtn = (myEid && !isLeaveDone(myEid, curMonthKey))
+      ? `<button class="btn btn-teal" style="padding:2px 10px;font-size:11px" onclick="markLeaveDone()">✅ 我休假選完了</button>`
+      : '';
     const editBtn = canEditOrders
       ? `<button class="btn" style="padding:2px 9px;font-size:11px;margin-left:auto" onclick="openMonthOrderModal()">✏️ 編輯順序</button>`
       : '';
-    if (ot.length || lv.length || canEditOrders) {
+    if (ot.length || lv.length || canEditOrders || myDoneBtn) {
       orderEl.innerHTML = `<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;padding:7px 16px;background:var(--s2);border-bottom:0.5px solid var(--bd);font-size:11px;color:var(--tx3)">
         ${ot.length ? `<span><b style="color:var(--amber-tx)">🚨 緊急加班：</b>${ot.map((n,i)=>'<b>'+(i+1)+'.</b>'+n).join(' ')}</span>` : (canEditOrders ? '<span style="color:var(--tx3)">🚨 緊急加班：尚未設定</span>' : '')}
-        ${lv.length ? `<span><b style="color:var(--teal-tx)">📋 填假順序：</b>${lv.join(' → ')}</span>` : (canEditOrders ? '<span style="color:var(--tx3)">📋 填假順序：尚未設定</span>' : '')}
+        ${lv.length ? `<span><b style="color:var(--teal-tx)">📋 填假順序：</b>${lv.map(n => {
+          const e = S.employees.find(x => x.name === n);
+          const done = e && isLeaveDone(e.id, curMonthKey);
+          const canUndo = done && (myRole() === 'admin' || String(getMyEmpId()) === String(e.id));
+          return done
+            ? `<span class="lv-done" ${canUndo?`onclick="undoLeaveDone(${e.id})" style="cursor:pointer" title="點擊撤回"`:''}>${n}✓</span>`
+            : n;
+        }).join(' → ')}</span>` : (canEditOrders ? '<span style="color:var(--tx3)">📋 填假順序：尚未設定</span>' : '')}
+        ${myDoneBtn}
         ${editBtn}
       </div>`;
     } else {
@@ -2717,7 +2719,7 @@ function initLeaveOrder() {
   if (leaveOrderUnsub) leaveOrderRef.off('value', leaveOrderUnsub);
   leaveOrderUnsub = leaveOrderRef.on('value', snap => {
     leaveOrderData = snap.val() || {};
-    renderLeaveOrderPanel();
+    renderAll();
   });
 }
 
@@ -2746,8 +2748,15 @@ function getPrevMonthKey(monthKey) {
 }
 
 function getMyEmpId() {
-  // Match logged-in user's displayName to employee name
-  if (!currentUser) return null;
+  if (!currentUser || isGuest()) return null;
+  // 優先用帳號管理中配對的班表人員
+  const uid = currentUser.uid.replace(/[.#$[\]]/g,'_');
+  const info = policy.roles && policy.roles[uid];
+  if (info && info.empId !== undefined && info.empId !== null && info.empId !== '') {
+    const linked = S.employees.find(e => String(e.id) === String(info.empId));
+    if (linked) return linked.id;
+  }
+  // 沒配對時退回用名字比對
   const name = myDisplayName();
   const emp = S.employees.find(e => e.name === name);
   return emp ? emp.id : null;
@@ -2815,28 +2824,63 @@ function renderLeaveOrderPanel() {
   }).join('');
 }
 
-function markLeaveDone() {
-  const myEmpId = getMyEmpId();
-  if (!myEmpId || !leaveOrderRef) return;
-  const monthKey = leaveOrderMonthKey();
+function isLeaveDone(empId, monthKey) {
+  const d = (leaveOrderData[monthKey || curMonthKeyOf()] || {}).done || {};
+  return !!d[String(empId)];
+}
 
-  // Collect my leave dates this month
+function markLeaveDone() {
+  if (!requireLogin()) return;
+  const myEmpId = getMyEmpId();
+  if (!myEmpId) { showToast('帳號尚未配對班表人員，請聯絡管理員'); return; }
+  if (!leaveOrderRef) return;
+  const monthKey = curMonthKeyOf();
   const [y, m] = monthKey.split('-').map(Number);
   const days = new Date(y, m, 0).getDate();
   const leaveDates = [];
   for (let d = 1; d <= days; d++) {
     const dk = monthKey + '-' + String(d).padStart(2,'0');
     const sv = S.schedule[`${myEmpId}_${dk}`];
-    if (sv && LEAVE_KEYS.includes(sv)) {
-      leaveDates.push(dk.slice(5) + ' ' + SHIFTS[sv].label);
-    }
+    if (sv && SHIFTS[sv] && SHIFTS[sv].isLeave) leaveDates.push(m + '/' + d + ' ' + SHIFTS[sv].label);
   }
+  const emp = S.employees.find(e => e.id == myEmpId);
+  openModal(`<div class="mt">確認休假已選完</div>
+    <div class="ms">${emp ? emp.name : ''} · ${y}年${m}月</div>
+    <div style="font-size:13px;background:var(--s2);border-radius:var(--r);padding:10px 12px;margin-bottom:12px;max-height:30vh;overflow:auto">
+      ${leaveDates.length ? leaveDates.join('<br>') : '<span style="color:var(--tx3)">本月沒有休假</span>'}
+    </div>
+    <div style="font-size:12px;color:var(--tx3);margin-bottom:12px">確認後，填假順序上你的名字會變成紫色，下一位就知道輪到他了。</div>
+    <div class="ma">
+      <button class="btn" onclick="closeModal()" style="flex:1">取消</button>
+      <button class="btn btn-teal" onclick="confirmLeaveDone()" style="flex:2">確認選完</button>
+    </div>`);
+  _leaveDoneDraft = { monthKey, empId: myEmpId, dates: leaveDates };
+}
 
-  leaveOrderRef.child(monthKey + '/done/' + myEmpId).set({
+let _leaveDoneDraft = null;
+function confirmLeaveDone() {
+  if (!_leaveDoneDraft || !leaveOrderRef) return;
+  const { monthKey, empId, dates } = _leaveDoneDraft;
+  leaveOrderRef.child(monthKey + '/done/' + empId).set({
     at: new Date().toISOString(),
-    dates: leaveDates,
-  });
-  showToast('✅ 已標記完成！');
+    by: currentUser.email,
+    dates,
+  }).then(() => showToast('✅ 已確認選完'))
+    .catch(err => showToast('失敗：' + (err.code || err.message)));
+  _leaveDoneDraft = null;
+  closeModal();
+}
+
+function undoLeaveDone(empId) {
+  if (!requireLogin()) return;
+  const mine = String(getMyEmpId()) === String(empId);
+  if (!mine && myRole() !== 'admin') { showToast('只能撤回自己的確認'); return; }
+  if (!leaveOrderRef) return;
+  const emp = S.employees.find(e => e.id == empId);
+  if (!confirm(`撤回 ${emp ? emp.name : ''} 的「休假已選完」？`)) return;
+  leaveOrderRef.child(curMonthKeyOf() + '/done/' + empId).remove()
+    .then(() => showToast('已撤回'))
+    .catch(err => showToast('失敗：' + (err.code || err.message)));
 }
 
 function openLeaveOrderEdit() {
@@ -3760,6 +3804,7 @@ function saveEmpOrder() {
 // 緊急加班順序 / 填假順序（管理員手動調整）
 // ══════════════════════════════════════════════
 let _monthOrderDraft = null; // { overtime:[name], leave:[name] }
+let _monthOrderSel = null;   // { kind, idx } 目前選中的人
 
 function getMonthOrders(monthKey) {
   const mk = monthKey || curMonthKeyOf();
@@ -3776,15 +3821,15 @@ function openMonthOrderModal() {
   if (!S.employees.length) { showToast('尚無員工資料'); return; }
   const mk = curMonthKeyOf();
   _monthOrderDraft = getMonthOrders(mk);
+  _monthOrderSel = null;
   openModal(`
     <div class="mt">加班／填假順序</div>
-    <div class="ms">${mk.replace('-','年')}月 · 只影響此月份</div>
+    <div class="ms">${mk.replace('-','年')}月 · 點名字選取，再用 ◀ ▶ 移動</div>
     <div style="font-size:12px;font-weight:600;color:var(--amber-tx);margin-bottom:6px">🚨 緊急加班順序</div>
-    <div id="mo-list-overtime" style="margin-bottom:8px"></div>
-    <div id="mo-add-overtime" style="margin-bottom:16px"></div>
+    <div id="mo-row-overtime" style="margin-bottom:14px"></div>
     <div style="font-size:12px;font-weight:600;color:var(--teal-tx);margin-bottom:6px">📋 填假順序</div>
-    <div id="mo-list-leave" style="margin-bottom:8px"></div>
-    <div id="mo-add-leave" style="margin-bottom:12px"></div>
+    <div id="mo-row-leave" style="margin-bottom:12px"></div>
+    <div id="mo-tools" style="display:flex;gap:6px;justify-content:center;margin-bottom:12px"></div>
     <div class="ma">
       <button class="btn" onclick="closeModal()" style="flex:1">取消</button>
       <button class="btn btn-teal" onclick="saveMonthOrder()" style="flex:1">儲存順序</button>
@@ -3794,48 +3839,67 @@ function openMonthOrderModal() {
 
 function renderMonthOrderLists() {
   if (!_monthOrderDraft) return;
+  const chip = 'display:inline-flex;align-items:center;gap:3px;padding:4px 9px;border-radius:14px;font-size:13px;cursor:pointer;white-space:nowrap;';
   ['overtime','leave'].forEach(kind => {
     const arr = _monthOrderDraft[kind];
-    const box = document.getElementById('mo-list-' + kind);
-    if (box) {
-      box.innerHTML = arr.length ? arr.map((name, i) => `
-        <div style="display:flex;align-items:center;gap:8px;padding:5px 10px;border:0.5px solid var(--bd);border-radius:var(--r);margin-bottom:5px;background:var(--surface)">
-          <span style="font-size:12px;color:var(--tx3);width:20px">${i+1}</span>
-          <span style="flex:1;font-size:14px">${name}</span>
-          <button class="btn" style="padding:2px 8px" onclick="moveMonthOrder('${kind}',${i},-1)" ${i===0?'disabled':''}>▲</button>
-          <button class="btn" style="padding:2px 8px" onclick="moveMonthOrder('${kind}',${i},1)" ${i===arr.length-1?'disabled':''}>▼</button>
-          <button class="btn" style="padding:2px 8px;color:var(--red-tx)" onclick="removeMonthOrder('${kind}',${i})">✕</button>
-        </div>`).join('') : '<div style="font-size:12px;color:var(--tx3);padding:4px 0">（尚未設定）</div>';
-    }
-    // 只列出還沒被加入的人
-    const addBox = document.getElementById('mo-add-' + kind);
-    if (addBox) {
-      const rest = sortEmpsForMonth(S.employees).filter(e => !arr.includes(e.name));
-      addBox.innerHTML = rest.length ? `<div style="display:flex;flex-wrap:wrap;gap:5px">` + rest.map(e =>
-        `<button class="btn" style="padding:3px 10px;font-size:12px" onclick="addMonthOrder('${kind}','${e.name}')">+ ${e.name}</button>`
-      ).join('') + `</div>` : '';
-    }
+    const box = document.getElementById('mo-row-' + kind);
+    if (!box) return;
+    const rest = sortEmpsForMonth(S.employees).filter(e => !arr.includes(e.name));
+    // 一行排完（可換行），已排的人是實心標籤，未排的是虛線 + 標籤
+    box.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:5px">` +
+      arr.map((name, i) => {
+        const on = _monthOrderSel && _monthOrderSel.kind === kind && _monthOrderSel.idx === i;
+        return `<span onclick="selectMonthOrder('${kind}',${i})" style="${chip}border:1px solid ${on?'var(--teal)':'var(--bd)'};background:${on?'var(--teal-bg)':'var(--surface)'};font-weight:${on?700:500}">
+          <b style="font-size:11px;color:var(--tx3)">${i+1}</b>${name}</span>`;
+      }).join('') +
+      rest.map(e =>
+        `<span onclick="addMonthOrder('${kind}','${e.name}')" style="${chip}border:1px dashed var(--bd);color:var(--tx3)">+${e.name}</span>`
+      ).join('') +
+      (arr.length || rest.length ? '' : '<span style="font-size:12px;color:var(--tx3)">（無人員）</span>') +
+      `</div>`;
   });
+  // 選取後出現的操作列
+  const tools = document.getElementById('mo-tools');
+  if (tools) {
+    const sel = _monthOrderSel;
+    if (!sel) { tools.innerHTML = '<span style="font-size:12px;color:var(--tx3)">點選名字後可移動或移除</span>'; return; }
+    const len = _monthOrderDraft[sel.kind].length;
+    const btn = 'padding:6px 16px;font-size:14px';
+    tools.innerHTML = `
+      <button class="btn" style="${btn}" onclick="moveMonthOrder(-1)" ${sel.idx===0?'disabled':''}>◀ 往前</button>
+      <button class="btn" style="${btn}" onclick="moveMonthOrder(1)" ${sel.idx===len-1?'disabled':''}>往後 ▶</button>
+      <button class="btn" style="${btn};color:var(--red-tx)" onclick="removeMonthOrder()">✕ 移除</button>`;
+  }
 }
 
-function moveMonthOrder(kind, idx, dir) {
-  if (!_monthOrderDraft) return;
+function selectMonthOrder(kind, idx) {
+  const same = _monthOrderSel && _monthOrderSel.kind === kind && _monthOrderSel.idx === idx;
+  _monthOrderSel = same ? null : { kind, idx };
+  renderMonthOrderLists();
+}
+
+function moveMonthOrder(dir) {
+  if (!_monthOrderDraft || !_monthOrderSel) return;
+  const { kind, idx } = _monthOrderSel;
   const arr = _monthOrderDraft[kind];
   const j = idx + dir;
   if (j < 0 || j >= arr.length) return;
   const t = arr[idx]; arr[idx] = arr[j]; arr[j] = t;
+  _monthOrderSel.idx = j; // 選取跟著移動，方便連續點
   renderMonthOrderLists();
 }
 
 function addMonthOrder(kind, name) {
   if (!_monthOrderDraft) return;
   if (!_monthOrderDraft[kind].includes(name)) _monthOrderDraft[kind].push(name);
+  _monthOrderSel = null;
   renderMonthOrderLists();
 }
 
-function removeMonthOrder(kind, idx) {
-  if (!_monthOrderDraft) return;
-  _monthOrderDraft[kind].splice(idx, 1);
+function removeMonthOrder() {
+  if (!_monthOrderDraft || !_monthOrderSel) return;
+  _monthOrderDraft[_monthOrderSel.kind].splice(_monthOrderSel.idx, 1);
+  _monthOrderSel = null;
   renderMonthOrderLists();
 }
 
@@ -3849,6 +3913,7 @@ function saveMonthOrder() {
   S.monthOrders[mk].overtime = _monthOrderDraft.overtime.slice();
   S.monthOrders[mk].leave    = _monthOrderDraft.leave.slice();
   _monthOrderDraft = null;
+  _monthOrderSel = null;
   saveAll();
   closeModal();
   renderAll();
@@ -4054,6 +4119,15 @@ function saveDisplayName(uid, name) {
   policyRef.child('roles/' + uid + '/displayName').set(name.trim());
 }
 
+function saveEmpLink(uid, empId) {
+  if (myRole() !== 'admin') { showToast('權限不足'); return; }
+  if (!policyRef) return;
+  const v = empId === '' ? null : parseInt(empId);
+  policyRef.child('roles/' + uid + '/empId').set(v)
+    .then(() => showToast(v === null ? '已取消配對' : '✅ 已配對班表人員'))
+    .catch(err => showToast('配對失敗：' + (err.code || err.message)));
+}
+
 function saveRoleSettings() {
   if (myRole() !== 'admin') { showToast('權限不足'); return; }
   const rows = document.querySelectorAll('.role-row');
@@ -4111,13 +4185,21 @@ function renderRoleUserList() {
       <button class="btn btn-red" style="font-size:11px;padding:4px 10px" onclick="rejectUser('${uid}')">✕ 拒絕</button>` : '';
     const nameEdit = !disabled && !isPending ? `<input style="width:80px;padding:3px 6px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--surface);font-size:12px;color:var(--tx)" 
       id="name-${uid}" value="${info.displayName||''}" placeholder="名字" onblur="saveDisplayName('${uid}',this.value)"/>` : '';
+    // 對應班表上的人員（已核准帳號才顯示）
+    const linkedIds = Object.entries(roles).filter(([u,i]) => u !== uid && i.empId !== undefined && i.empId !== null).map(([u,i]) => String(i.empId));
+    const empLink = !isPending ? `<select title="對應班表人員" onchange="saveEmpLink('${uid}',this.value)"
+      style="padding:5px 8px;border-radius:var(--r);border:0.5px solid var(--bd2);background:var(--surface);font-size:12px;color:var(--tx)">
+        <option value="">👤 未配對</option>
+        ${sortEmpsForMonth(S.employees).map(e => `<option value="${e.id}" ${String(info.empId)===String(e.id)?'selected':''} ${linkedIds.includes(String(e.id))?'disabled':''}>${e.name}${linkedIds.includes(String(e.id))?'（已配對）':''}</option>`).join('')}
+      </select>` : '';
     return `<div class="role-row" data-uid="${uid}" data-email="${info.email||''}"
-      style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:0.5px solid ${isSuper?'var(--purple-bd)':isPending?'var(--amber-bd)':'var(--bd)'};border-radius:var(--r);margin-bottom:6px;background:${isSuper?'var(--purple-bg)':isPending?'var(--amber-bg)':'var(--s2)'}">
+      style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px 12px;border:0.5px solid ${isSuper?'var(--purple-bd)':isPending?'var(--amber-bd)':'var(--bd)'};border-radius:var(--r);margin-bottom:6px;background:${isSuper?'var(--purple-bg)':isPending?'var(--amber-bg)':'var(--s2)'}">
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${info.displayName||info.email||uid}${badge}${pendingBadge}</div>
         <div style="font-size:11px;color:var(--tx3);margin-top:2px">${info.email||''}</div>
       </div>
       ${nameEdit}
+      ${empLink}
       ${sel}
       ${approveBtn}
     </div>`;
